@@ -1,0 +1,1984 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0">
+<title>일일 안전보건 현장관리 | 광주 학동4구역</title>
+<style>
+  :root{
+    --blue-700:#2350C7;
+    --blue-600:#2F5FDB;
+    --blue-100:#E7EDFC;
+    --ink-900:#161B26;
+    --ink-600:#5B6472;
+    --ink-400:#8B93A3;
+    --bg:#F4F5F7;
+    --card:#FFFFFF;
+    --line:#E7E9EE;
+    --red:#E5484D;
+    --red-bg:#FCE9E9;
+    --amber:#D9822B;
+    --amber-bg:#FDF0DE;
+    --green:#1E9E5A;
+    --green-bg:#E4F7EC;
+    --purple:#7C5CDB;
+    --radius-lg:18px;
+    --radius-md:13px;
+    --radius-sm:9px;
+    --shadow:0 2px 10px rgba(20,30,50,0.06), 0 1px 2px rgba(20,30,50,0.05);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:-apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    background:var(--bg); color:var(--ink-900);
+  }
+  #app{max-width:520px; margin:0 auto; min-height:100vh; background:var(--bg);
+    display:flex; flex-direction:column; position:relative; padding-bottom:calc(74px + env(safe-area-inset-bottom));}
+
+  /* ===== Header ===== */
+  .topbar{background:#fff; border-bottom:1px solid var(--line); padding:calc(14px + env(safe-area-inset-top)) 18px 14px;
+    display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:15;}
+  .topbar .icon{width:56px;height:auto;flex-shrink:0;object-fit:contain;}
+  .topbar h1{margin:0;font-size:17px;font-weight:800;letter-spacing:-0.01em;}
+  .topbar .sub{margin:1px 0 0;font-size:12px;color:var(--blue-600);font-weight:700;}
+
+  .date-row{display:flex;align-items:center;justify-content:space-between;
+    padding:12px 16px; gap:10px;}
+  .date-picker{display:flex;align-items:center;gap:8px;background:#fff;border:1.5px solid var(--line);
+    border-radius:12px;padding:10px 16px;flex:1;box-shadow:var(--shadow);position:relative;}
+  .date-picker .cal-ic{font-size:15px;}
+  .date-picker .date-text{font-size:15.5px;font-weight:800;font-family:inherit;padding:0;color:var(--ink-900);}
+  .date-nav{display:flex;gap:6px;}
+  .date-nav button{width:38px;height:38px;border-radius:11px;border:1.5px solid var(--line);background:#fff;
+    font-size:16px;font-weight:800;color:var(--ink-600);box-shadow:var(--shadow);}
+  .date-nav button:active{background:var(--blue-100);}
+  #dateInput{position:absolute;inset:0;width:100%;height:100%;opacity:0;border:none;margin:0;padding:0;
+    cursor:pointer;-webkit-appearance:none;appearance:none;}
+
+  .section{padding:14px 16px 4px;}
+  .section-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;}
+  .section-head h2{font-size:15px;margin:0;font-weight:800;letter-spacing:-0.01em;}
+  .section-head .meta{font-size:12px;color:var(--ink-400);font-weight:700;}
+
+  /* ===== Map card ===== */
+  .map-card{background:var(--card);border-radius:var(--radius-lg);box-shadow:var(--shadow);
+    overflow:hidden;border:1px solid var(--line);}
+  .map-toolbar{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border-bottom:1px solid var(--line);}
+  .map-toolbar .t{font-size:13.5px;font-weight:800;display:flex;align-items:center;gap:6px;}
+  .map-toolbar .dot{width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;}
+  .map-actions{display:flex;gap:7px;padding:10px 14px;border-bottom:1px solid var(--line);}
+  .map-action-btn{flex:1;padding:8px 4px;border-radius:9px;border:1.5px solid var(--line);background:#fff;
+    font-size:12px;font-weight:800;color:var(--ink-600);font-family:inherit;}
+  .map-action-btn:active{background:var(--bg);}
+  .map-wrap{position:relative;width:100%;aspect-ratio:1000/572;background:#0F1930;overflow:hidden;touch-action:none;}
+  .map-wrap img.bg{width:100%;height:100%;object-fit:cover;display:block;user-select:none;-webkit-user-drag:none;}
+  .pin{position:absolute;transform:translate(-50%,-100%);cursor:pointer;z-index:3;}
+  .pin .dot{min-width:27px;height:27px;padding:0 6px;border-radius:50% 50% 50% 4px;
+    transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;
+    box-shadow:0 3px 7px rgba(0,0,0,0.4);border:2px solid #fff;}
+  .pin .dot span{transform:rotate(45deg);font-size:11px;color:#fff;font-weight:800;white-space:nowrap;}
+  .pin.risk::after{content:"⚠";position:absolute;top:-9px;right:-7px;transform:rotate(0);
+    background:var(--red);color:#fff;width:17px;height:17px;border-radius:50%;font-size:10px;
+    display:flex;align-items:center;justify-content:center;border:1.5px solid #fff;}
+  .pin.pump .dot{border-radius:50%;transform:none;}
+  .pin.pump .dot span{transform:none;}
+  .region-box{position:absolute;border:2px solid var(--red);background:rgba(229,72,77,0.12);
+    border-radius:6px;pointer-events:none;z-index:2;}
+  .draw-box{position:absolute;border:2px dashed var(--blue-600);background:rgba(47,95,219,0.12);border-radius:4px;}
+  .draw-box.confirmed{border-style:solid;border-color:var(--green);background:rgba(30,158,90,0.12);}
+  .handle{position:absolute;width:14px;height:14px;background:#fff;border:2px solid var(--blue-600);border-radius:50%;transform:translate(-50%,-50%);}
+  .draw-box.confirmed .handle{border-color:var(--green);}
+  .region-tag{position:absolute;top:-11px;left:6px;background:var(--amber);color:#fff;font-size:10.5px;
+    font-weight:800;padding:2px 8px;border-radius:20px;}
+  .draw-box.confirmed .region-tag{background:var(--green);content:"확정";}
+
+  .map-legend{display:flex;flex-wrap:wrap;gap:8px 14px;padding:12px 14px;border-top:1px solid var(--line);}
+  .legend-item{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--ink-600);}
+  .legend-swatch{width:9px;height:9px;border-radius:3px;flex-shrink:0;}
+
+  /* ===== Summary ===== */
+  .summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px;}
+  .stat-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);
+    padding:11px 4px;text-align:center;box-shadow:var(--shadow);}
+  .stat-card .num{font-size:19px;font-weight:800;letter-spacing:-0.02em;}
+  .stat-card .lbl{font-size:10px;color:var(--ink-400);font-weight:700;margin-top:2px;}
+  .stat-card.risk .num{color:var(--red);}
+  .stat-card.grade .num{color:var(--amber);}
+  .export-btn{width:100%;margin-top:10px;padding:13px;border:1.5px dashed var(--blue-600);border-radius:12px;
+    background:var(--blue-100);color:var(--blue-700);font-size:13.5px;font-weight:800;font-family:inherit;}
+  .export-btn:active{opacity:0.8;}
+  .export-btn[disabled]{opacity:0.5;}
+  .export-btn.excel{border-color:var(--green);background:var(--green-bg);color:var(--green);margin-top:8px;}
+
+  /* ===== Company group ===== */
+  .company-group{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);
+    margin-bottom:10px;box-shadow:var(--shadow);overflow:hidden;}
+  .company-group.risky{border-color:#F3C6C7;}
+  .company-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;
+    background:var(--bg);}
+  .company-head .name{display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:800;}
+  .company-head .name .warn{color:var(--red);font-size:13px;}
+  .company-head .cnt{font-size:11.5px;font-weight:700;color:var(--ink-400);}
+  .task-row{padding:13px 14px;border-top:1px solid var(--line);}
+  .task-row:active{background:#FAFBFC;}
+  .task-row .top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;}
+  .task-row .name{font-size:14px;font-weight:800;letter-spacing:-0.01em;margin:0 0 6px;flex:1;}
+  .badge{font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:7px;white-space:nowrap;flex-shrink:0;}
+  .badge.status-예정{background:var(--blue-100);color:var(--blue-600);}
+  .badge.status-진행중{background:var(--blue-600);color:#fff;}
+  .badge.status-완료{background:#EEF0F4;color:var(--ink-400);}
+  .badge.hi-risk{background:var(--red-bg);color:var(--red);}
+  .badge.hi-grade{background:var(--amber-bg);color:var(--amber);}
+  .badges-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px;}
+  .status-edit-row{display:flex;gap:7px;margin:6px 0 14px;}
+  .status-edit-btn{flex:1;padding:10px 4px;border-radius:10px;border:1.5px solid var(--line);background:#fff;
+    font-size:13px;font-weight:800;color:var(--ink-600);font-family:inherit;}
+  .status-edit-btn.status-예정.on{background:var(--blue-100);border-color:var(--blue-600);color:var(--blue-600);}
+  .status-edit-btn.status-진행중.on{background:var(--blue-600);border-color:var(--blue-600);color:#fff;}
+  .status-edit-btn.status-완료.on{background:var(--ink-900);border-color:var(--ink-900);color:#fff;}
+  .task-meta{display:flex;flex-wrap:wrap;gap:9px;font-size:12px;color:var(--ink-600);font-weight:600;}
+  .task-guard{margin-top:7px;display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;
+    color:var(--green);width:fit-content;}
+
+  .empty-state{text-align:center;padding:34px 20px;color:var(--ink-400);}
+  .empty-state .ic{font-size:30px;margin-bottom:8px;}
+  .empty-state .t{font-weight:800;color:var(--ink-600);font-size:14px;margin-bottom:3px;}
+  .empty-state .s{font-size:12.5px;}
+
+  /* ===== Register tabs ===== */
+  .subtab-row{display:flex;background:#fff;border:1.5px solid var(--line);border-radius:13px;padding:4px;
+    margin-bottom:14px;box-shadow:var(--shadow);}
+  .subtab-row button{flex:1;padding:11px;border:none;border-radius:10px;background:none;font-family:inherit;
+    font-size:13.5px;font-weight:800;color:var(--ink-600);display:flex;align-items:center;justify-content:center;gap:6px;}
+  .subtab-row button.on{background:var(--blue-600);color:#fff;}
+
+  .form-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);
+    box-shadow:var(--shadow);padding:16px;margin-bottom:14px;}
+  .form-card h3{font-size:13px;font-weight:800;margin:0 0 12px;color:var(--blue-700);display:flex;align-items:center;gap:6px;}
+  .form-card h3::before{content:"";width:4px;height:14px;background:var(--blue-600);border-radius:3px;}
+  .field{margin-bottom:13px;}
+  .field:last-child{margin-bottom:0;}
+  .field label{display:block;font-size:12.5px;font-weight:700;color:var(--ink-600);margin-bottom:6px;}
+  .field .req{color:var(--red);}
+  .field .hint2{display:block;font-size:11px;color:var(--ink-400);font-weight:500;margin-top:-3px;margin-bottom:6px;}
+  .field input[type=text],.field input[type=number],.field input[type=date],.field input[type=time],
+  .field select,.field textarea{width:100%;padding:11px 12px;border-radius:10px;border:1.5px solid var(--line);
+    font-size:14.5px;font-family:inherit;background:#FBFCFE;color:var(--ink-900);
+    box-sizing:border-box;min-width:0;-webkit-appearance:none;appearance:none;}
+  .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--blue-600);background:#fff;}
+  .field textarea{resize:vertical;min-height:66px;}
+  .field-row{display:flex;gap:10px;}
+  .field-row .field{flex:1;min-width:0;}
+  .chip-group{display:flex;flex-wrap:wrap;gap:7px;}
+  .building-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;}
+  .building-grid .chip{width:100%;text-align:center;padding:9px 4px;}
+  .chip{padding:8px 13px;border-radius:20px;border:1.5px solid var(--line);background:#fff;
+    font-size:13px;font-weight:700;color:var(--ink-600);}
+  .chip.on{background:var(--blue-600);border-color:var(--blue-600);color:#fff;}
+  .chip.risk-on{background:var(--red);border-color:var(--red);}
+  .floor-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;max-height:230px;overflow-y:auto;
+    border:1.5px solid var(--line);border-radius:10px;padding:8px;}
+  .floor-chip{padding:9px 4px;border-radius:8px;border:1.5px solid var(--line);background:#fff;
+    font-size:12.5px;font-weight:700;color:var(--ink-600);text-align:center;}
+  .floor-chip.on{background:var(--blue-600);border-color:var(--blue-600);color:#fff;}
+  .sel-line{font-size:12px;color:var(--blue-600);font-weight:700;margin-top:7px;}
+  .toggle-row{display:flex;gap:10px;}
+  .toggle-btn{flex:1;padding:12px;border-radius:10px;border:1.5px solid var(--line);background:#fff;
+    font-size:14px;font-weight:800;color:var(--ink-600);font-family:inherit;}
+  .toggle-btn.on-o{background:var(--red-bg);border-color:var(--red);color:var(--red);}
+  .toggle-btn.on-x{background:var(--blue-100);border-color:var(--blue-600);color:var(--blue-600);}
+  .check-row{display:flex;align-items:center;gap:9px;padding:11px 12px;border:1.5px solid var(--line);
+    border-radius:10px;background:#FBFCFE;}
+  .check-row input{width:18px;height:18px;accent-color:var(--blue-600);}
+  .check-row label{font-size:13.5px;font-weight:700;color:var(--ink-900);margin:0;}
+  .submit-btn{width:100%;padding:15px;border:none;border-radius:12px;background:var(--blue-600);
+    color:#fff;font-size:15.5px;font-weight:800;box-shadow:0 6px 16px rgba(47,95,219,0.32);}
+  .submit-btn:active{transform:scale(0.98);}
+  .hint{font-size:11.5px;color:var(--ink-400);margin-top:5px;}
+
+  .draw-toolbar{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+  .draw-btn{padding:9px 13px;border-radius:9px;border:1.5px solid var(--line);background:#fff;
+    font-size:12.5px;font-weight:800;color:var(--ink-600);font-family:inherit;display:flex;align-items:center;gap:5px;}
+  .draw-btn.confirm{background:var(--green-bg);border-color:var(--green);color:var(--green);}
+  .draw-status{padding:9px 13px;border-radius:9px;background:var(--bg);font-size:12.5px;font-weight:700;color:var(--ink-600);}
+
+  /* pumps list */
+  .pump-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);
+    padding:13px;margin-bottom:9px;box-shadow:var(--shadow);}
+  .pump-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .pump-top .no{font-size:12px;font-weight:800;color:var(--ink-400);}
+  .pump-top .st{font-size:11px;font-weight:800;padding:3px 9px;border-radius:20px;}
+  .st-가동중{background:var(--green-bg);color:var(--green);}
+  .st-외부배수{background:var(--blue-100);color:var(--blue-600);}
+  .st-미가동{background:#EEF0F4;color:var(--ink-400);}
+  .pump-name{font-size:14.5px;font-weight:800;margin:0 0 4px;}
+  .pump-meta{font-size:12px;color:var(--ink-600);font-weight:600;display:flex;gap:10px;flex-wrap:wrap;}
+  .pump-actions{display:flex;gap:6px;margin-top:9px;}
+  .pump-actions button{flex:1;padding:8px;border-radius:8px;border:1.5px solid var(--line);background:#fff;
+    font-size:12px;font-weight:800;color:var(--ink-600);font-family:inherit;}
+  .pump-actions button.del{color:var(--red);border-color:#F3C6C7;}
+
+  /* ===== Status view ===== */
+  .filter-scroll{display:flex;gap:7px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch;}
+  .filter-scroll::-webkit-scrollbar{display:none;}
+  .filter-chip{flex-shrink:0;padding:8px 14px;border-radius:20px;background:#fff;border:1.5px solid var(--line);
+    font-size:12.5px;font-weight:700;color:var(--ink-600);font-family:inherit;}
+  .filter-chip.on{background:var(--blue-600);color:#fff;border-color:var(--blue-600);}
+
+  /* ===== Building view ===== */
+  .bchip-scroll{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;}
+  .bchip-scroll::-webkit-scrollbar{display:none;}
+  .bchip{flex-shrink:0;padding:9px 16px;border-radius:11px;background:#fff;border:1.5px solid var(--line);
+    font-size:13.5px;font-weight:800;color:var(--ink-600);font-family:inherit;}
+  .bchip.on{background:var(--blue-600);color:#fff;border-color:var(--blue-600);}
+  .floor-filter-scroll{display:flex;gap:6px;overflow-x:auto;margin-top:10px;padding-bottom:3px;-webkit-overflow-scrolling:touch;}
+  .floor-filter-scroll::-webkit-scrollbar{display:none;}
+  .ffchip{flex-shrink:0;padding:7px 12px;border-radius:9px;background:var(--bg);border:1.5px solid var(--line);
+    font-size:12px;font-weight:700;color:var(--ink-600);font-family:inherit;}
+  .ffchip.on{background:var(--ink-900);color:#fff;border-color:var(--ink-900);}
+
+  /* ===== bottom nav ===== */
+  .bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:20;max-width:520px;margin:0 auto;
+    background:rgba(255,255,255,0.95);backdrop-filter:blur(14px);border-top:1px solid var(--line);
+    display:flex;padding:6px 4px calc(6px + env(safe-area-inset-bottom));}
+  .nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;
+    padding:7px 2px;color:var(--ink-400);font-family:inherit;}
+  .nav-btn .nic{font-size:20px;transition:transform .18s ease;}
+  .nav-btn .nlb{font-size:10.5px;font-weight:700;}
+  .nav-btn.active{color:var(--blue-600);}
+  .nav-btn.active .nic{transform:translateY(-2px) scale(1.08);}
+
+  .view{display:none;animation:fadeUp .25s ease;}
+  .view.active{display:block;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(8px);} to{opacity:1;transform:translateY(0);}}
+
+  .toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);
+    opacity:0;background:var(--ink-900);color:#fff;padding:12px 20px;border-radius:12px;font-size:13.5px;font-weight:700;
+    box-shadow:0 8px 24px rgba(0,0,0,0.25);z-index:80;transition:all .25s ease;max-width:88%;text-align:center;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  .sync-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--card);
+    border:1px solid var(--line);border-radius:var(--radius-md);padding:11px 13px;margin:0 16px 14px;box-shadow:var(--shadow);}
+  .sync-bar .txt{font-size:12px;color:var(--ink-600);font-weight:600;}
+  .sync-bar .txt b{color:var(--ink-900);}
+  .sync-btn{border:none;background:var(--blue-100);color:var(--blue-700);font-weight:800;font-size:12px;
+    padding:8px 12px;border-radius:9px;flex-shrink:0;font-family:inherit;}
+
+  /* ===== sheets/modals ===== */
+  .sheet{position:fixed;inset:0;background:rgba(10,16,32,0.5);z-index:60;display:none;align-items:flex-end;justify-content:center;}
+  .sheet.show{display:flex;}
+  .sheet-inner{width:100%;max-width:520px;background:#fff;border-radius:20px 20px 0 0;
+    padding:18px 18px calc(18px + env(safe-area-inset-bottom));max-height:88vh;overflow-y:auto;}
+  .sheet-inner h4{margin:0 0 4px;font-size:15px;font-weight:800;}
+  .sheet-inner p.desc{margin:0 0 12px;font-size:12px;color:var(--ink-400);}
+  .sheet-actions{display:flex;gap:8px;margin-top:12px;}
+  .sheet-actions button{flex:1;padding:12px;border-radius:10px;border:none;font-weight:800;font-size:13.5px;font-family:inherit;}
+  .btn-secondary{background:var(--bg);color:var(--ink-900);}
+  .btn-primary{background:var(--blue-600);color:#fff;}
+  .btn-danger{background:var(--red-bg);color:var(--red);}
+
+  .detail-close{position:absolute;top:14px;right:14px;width:32px;height:32px;border-radius:50%;
+    background:var(--bg);border:none;font-size:16px;color:var(--ink-600);}
+  .detail-title{font-size:19px;font-weight:800;letter-spacing:-0.01em;margin:6px 34px 4px 0;line-height:1.35;}
+  .detail-company{font-size:13px;color:var(--ink-400);font-weight:700;margin-bottom:14px;}
+  .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+  .detail-cell{background:var(--bg);border-radius:11px;padding:11px 12px;}
+  .detail-cell .k{font-size:11px;color:var(--ink-400);font-weight:700;display:flex;align-items:center;gap:4px;margin-bottom:3px;}
+  .detail-cell .v{font-size:14.5px;font-weight:800;}
+  .detail-banner{background:var(--red-bg);border-radius:11px;padding:12px 13px;margin-bottom:12px;}
+  .detail-banner .t{color:var(--red);font-weight:800;font-size:13.5px;display:flex;align-items:center;gap:6px;margin-bottom:3px;}
+  .detail-banner .s{color:var(--red);font-size:12.5px;font-weight:600;opacity:0.85;}
+  .detail-info{background:var(--bg);border-radius:11px;padding:11px 12px;margin-bottom:8px;}
+  .detail-info .k{font-size:11px;color:var(--ink-400);font-weight:700;margin-bottom:2px;}
+  .detail-info .v{font-size:13.5px;font-weight:700;}
+  .detail-guard{background:var(--amber-bg);border-radius:11px;padding:11px 12px;margin-bottom:8px;}
+  .detail-guard .k{font-size:11px;color:var(--amber);font-weight:800;margin-bottom:2px;}
+  .detail-guard .v{font-size:13.5px;font-weight:800;color:#8A5A16;}
+  .detail-actions{display:flex;gap:8px;margin:14px 0;}
+  .detail-actions button{flex:1;padding:12px;border-radius:10px;border:1.5px solid var(--line);background:#fff;
+    font-size:13px;font-weight:800;color:var(--ink-600);font-family:inherit;}
+  .detail-actions button.danger{color:var(--red);border-color:#F3C6C7;}
+  .detail-actions button.primary{background:var(--blue-600);border-color:var(--blue-600);color:#fff;}
+  .detail-map-title{font-size:13.5px;font-weight:800;margin:6px 0 8px;}
+  .detail-map{position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--line);}
+  .detail-map img{width:100%;display:block;}
+
+  /* ===== image lightbox ===== */
+  .lightbox-sheet{align-items:stretch;}
+  .lightbox-inner{width:100%;height:100%;background:#000;display:flex;align-items:center;justify-content:center;
+    position:relative;overflow:hidden;}
+  .lightbox-scroll{width:100%;height:100%;overflow:auto;display:flex;align-items:center;justify-content:center;
+    -webkit-overflow-scrolling:touch;}
+  .lightbox-img{width:100%;max-width:100%;transition:transform .25s ease;transform-origin:center;}
+  .lightbox-img.zoomed{transform:scale(2.2);}
+  .lightbox-close{position:absolute;top:calc(14px + env(safe-area-inset-top));right:14px;width:38px;height:38px;
+    border-radius:50%;background:rgba(255,255,255,0.16);border:none;font-size:18px;color:#fff;z-index:5;}
+  .lightbox-hint{position:absolute;bottom:calc(20px + env(safe-area-inset-bottom));left:0;right:0;text-align:center;
+    color:rgba(255,255,255,0.75);font-size:12px;font-weight:600;pointer-events:none;}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+</head>
+<body>
+<div id="app">
+
+  <div class="topbar">
+    <img class="icon" src="./logo.png" alt="로고">
+    <div>
+      <h1 id="siteTitle">광주 학동4구역 재개발정비사업</h1>
+      <div class="sub">일일안전보건현황 관리시스템</div>
+    </div>
+  </div>
+
+  <div class="date-row">
+    <div class="date-picker">
+      <span class="cal-ic">📅</span>
+      <span class="date-text" id="dateLabel"></span>
+      <input type="date" id="dateInput" onchange="onDateChange(this.value)">
+    </div>
+    <div class="date-nav">
+      <button onclick="shiftDate(-1)">‹</button>
+      <button onclick="shiftDate(1)">›</button>
+    </div>
+  </div>
+
+  <!-- ===================== DASHBOARD ===================== -->
+  <div class="view active" id="view-dashboard">
+    <div class="section">
+      <div class="section-head"><h2>단지 배치 및 작업 위치</h2><span class="meta">터치해서 상세 확인</span></div>
+      <div class="map-card">
+        <div class="map-toolbar">
+          <span class="t"><span class="dot"></span>전경 배치도</span>
+          <span class="meta" id="pinCountMeta"></span>
+        </div>
+        <div class="map-actions">
+          <button type="button" class="map-action-btn" style="flex:none;width:100%;" onclick="openImageLightbox()">↗ 확대보기</button>
+        </div>
+        <input type="file" accept="image/*" id="siteImageInput" style="display:none" onchange="handleSiteImageChange(event)">
+        <div class="map-wrap" id="mapWrap">
+          <img class="bg" src="./map.jpg" alt="단지 배치도">
+        </div>
+        <div class="map-legend" id="mapLegend"></div>
+      </div>
+      <div class="summary-grid" id="summaryGrid"></div>
+      <button class="export-btn" id="exportExcelBtn" onclick="exportToExcel()">📤 일일 고위험 작업 현황 내보내기</button>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><h2>주요 작업 목록</h2><span class="meta" id="taskCountMeta"></span></div>
+      <div id="dashboardTaskList"></div>
+    </div>
+  </div>
+
+  <!-- ===================== REGISTER ===================== -->
+  <div class="view" id="view-register">
+    <div class="section">
+      <div class="subtab-row">
+        <button id="subtabTask" class="on" onclick="switchRegisterTab('task')">📋 일일작업 등록</button>
+        <button id="subtabPump" onclick="switchRegisterTab('pump')">💧 양수기 위치 관리</button>
+      </div>
+
+      <!-- ---- 일일작업 등록 ---- -->
+      <div id="registerTask">
+        <form id="taskForm" onsubmit="handleSubmitTask(event)">
+          <div class="form-card">
+            <h3>기본 정보</h3>
+            <div class="field"><label>작업 일자 <span class="req">*</span></label>
+              <input type="date" id="f_date" required></div>
+            <div class="field"><label>협력업체명 <span class="req">*</span></label>
+              <input type="text" id="f_company" placeholder="예: (주)한국건설" required></div>
+            <div class="field"><label>작업명 <span class="req">*</span></label>
+              <input type="text" id="f_taskname" placeholder="예: 101동 3층 슬라브 철근 배근" required></div>
+          </div>
+
+          <div class="form-card">
+            <h3>작업 개요</h3>
+            <div class="field"><label>공종 <span class="req">*</span></label>
+              <select id="f_worktype" onchange="onWorktypeChange()">
+                <option>골조</option><option>토목</option><option>철근</option><option>거푸집</option>
+                <option>비계</option><option>양중</option><option>마감</option><option>설비</option>
+                <option>전기</option><option>직접입력</option>
+              </select>
+              <input type="text" id="f_worktype_custom" placeholder="공종을 직접 입력하세요" style="display:none; margin-top:8px;">
+            </div>
+            <div class="field"><label>작업 상태 <span class="req">*</span></label>
+              <select id="f_status">
+                <option value="예정">예정</option>
+                <option value="진행중" selected>진행중</option>
+                <option value="완료">완료</option>
+              </select></div>
+            <div class="field"><label>동 (복수 선택 가능) <span class="req">*</span></label>
+              <div class="building-grid" id="buildingChips"></div>
+              <div class="sel-line" id="buildingSelLine">선택: 없음</div></div>
+            <div class="field"><label>층 (복수 선택 가능) <span class="req">*</span></label>
+              <div class="floor-grid" id="floorGrid"></div>
+              <div class="sel-line" id="floorSelLine">선택: 없음</div></div>
+            <div class="field"><label>상세 위치</label>
+              <input type="text" id="f_location" placeholder="예: E/V 코어 주변 전 세대"></div>
+          </div>
+
+          <div class="form-card">
+            <h3>인원 · 시간</h3>
+            <div class="field"><label>출역 인원 (명) <span class="req">*</span></label>
+              <input type="number" id="f_workers" min="0" placeholder="0" required></div>
+            <div class="field"><label>작업 시작 <span class="req">*</span></label>
+              <input type="time" id="f_timestart" value="07:00"></div>
+            <div class="field"><label>작업 종료 <span class="req">*</span></label>
+              <input type="time" id="f_timeend" value="16:00"></div>
+            <div class="field"><label>작업 내용 상세</label>
+              <textarea id="f_detail" placeholder="작업 상세 내용을 입력하세요"></textarea></div>
+          </div>
+
+          <div class="form-card">
+            <div class="check-row"><input type="checkbox" id="f_equipment" onchange="onEquipmentToggle()"><label for="f_equipment">🔧 장비 사용 여부</label></div>
+            <input type="text" id="f_equipment_type" placeholder="사용 장비를 입력하세요 (예: 타워크레인, 굴착기, 지게차)" style="display:none; margin-top:10px;">
+          </div>
+
+          <div class="form-card">
+            <h3>고위험 작업 여부 <span style="font-weight:600;color:var(--ink-400);font-size:11.5px;">(해당 항목 모두 선택)</span></h3>
+            <div class="chip-group" id="riskChips"></div>
+            <input type="text" id="f_risk_custom" placeholder="기타 고위험 작업을 입력하세요" style="display:none; margin-top:10px;">
+          </div>
+
+          <div class="form-card">
+            <h3>안전 점검 항목</h3>
+            <div class="field"><label>작업대 수량</label><span class="hint2">말비계, 안전사다리 포함</span>
+              <input type="number" id="f_platform" min="0" placeholder="0"></div>
+            <div class="field"><label>절단공구 수량</label><span class="hint2">그라인더, 고속절단기 포함</span>
+              <input type="number" id="f_cuttool" min="0" placeholder="0"></div>
+            <div class="field"><label>작업계획서 또는 사전작업허가서(P.T.W)</label>
+              <div class="toggle-row">
+                <button type="button" class="toggle-btn" id="btn_workplan_o" onclick="setToggle('workplan',true)">해당 (O)</button>
+                <button type="button" class="toggle-btn on-x" id="btn_workplan_x" onclick="setToggle('workplan',false)">미해당 (X)</button>
+              </div></div>
+            <div class="field"><label>위험성평가 상등급 해당 여부</label>
+              <div class="toggle-row">
+                <button type="button" class="toggle-btn" id="btn_riskgrade_o" onclick="setToggle('riskgrade',true)">해당 (O)</button>
+                <button type="button" class="toggle-btn on-x" id="btn_riskgrade_x" onclick="setToggle('riskgrade',false)">미해당 (X)</button>
+              </div></div>
+            <div class="field"><label>유해위험물질 반입 여부</label>
+              <div class="toggle-row">
+                <button type="button" class="toggle-btn" id="btn_hazmat_o" onclick="setToggle('hazmat',true)">반입 (O)</button>
+                <button type="button" class="toggle-btn on-x" id="btn_hazmat_x" onclick="setToggle('hazmat',false)">미반입 (X)</button>
+              </div></div>
+          </div>
+
+          <div class="form-card">
+            <h3>책임자 · 감시단</h3>
+            <div class="field"><label>작업지휘자</label><input type="text" id="f_director" placeholder="성명 입력"></div>
+            <div class="field"><label>관리감독자 (협력사)</label><input type="text" id="f_supervisorco" placeholder="성명 입력"></div>
+            <div class="field"><label>관리감독자 (HDC)</label>
+              <select id="f_supervisorhdc"><option value="">선택하세요</option></select></div>
+            <div class="field"><label>안전관리자 (HDC)</label>
+              <select id="f_safetymanager"><option value="">선택하세요</option></select></div>
+            <div class="field"><label>감시단 또는 안전전담자 배치 여부</label>
+              <div class="toggle-row">
+                <button type="button" class="toggle-btn on-o" id="btn_guard_o" onclick="setGuardToggle(true)">배치</button>
+                <button type="button" class="toggle-btn" id="btn_guard_x" onclick="setGuardToggle(false)">미배치</button>
+              </div>
+              <input type="text" id="f_guardname" placeholder="감시단 또는 안전전담자 성명" style="margin-top:8px;"></div>
+          </div>
+
+          <div class="form-card">
+            <h3>부가 안전정보</h3>
+            <div class="field"><label>재해유형</label>
+              <input type="text" id="f_hazardtype" placeholder="예: 협착, 추락, 낙하, 화재 등"></div>
+            <div class="field"><label>조출 여부</label>
+              <div class="toggle-row">
+                <button type="button" class="toggle-btn on-x" id="btn_early_x" onclick="setEarlyToggle(false)">정규</button>
+                <button type="button" class="toggle-btn" id="btn_early_o" onclick="setEarlyToggle(true)">조출</button>
+              </div>
+              <input type="time" id="f_earlytime" value="06:00" style="display:none; margin-top:8px;"></div>
+            <div class="field"><label>작업제외구역 (이격거리)</label>
+              <input type="text" id="f_exclusionzone" placeholder="예: 5m 이격 통제"></div>
+            <div class="field"><label>이동식 CCTV 설치 여부</label>
+              <div class="toggle-row">
+                <button type="button" class="toggle-btn" id="btn_cctv_o" onclick="setCctvToggle(true)">설치(O)</button>
+                <button type="button" class="toggle-btn on-x" id="btn_cctv_x" onclick="setCctvToggle(false)">미설치(X)</button>
+              </div></div>
+          </div>
+
+          <div class="form-card">
+            <h3>비고</h3>
+            <textarea id="f_remarks" placeholder="특이사항을 입력하세요"></textarea>
+          </div>
+
+          <div class="form-card">
+            <h3>작업 위치 표시</h3>
+            <p class="hint" style="margin-top:0;">드래그로 작업구간을 지정하고, 확정 버튼을 눌러주세요.</p>
+            <div class="draw-toolbar">
+              <span class="draw-status" id="drawStatus">구간 미지정</span>
+              <button type="button" class="draw-btn" onclick="clearRegion()">🗑 초기화</button>
+              <button type="button" class="draw-btn confirm" onclick="confirmRegion()">☑ 작업구간 확정</button>
+            </div>
+            <div class="map-wrap" id="drawMapWrap" style="border-radius:12px; aspect-ratio:1000/572;">
+              <img class="bg" src="./map.jpg" alt="배치도" style="pointer-events:none;">
+            </div>
+          </div>
+
+          <button type="submit" class="submit-btn" id="submitBtn">✓ 작업 등록하기</button>
+        </form>
+      </div>
+
+      <!-- ---- 양수기 위치 관리 ---- -->
+      <div id="registerPump" style="display:none;">
+        <div class="form-card">
+          <h3>양수기 등록</h3>
+          <div class="field"><label>업체명 <span class="req">*</span></label>
+            <input type="text" id="p_company" placeholder="예: 우설건설"></div>
+          <div class="field"><label>위치 <span class="req">*</span></label>
+            <input type="text" id="p_location" placeholder="예: 101동 주변"></div>
+          <div class="field-row">
+            <div class="field"><label>구경 (인치)</label><input type="number" id="p_diameter" min="0" placeholder="2"></div>
+            <div class="field"><label>대수</label><input type="number" id="p_count" min="1" placeholder="1" value="1"></div>
+          </div>
+          <div class="field"><label>상태</label>
+            <select id="p_status"><option value="가동중">가동중</option><option value="외부배수">외부배수</option><option value="미가동">미가동</option></select></div>
+          <div class="field"><label>등록일</label><input type="date" id="p_date"></div>
+          <p class="hint" style="margin-bottom:8px;">아래 배치도를 터치해 위치를 지정하세요.</p>
+          <div class="map-wrap" id="pumpMapWrap" style="border-radius:12px; aspect-ratio:1000/572;">
+            <img class="bg" src="./map.jpg" alt="배치도" style="pointer-events:none;">
+          </div>
+          <div class="hint" id="pumpPosStatus" style="margin-top:8px;">위치 미지정</div>
+          <button type="button" class="submit-btn" style="margin-top:14px;" onclick="handleSubmitPump()">💧 양수기 등록하기</button>
+        </div>
+
+        <div class="section-head" style="padding:0 0 8px;"><h2>등록된 양수기</h2><span class="meta" id="pumpListMeta"></span></div>
+        <div id="pumpList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== STATUS ===================== -->
+  <div class="view" id="view-status">
+    <div class="section">
+      <div class="section-head"><h2>작업현황</h2><span class="meta" id="statusCountMeta"></span></div>
+      <div class="filter-scroll" id="statusFilters"></div>
+    </div>
+    <div class="section"><div id="statusTaskList"></div></div>
+  </div>
+
+  <!-- ===================== BUILDING ===================== -->
+  <div class="view" id="view-building">
+    <div class="section">
+      <div class="section-head"><h2>동별 현황</h2><span class="meta">층별 작업 분포 확인</span></div>
+      <div class="bchip-scroll" id="buildingFilterChips"></div>
+      <div class="floor-filter-scroll" id="floorFilterChips"></div>
+    </div>
+    <div class="section"><div id="buildingTaskList"></div></div>
+  </div>
+
+  <!-- ===================== ADMIN (관리) ===================== -->
+  <div class="view" id="view-admin">
+    <div class="section">
+      <div id="adminLocked">
+        <div class="form-card" style="text-align:center;">
+          <h3 style="justify-content:center;">🔒 관리자 인증</h3>
+          <p class="hint" style="margin:0 0 14px;">전경사진 변경, Google Sheets 연동 등 관리 기능은 비밀번호 입력 후 사용할 수 있습니다.</p>
+          <input type="password" id="adminPwInput" placeholder="비밀번호" inputmode="numeric"
+            style="text-align:center;font-size:18px;letter-spacing:6px;padding:12px;border-radius:10px;border:1.5px solid var(--line);width:100%;box-sizing:border-box;"
+            onkeydown="if(event.key==='Enter') tryAdminLogin()">
+          <button class="submit-btn" style="margin-top:12px;" onclick="tryAdminLogin()">확인</button>
+        </div>
+      </div>
+
+      <div id="adminPanel" style="display:none;">
+        <div class="form-card">
+          <h3>📷 전경사진 관리</h3>
+          <p class="hint" style="margin-top:0;">대시보드 배치도 사진을 변경하거나, 변경 전 사진으로 되돌릴 수 있습니다.</p>
+          <div class="map-actions" style="border:none;padding:0;">
+            <button type="button" class="map-action-btn" onclick="triggerSiteImageUpload()">📷 사진변경</button>
+            <button type="button" class="map-action-btn" onclick="deleteSiteImage()">🗑 삭제(이전 사진)</button>
+          </div>
+        </div>
+
+        <div class="form-card">
+          <h3>🔗 Google Sheets 연동</h3>
+          <p class="hint" style="margin-top:0;">설정하면 작업/양수기 데이터가 구글 스프레드시트와 자동 동기화됩니다. 비워두면 이 기기에만 저장됩니다.</p>
+          <div class="field"><label>GAS 웹앱 URL</label>
+            <input type="text" id="gasUrlInput" placeholder="https://script.google.com/macros/s/xxxx/exec"></div>
+          <div class="field"><label>구글시트 바로가기 URL (선택)</label>
+            <input type="text" id="sheetUrlInput" placeholder="https://docs.google.com/spreadsheets/d/xxxx/edit"></div>
+          <button class="submit-btn" onclick="saveSettings()">저장 후 동기화</button>
+          <button class="map-action-btn" style="width:100%;margin-top:10px;padding:11px;" onclick="openSheetLink()">📄 구글시트 열기</button>
+          <p class="hint" style="text-align:center;margin:10px 0 0;">연동 상태: <b id="syncStatus">미설정</b></p>
+        </div>
+
+        <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-12 22:26 UTC</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <button class="nav-btn active" data-view="dashboard" onclick="switchView('dashboard')"><span class="nic">🏗️</span><span class="nlb">대시보드</span></button>
+    <button class="nav-btn" data-view="register" onclick="switchView('register')"><span class="nic">📝</span><span class="nlb">작업등록</span></button>
+    <button class="nav-btn" data-view="status" onclick="switchView('status')"><span class="nic">📋</span><span class="nlb">작업현황</span></button>
+    <button class="nav-btn" data-view="building" onclick="switchView('building')"><span class="nic">🏢</span><span class="nlb">동별보기</span></button>
+    <button class="nav-btn" data-view="admin" onclick="switchView('admin')"><span class="nic">🔒</span><span class="nlb">관리</span></button>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- Task detail sheet -->
+  <div class="sheet" id="detailSheet">
+    <div class="sheet-inner" style="position:relative;">
+      <button class="detail-close" onclick="closeDetail()">✕</button>
+      <div id="detailBody"></div>
+    </div>
+  </div>
+
+  <!-- Image lightbox -->
+  <div class="sheet lightbox-sheet" id="imageLightboxSheet">
+    <div class="lightbox-inner">
+      <button class="lightbox-close" onclick="closeImageLightbox()">✕</button>
+      <div class="lightbox-scroll" id="lightboxScroll">
+        <img id="lightboxImg" class="lightbox-img" src="" alt="전경사진 확대보기" onclick="toggleLightboxZoom()">
+      </div>
+      <div class="lightbox-hint">이미지를 탭하면 확대/축소됩니다</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* =========================================================
+   CONSTANTS
+========================================================= */
+const BUILDINGS = [
+  {name:'101동',x:82.7,y:67.8},{name:'102동',x:86.7,y:49.3},{name:'103동',x:89.7,y:27.6},
+  {name:'104동',x:67.7,y:69.6},{name:'105동',x:70.7,y:46.3},{name:'106동',x:76.2,y:24.5},
+  {name:'107동',x:53.7,y:69.6},{name:'108동',x:56.7,y:46.3},{name:'109동',x:62.2,y:21.0},
+  {name:'110동',x:42.2,y:41.6},{name:'111동',x:45.2,y:21.0},{name:'112동',x:24.7,y:79.5},
+  {name:'113동',x:24.7,y:59.4},{name:'114동',x:27.7,y:41.6},{name:'115동',x:31.3,y:21.0},
+  {name:'116동',x:11.7,y:80.4},{name:'117동',x:12.7,y:60.7},{name:'118동',x:15.7,y:40.7},
+  {name:'119동',x:17.2,y:21.0}
+];
+const BUILDING_NAMES = BUILDINGS.map(b=>b.name);
+function buildingPos(name){ return BUILDINGS.find(b=>b.name===name) || {x:50,y:50}; }
+
+const FLOORS = ['지하2층','지하1층',...Array.from({length:30},(_,i)=>(i+1)+'층'),'지붕층'];
+
+const RISK_ITEMS = ['타워크레인 설치/인상/해체','호이스트 설치/인상/해체','RCS 설치/인상/해체',
+  '시스템비계 및 동바리 설치/해체','옥탑 구조물 작업','로프,곤돌라 작업','제연덕트 설치 작업',
+  '밀폐공간 작업','기타(직접입력)','해당 없음'];
+
+const SUPERVISORS_HDC = ['김양선(토목)','김진수(전기)','박수환(건축)','박치호(건축)','신승묵(건축)',
+  '우승주(건축)','위광용(건축)','이민우(건축)','이성원(건축)','이정호(건축)','임규운(전기)',
+  '조석곤(기계)','채수혁(토목)','최성환(건축)'];
+
+const SAFETY_MANAGERS_HDC = ['서진수(안전총괄책임자)','노을(안전)','최교훈(안전관)','김대량(안전)',
+  '김백호(안전)','박두봉(안전)','이상재(안전)','임경찬(안전)','이상훈(안전)','편정훈(안전)'];
+
+const DEFAULT_SITE_IMAGE = './map.jpg';
+let currentSiteImage = DEFAULT_SITE_IMAGE;
+let previousSiteImage = DEFAULT_SITE_IMAGE;
+
+const COMPANY_COLORS = ['#2F5FDB','#E5484D','#1E9E5A','#D9822B','#7C5CDB','#0EA5A5','#C2410C','#4B5563',
+  '#0891B2','#BE185D','#65A30D','#9333EA'];
+let companyColorMap = {};
+let companyColorSeq = 0;
+function companyColor(name){
+  if(!companyColorMap[name]){
+    companyColorMap[name] = COMPANY_COLORS[companyColorSeq % COMPANY_COLORS.length];
+    companyColorSeq++;
+  }
+  return companyColorMap[name];
+}
+
+const STORAGE_TASKS = 'siteSafetyTasks_v2';
+const STORAGE_PUMPS = 'siteSafetyPumps_v2';
+const GAS_URL_KEY = 'siteSafetyGasUrl_v2';
+const SHEET_URL_KEY = 'siteSafetySheetUrl_v2';
+const SITE_IMG_CUR_KEY = 'siteSafetySiteImgCur_v1';
+const SITE_IMG_PREV_KEY = 'siteSafetySiteImgPrev_v1';
+
+let state = {
+  date: todayStr(),
+  view:'dashboard',
+  registerTab:'task',
+  statusFilter:'전체',
+  buildingFilter: BUILDING_NAMES[0],
+  floorFilter:'전체층',
+  formBuildingSel: [],
+  formFloorSel: [],
+  formRiskSel: [],
+  formRiskGrade: false,
+  formHazmat: false,
+  formWorkplan: false,
+  formGuard: true,
+  formEarly: false,
+  formCctv: false,
+  editingTaskId: null,
+  region: null,      // {x,y,w,h} in percent, confirmed
+  drawing: null,      // in-progress rect while drawing
+  pumpPos: null,      // {x,y} percent for new pump
+  tasks: [],
+  pumps: []
+};
+
+function todayStr(){ return ymdLocal(new Date()); }
+function ymdLocal(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function cuid(pfx){ return (pfx||'id')+'_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+/* =========================================================
+   SEED DATA
+========================================================= */
+function seedTasks(){
+  const t = state.date;
+  return [
+    {id:cuid('t'), date:t, company:'우설건설', taskName:'103동 주변 주차장 지하 1층 시스템 동바리 설치 작업',
+     workType:'비계', status:'진행중', buildings:['103동'], floors:['지하1층'], location:'주차장 지하 1층',
+     workers:7, timeStart:'08:00', timeEnd:'17:00', detail:'시스템 동바리 설치 및 고정 작업',
+     equipmentUsed:true, equipmentType:'시스템동바리, 크레인', highRisk:['시스템비계 및 동바리 설치/해체'], platform:2, cutTool:0,
+     riskGradeHigh:false, hazmat:false, director:'박민수', supervisorCo:'김낙진', supervisorHDC:'김승원(건축, 103/104동)', safetyManagerHDC:'서진수(안전총괄책임자)',
+     guardDeployed:true, guardName:'조영인', remarks:'',
+     hazardType:'협착', earlyStart:true, earlyStartTime:'06:00', exclusionZone:'5m 이격 통제', mobileCCTV:true,
+     region:{x:66,y:6,w:31,h:34}, createdAt:new Date().toISOString()},
+    {id:cuid('t'), date:t, company:'한빛엔지니어링', taskName:'109동 12층 RCS 인양 작업',
+     workType:'골조', status:'진행중', buildings:['109동'], floors:['12층'], location:'북측 코어',
+     workers:12, timeStart:'08:30', timeEnd:'18:00', detail:'RCS 시스템 인양 및 고정',
+     equipmentUsed:true, equipmentType:'타워크레인', highRisk:['RCS 설치/인상/해체'], platform:0, cutTool:0,
+     riskGradeHigh:true, hazmat:false, director:'이재현', supervisorCo:'정우성', supervisorHDC:'김승원(건축, 109동)', safetyManagerHDC:'최교훈(안전관)',
+     guardDeployed:true, guardName:'장서준', remarks:'',
+     hazardType:'낙하물', earlyStart:false, earlyStartTime:'', exclusionZone:'', mobileCCTV:false,
+     region:null, createdAt:new Date().toISOString()},
+    {id:cuid('t'), date:t, company:'대성이엔씨', taskName:'101동 지하 2층 배관 설비 작업',
+     workType:'설비', status:'예정', buildings:['101동'], floors:['지하2층'], location:'기계실 인근',
+     workers:5, timeStart:'09:00', timeEnd:'16:00', detail:'냉난방 배관 라인 설치',
+     equipmentUsed:false, equipmentType:'', highRisk:['해당 없음'], platform:0, cutTool:1,
+     riskGradeHigh:false, hazmat:false, director:'최정훈', supervisorCo:'박민수', supervisorHDC:'',
+     guardDeployed:false, guardName:'', remarks:'',
+     hazardType:'', earlyStart:false, earlyStartTime:'', exclusionZone:'', mobileCCTV:false,
+     region:null, createdAt:new Date().toISOString()}
+  ];
+}
+function seedPumps(){
+  const t = state.date;
+  return [
+    {id:cuid('p'), no:7, company:'우설건설', location:'101동 주변', diameter:2, count:1, status:'외부배수',
+     regDate:'2026-07-15', x:79,y:60},
+    {id:cuid('p'), no:10, company:'우설건설', location:'102동 주변', diameter:3, count:1, status:'가동중',
+     regDate:'2026-07-15', x:84,y:44}
+  ];
+}
+
+/* =========================================================
+   PERSISTENCE
+========================================================= */
+function loadData(){
+  try{ const raw = localStorage.getItem(STORAGE_TASKS);
+    state.tasks = raw ? JSON.parse(raw) : seedTasks();
+    if(!raw) saveTasks();
+  }catch(e){ state.tasks = seedTasks(); }
+  try{ const raw = localStorage.getItem(STORAGE_PUMPS);
+    state.pumps = raw ? JSON.parse(raw) : seedPumps();
+    if(!raw) savePumps();
+  }catch(e){ state.pumps = seedPumps(); }
+}
+function saveTasks(){ localStorage.setItem(STORAGE_TASKS, JSON.stringify(state.tasks)); }
+function savePumps(){ localStorage.setItem(STORAGE_PUMPS, JSON.stringify(state.pumps)); }
+function getGasUrl(){ return localStorage.getItem(GAS_URL_KEY) || ''; }
+
+/* =========================================================
+   INIT
+========================================================= */
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('dateInput').value = state.date;
+  document.getElementById('p_date').value = todayStr();
+  loadData();
+  loadSiteImage();
+  buildRegisterChips();
+  setupDrawMap();
+  setupPumpMap();
+  updateSyncStatus();
+  renderAll();
+  if(getGasUrl()) pullFromGAS(true);
+});
+
+function renderAll(){
+  renderDateLabel();
+  renderDashboard();
+  renderStatusFilters();
+  renderStatusList();
+  renderBuildingFilters();
+  renderBuildingList();
+  renderPumpList();
+}
+
+/* =========================================================
+   DATE
+========================================================= */
+function renderDateLabel(){
+  const d = new Date(state.date+'T00:00:00');
+  const wd = ['일','월','화','수','목','금','토'][d.getDay()];
+  document.getElementById('dateLabel').textContent = `${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()}. (${wd})`;
+}
+function onDateChange(v){ state.date = v; renderAll(); }
+function shiftDate(delta){
+  const d = new Date(state.date+'T00:00:00'); d.setDate(d.getDate()+delta);
+  state.date = ymdLocal(d);
+  document.getElementById('dateInput').value = state.date;
+  renderAll();
+}
+
+/* =========================================================
+   VIEW SWITCH
+========================================================= */
+function switchView(name){
+  state.view = name;
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.view===name));
+  if(name==='register'){ document.getElementById('f_date').value = state.date; }
+  if(name==='admin'){ adminUnlocked ? showAdminPanel() : showAdminLocked(); }
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+function switchRegisterTab(tab){
+  state.registerTab = tab;
+  document.getElementById('subtabTask').classList.toggle('on', tab==='task');
+  document.getElementById('subtabPump').classList.toggle('on', tab==='pump');
+  document.getElementById('registerTask').style.display = tab==='task' ? '' : 'none';
+  document.getElementById('registerPump').style.display = tab==='pump' ? '' : 'none';
+}
+
+/* =========================================================
+   HELPERS
+========================================================= */
+function tasksForDate(d){ return state.tasks.filter(t=>t.date===d); }
+function isHighRisk(t){ return (t.highRisk && t.highRisk.some(r=>r!=='해당 없음')) || t.riskGradeHigh; }
+function fmtBuildings(t){ return (t.buildings||[]).join(', ') || '-'; }
+function fmtFloors(t){ return (t.floors||[]).join(', '); }
+
+function taskCenter(t){
+  if(t.region) return {x:t.region.x + t.region.w/2, y:t.region.y + t.region.h/2};
+  if(t.buildings && t.buildings.length) return buildingPos(t.buildings[0]);
+  return {x:50,y:50};
+}
+
+/* =========================================================
+   DASHBOARD
+========================================================= */
+function renderDashboard(){
+  const list = tasksForDate(state.date);
+  const pumps = state.pumps;
+
+  const mapWrap = document.getElementById('mapWrap');
+  mapWrap.querySelectorAll('.pin,.region-box').forEach(el=>el.remove());
+
+  list.forEach(t=>{
+    if(t.region){
+      const rb = document.createElement('div');
+      rb.className = 'region-box';
+      rb.style.left = t.region.x+'%'; rb.style.top = t.region.y+'%';
+      rb.style.width = t.region.w+'%'; rb.style.height = t.region.h+'%';
+      mapWrap.appendChild(rb);
+    }
+    const c = taskCenter(t);
+    const pin = document.createElement('div');
+    pin.className = 'pin' + (isHighRisk(t) ? ' risk':'');
+    pin.style.left = c.x+'%'; pin.style.top = c.y+'%';
+    pin.innerHTML = `<div class="dot" style="background:${companyColor(t.company)}"><span>😊 ${t.workers||0}</span></div>`;
+    pin.onclick = ()=> openDetail(t.id);
+    mapWrap.appendChild(pin);
+  });
+
+  pumps.forEach(p=>{
+    const pin = document.createElement('div');
+    pin.className = 'pin pump';
+    pin.style.left = p.x+'%'; pin.style.top = p.y+'%';
+    const col = p.status==='가동중' ? '#1E9E5A' : (p.status==='외부배수' ? '#2F5FDB' : '#8B93A3');
+    pin.innerHTML = `<div class="dot" style="background:${col}"><span>P</span></div>`;
+    pin.title = `양수기 No.${p.no} · ${p.location}`;
+    pin.onclick = ()=> showToast(`💧 양수기 No.${p.no} · ${p.company} · ${p.location} (${p.status})`);
+    mapWrap.appendChild(pin);
+  });
+
+  document.getElementById('pinCountMeta').textContent = `작업 ${list.length} · 양수기 ${pumps.length}`;
+
+  const companies = [...new Set(list.map(t=>t.company))];
+  document.getElementById('mapLegend').innerHTML = companies.length ? companies.map(c=>`
+    <div class="legend-item"><span class="legend-swatch" style="background:${companyColor(c)}"></span>${c}</div>
+  `).join('') : `<div class="legend-item">등록된 작업이 없습니다</div>`;
+
+  const totalWorkers = list.reduce((s,t)=>s+(Number(t.workers)||0),0);
+  const totalTasks = list.length;
+  const highRiskCount = list.filter(isHighRisk).length;
+  const gradeCount = list.filter(t=>t.riskGradeHigh).length;
+  document.getElementById('summaryGrid').innerHTML = `
+    <div class="stat-card"><div class="num">${totalWorkers}</div><div class="lbl">출역인원(명)</div></div>
+    <div class="stat-card"><div class="num">${totalTasks}</div><div class="lbl">작업건수</div></div>
+    <div class="stat-card risk"><div class="num">${highRiskCount}</div><div class="lbl">고위험</div></div>
+    <div class="stat-card grade"><div class="num">${gradeCount}</div><div class="lbl">상등급</div></div>
+  `;
+
+  document.getElementById('taskCountMeta').textContent = `전체 (${totalTasks}건)`;
+  document.getElementById('dashboardTaskList').innerHTML = renderCompanyGroups(list);
+  bindTaskRowClicks();
+}
+
+/* =========================================================
+   COMPANY-GROUPED TASK LIST (dashboard style)
+========================================================= */
+function renderCompanyGroups(list){
+  if(!list.length){
+    return `<div class="empty-state"><div class="ic">📭</div><div class="t">등록된 작업이 없습니다</div><div class="s">작업등록 탭에서 새 작업을 추가해 보세요</div></div>`;
+  }
+  const byCompany = {};
+  list.forEach(t=>{ (byCompany[t.company] = byCompany[t.company]||[]).push(t); });
+  return Object.keys(byCompany).map(company=>{
+    const items = byCompany[company];
+    const hasRisk = items.some(isHighRisk);
+    return `
+    <div class="company-group ${hasRisk?'risky':''}">
+      <div class="company-head">
+        <span class="name">${hasRisk?'<span class=\"warn\">⚠</span>':''} ${company}</span>
+        <span class="cnt">${items.length}건</span>
+      </div>
+      ${items.map(t=>taskRowHTML(t)).join('')}
+    </div>`;
+  }).join('');
+}
+
+function taskRowHTML(t){
+  return `
+    <div class="task-row" data-id="${t.id}">
+      <div class="top">
+        <h4 class="name">${t.taskName}</h4>
+        <span class="badge status-${t.status}">${t.status}</span>
+      </div>
+      <div class="badges-row">
+        ${isHighRisk(t) ? '<span class="badge hi-risk">⚠ 고위험</span>' : ''}
+        ${t.riskGradeHigh ? '<span class="badge hi-grade">⊙ 상등급</span>' : ''}
+      </div>
+      <div class="task-meta">
+        <span>🏢 ${fmtBuildings(t)}${t.floors&&t.floors.length?(' '+fmtFloors(t)):''}</span>
+        <span>👥 ${t.workers||0}명</span>
+        <span>🕒 ${t.timeStart||'-'}~${t.timeEnd||'-'}</span>
+      </div>
+      ${t.guardDeployed && t.guardName ? `<div class="task-guard">🛡 감시단/안전전담자: ${t.guardName}</div>` : ''}
+    </div>`;
+}
+function bindTaskRowClicks(){
+  document.querySelectorAll('.task-row').forEach(row=>{
+    row.onclick = ()=> openDetail(row.dataset.id);
+  });
+}
+
+/* =========================================================
+   STATUS VIEW
+========================================================= */
+function renderStatusFilters(){
+  const filters = ['전체','예정','진행중','완료'];
+  document.getElementById('statusFilters').innerHTML = filters.map(f=>`
+    <button class="filter-chip ${state.statusFilter===f?'on':''}" onclick="setStatusFilter('${f}')">${f}</button>`).join('');
+}
+function setStatusFilter(f){ state.statusFilter=f; renderStatusFilters(); renderStatusList(); }
+function renderStatusList(){
+  let list = tasksForDate(state.date);
+  if(state.statusFilter!=='전체') list = list.filter(t=>t.status===state.statusFilter);
+  document.getElementById('statusCountMeta').textContent = `${list.length}건`;
+  document.getElementById('statusTaskList').innerHTML = renderCompanyGroups(list);
+  bindTaskRowClicks();
+}
+
+/* =========================================================
+   BUILDING VIEW
+========================================================= */
+function renderBuildingFilters(){
+  document.getElementById('buildingFilterChips').innerHTML = BUILDING_NAMES.map(b=>`
+    <button class="bchip ${state.buildingFilter===b?'on':''}" onclick="setBuildingFilter('${b}')">🏢 ${b}</button>`).join('');
+  const floors = ['전체층', ...FLOORS];
+  document.getElementById('floorFilterChips').innerHTML = floors.map(f=>`
+    <button class="ffchip ${state.floorFilter===f?'on':''}" onclick="setFloorFilter('${f}')">${f}</button>`).join('');
+}
+function setBuildingFilter(b){ state.buildingFilter=b; renderBuildingFilters(); renderBuildingList(); }
+function setFloorFilter(f){ state.floorFilter=f; renderBuildingFilters(); renderBuildingList(); }
+function renderBuildingList(){
+  let list = tasksForDate(state.date).filter(t=> (t.buildings||[]).includes(state.buildingFilter));
+  if(state.floorFilter!=='전체층'){
+    list = list.filter(t=> (t.floors||[]).includes(state.floorFilter));
+  }
+  document.getElementById('buildingTaskList').innerHTML = `
+    <div class="section-head" style="padding:2px 0 10px;"><h2>${state.buildingFilter} <span style="font-weight:600;color:var(--ink-400);">${state.floorFilter}</span></h2><span class="meta">${list.length}건</span></div>
+    ${list.length ? renderCompanyGroups(list) : `<div class="empty-state"><div class="ic">🏢</div><div class="t">해당 구역에 등록된 작업이 없습니다</div><div class="s">동/층 필터를 바꿔서 확인해 보세요</div></div>`}
+  `;
+  bindTaskRowClicks();
+}
+
+/* =========================================================
+   REGISTER FORM — chips / toggles
+========================================================= */
+function buildRegisterChips(){
+  document.getElementById('buildingChips').innerHTML = BUILDING_NAMES.map(b=>`
+    <button type="button" class="chip" data-b="${b}" onclick="toggleFormChip(this,'formBuildingSel','buildingSelLine')">${b}</button>`).join('');
+  document.getElementById('floorGrid').innerHTML = FLOORS.map(f=>`
+    <button type="button" class="floor-chip" data-f="${f}" onclick="toggleFormChip(this,'formFloorSel','floorSelLine')">${f}</button>`).join('');
+  document.getElementById('riskChips').innerHTML = RISK_ITEMS.map(r=>`
+    <button type="button" class="chip" data-r="${r}" onclick="toggleRiskChip(this)">${r}</button>`).join('');
+  document.getElementById('f_supervisorhdc').innerHTML = '<option value="">선택하세요</option>' +
+    SUPERVISORS_HDC.map(s=>`<option value="${s}">${s}</option>`).join('');
+  document.getElementById('f_safetymanager').innerHTML = '<option value="">선택하세요</option>' +
+    SAFETY_MANAGERS_HDC.map(s=>`<option value="${s}">${s}</option>`).join('');
+  document.getElementById('f_date').value = state.date;
+}
+function toggleFormChip(el, arrKey, lineId){
+  el.classList.toggle('on');
+  const val = el.dataset.b || el.dataset.f;
+  const arr = state[arrKey];
+  const idx = arr.indexOf(val);
+  if(idx>-1) arr.splice(idx,1); else arr.push(val);
+  document.getElementById(lineId).textContent = '선택: ' + (arr.length ? arr.join(', ') : '없음');
+}
+function toggleRiskChip(el){
+  const val = el.dataset.r;
+  if(val==='해당 없음'){
+    document.querySelectorAll('#riskChips .chip').forEach(c=>c.classList.remove('on','risk-on'));
+    el.classList.add('on');
+    state.formRiskSel = ['해당 없음'];
+    document.getElementById('f_risk_custom').style.display='none';
+    return;
+  }
+  const noneChip = [...document.querySelectorAll('#riskChips .chip')].find(c=>c.dataset.r==='해당 없음');
+  noneChip.classList.remove('on');
+  const idx = state.formRiskSel.indexOf('해당 없음');
+  if(idx>-1) state.formRiskSel.splice(idx,1);
+
+  el.classList.toggle('on'); el.classList.toggle('risk-on');
+  const i2 = state.formRiskSel.indexOf(val);
+  if(i2>-1) state.formRiskSel.splice(i2,1); else state.formRiskSel.push(val);
+
+  document.getElementById('f_risk_custom').style.display =
+    state.formRiskSel.includes('기타(직접입력)') ? '' : 'none';
+}
+function onWorktypeChange(){
+  const v = document.getElementById('f_worktype').value;
+  document.getElementById('f_worktype_custom').style.display = v==='직접입력' ? '' : 'none';
+}
+function onEquipmentToggle(){
+  const checked = document.getElementById('f_equipment').checked;
+  const input = document.getElementById('f_equipment_type');
+  input.style.display = checked ? '' : 'none';
+  if(!checked) input.value = '';
+}
+function setToggle(key, val){
+  if(key==='riskgrade'){
+    state.formRiskGrade = val;
+    document.getElementById('btn_riskgrade_o').className = 'toggle-btn' + (val?' on-o':'');
+    document.getElementById('btn_riskgrade_x').className = 'toggle-btn' + (!val?' on-x':'');
+  } else if(key==='hazmat'){
+    state.formHazmat = val;
+    document.getElementById('btn_hazmat_o').className = 'toggle-btn' + (val?' on-o':'');
+    document.getElementById('btn_hazmat_x').className = 'toggle-btn' + (!val?' on-x':'');
+  } else if(key==='workplan'){
+    state.formWorkplan = val;
+    document.getElementById('btn_workplan_o').className = 'toggle-btn' + (val?' on-o':'');
+    document.getElementById('btn_workplan_x').className = 'toggle-btn' + (!val?' on-x':'');
+  }
+}
+function setGuardToggle(val){
+  state.formGuard = val;
+  document.getElementById('btn_guard_o').className = 'toggle-btn' + (val?' on-o':'');
+  document.getElementById('btn_guard_x').className = 'toggle-btn' + (!val?' on-x':'');
+}
+function setEarlyToggle(val){
+  state.formEarly = val;
+  document.getElementById('btn_early_o').className = 'toggle-btn' + (val?' on-o':'');
+  document.getElementById('btn_early_x').className = 'toggle-btn' + (!val?' on-x':'');
+  document.getElementById('f_earlytime').style.display = val ? '' : 'none';
+}
+function setCctvToggle(val){
+  state.formCctv = val;
+  document.getElementById('btn_cctv_o').className = 'toggle-btn' + (val?' on-o':'');
+  document.getElementById('btn_cctv_x').className = 'toggle-btn' + (!val?' on-x':'');
+}
+
+/* =========================================================
+   DRAW REGION ON MAP (drag to define work area)
+========================================================= */
+function setupDrawMap(){
+  const wrap = document.getElementById('drawMapWrap');
+  let startPt = null;
+  let box = null;
+  let locked = false;
+
+  function pct(e){
+    const r = wrap.getBoundingClientRect();
+    const pt = e.touches ? e.touches[0] : e;
+    let x = (pt.clientX - r.left) / r.width * 100;
+    let y = (pt.clientY - r.top) / r.height * 100;
+    x = Math.max(0,Math.min(100,x)); y = Math.max(0,Math.min(100,y));
+    return {x,y};
+  }
+  function drawBox(p1,p2){
+    if(box) box.remove();
+    box = document.createElement('div');
+    box.className = 'draw-box';
+    const x = Math.min(p1.x,p2.x), y = Math.min(p1.y,p2.y);
+    const w = Math.abs(p2.x-p1.x), h = Math.abs(p2.y-p1.y);
+    box.style.left=x+'%'; box.style.top=y+'%'; box.style.width=w+'%'; box.style.height=h+'%';
+    box.innerHTML = '<span class="region-tag">미확정</span>';
+    wrap.appendChild(box);
+    state.drawing = {x,y,w,h};
+    document.getElementById('drawStatus').textContent = '구간이 지정되었습니다';
+  }
+  function onDown(e){
+    if(locked){ showToast('구간을 다시 지정하려면 먼저 초기화해주세요'); return; }
+    startPt = pct(e);
+  }
+  function onMove(e){
+    if(!startPt || locked) return;
+    e.preventDefault();
+    drawBox(startPt, pct(e));
+  }
+  function onUp(){ startPt = null; }
+
+  wrap.addEventListener('mousedown', onDown);
+  wrap.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onUp);
+  wrap.addEventListener('touchstart', onDown, {passive:true});
+  wrap.addEventListener('touchmove', onMove, {passive:false});
+  window.addEventListener('touchend', onUp);
+
+  window._clearDrawBox = ()=>{ if(box){ box.remove(); box=null; } locked = false; };
+  window._confirmDrawBox = ()=>{
+    if(box){ box.classList.add('confirmed'); box.querySelector('.region-tag').textContent='확정'; locked = true; }
+  };
+  window._setDrawBox = (region)=>{
+    if(box) box.remove();
+    box = document.createElement('div');
+    box.className = 'draw-box confirmed';
+    box.style.left=region.x+'%'; box.style.top=region.y+'%';
+    box.style.width=region.w+'%'; box.style.height=region.h+'%';
+    box.innerHTML = '<span class="region-tag">확정</span>';
+    wrap.appendChild(box);
+    state.drawing = {...region};
+    locked = true;
+  };
+}
+function clearRegion(){
+  state.region = null; state.drawing = null;
+  window._clearDrawBox && window._clearDrawBox();
+  document.getElementById('drawStatus').textContent = '구간 미지정';
+}
+function confirmRegion(){
+  if(!state.drawing){ showToast('먼저 지도를 드래그해 구간을 지정하세요'); return; }
+  state.region = {...state.drawing};
+  window._confirmDrawBox && window._confirmDrawBox();
+  document.getElementById('drawStatus').textContent = '✓ 작업구간 확정됨 (수정하려면 초기화)';
+  showToast('작업구간이 확정되었습니다. 삭제 전까지 유지됩니다');
+}
+
+/* =========================================================
+   PUMP MAP (tap to place)
+========================================================= */
+function setupPumpMap(){
+  const wrap = document.getElementById('pumpMapWrap');
+  wrap.addEventListener('click', (e)=>{
+    const r = wrap.getBoundingClientRect();
+    const x = Math.max(0,Math.min(100,(e.clientX-r.left)/r.width*100));
+    const y = Math.max(0,Math.min(100,(e.clientY-r.top)/r.height*100));
+    state.pumpPos = {x,y};
+    wrap.querySelectorAll('.pin').forEach(p=>p.remove());
+    const pin = document.createElement('div');
+    pin.className = 'pin pump';
+    pin.style.left = x+'%'; pin.style.top = y+'%';
+    pin.innerHTML = `<div class="dot" style="background:#2F5FDB"><span>P</span></div>`;
+    wrap.appendChild(pin);
+    document.getElementById('pumpPosStatus').textContent = `위치 지정됨 (${x.toFixed(1)}%, ${y.toFixed(1)}%)`;
+  });
+}
+
+/* =========================================================
+   SUBMIT: TASK
+========================================================= */
+function collectFormTaskFields(){
+  const worktype = document.getElementById('f_worktype').value;
+  const worktypeFinal = worktype==='직접입력' ? (document.getElementById('f_worktype_custom').value.trim()||'기타') : worktype;
+  const riskSel = [...state.formRiskSel];
+  if(riskSel.includes('기타(직접입력)')){
+    const custom = document.getElementById('f_risk_custom').value.trim();
+    if(custom){ riskSel[riskSel.indexOf('기타(직접입력)')] = custom; }
+  }
+  return {
+    date: document.getElementById('f_date').value || state.date,
+    company: document.getElementById('f_company').value.trim(),
+    taskName: document.getElementById('f_taskname').value.trim(),
+    workType: worktypeFinal,
+    status: document.getElementById('f_status').value,
+    buildings: [...state.formBuildingSel],
+    floors: [...state.formFloorSel],
+    location: document.getElementById('f_location').value.trim(),
+    workers: Number(document.getElementById('f_workers').value)||0,
+    timeStart: document.getElementById('f_timestart').value,
+    timeEnd: document.getElementById('f_timeend').value,
+    detail: document.getElementById('f_detail').value.trim(),
+    equipmentUsed: document.getElementById('f_equipment').checked,
+    equipmentType: document.getElementById('f_equipment').checked ? document.getElementById('f_equipment_type').value.trim() : '',
+    highRisk: riskSel,
+    platform: Number(document.getElementById('f_platform').value)||0,
+    cutTool: Number(document.getElementById('f_cuttool').value)||0,
+    riskGradeHigh: state.formRiskGrade,
+    hazmat: state.formHazmat,
+    workPlanRequired: state.formWorkplan,
+    director: document.getElementById('f_director').value.trim(),
+    supervisorCo: document.getElementById('f_supervisorco').value.trim(),
+    supervisorHDC: document.getElementById('f_supervisorhdc').value,
+    safetyManagerHDC: document.getElementById('f_safetymanager').value,
+    guardDeployed: state.formGuard,
+    guardName: document.getElementById('f_guardname').value.trim(),
+    remarks: document.getElementById('f_remarks').value.trim(),
+    hazardType: document.getElementById('f_hazardtype').value.trim(),
+    earlyStart: state.formEarly,
+    earlyStartTime: state.formEarly ? document.getElementById('f_earlytime').value : '',
+    exclusionZone: document.getElementById('f_exclusionzone').value.trim(),
+    mobileCCTV: state.formCctv,
+    region: state.region ? {...state.region} : null
+  };
+}
+
+function resetTaskForm(){
+  document.getElementById('taskForm').reset();
+  state.formBuildingSel=[]; state.formFloorSel=[]; state.formRiskSel=[];
+  state.formRiskGrade=false; state.formHazmat=false; state.formWorkplan=false; state.formGuard=true;
+  state.formEarly=false; state.formCctv=false;
+  state.region=null; state.drawing=null;
+  buildRegisterChips();
+  clearRegion();
+  setToggle('riskgrade', false); setToggle('hazmat', false); setToggle('workplan', false); setGuardToggle(true);
+  setEarlyToggle(false); setCctvToggle(false);
+  document.getElementById('f_status').value='진행중';
+  document.getElementById('f_timestart').value='07:00';
+  document.getElementById('f_timeend').value='16:00';
+  document.getElementById('f_worktype_custom').style.display='none';
+  document.getElementById('f_risk_custom').style.display='none';
+  document.getElementById('f_equipment_type').style.display='none';
+  document.getElementById('f_date').value = state.date;
+  state.editingTaskId = null;
+  document.getElementById('submitBtn').textContent = '✓ 작업 등록하기';
+}
+
+function handleSubmitTask(e){
+  e.preventDefault();
+  const fields = collectFormTaskFields();
+
+  if(!fields.company || !fields.taskName){ showToast('협력업체명과 작업명을 입력해 주세요'); return; }
+  if(!fields.buildings.length){ showToast('동을 최소 1개 이상 선택해 주세요'); return; }
+
+  if(state.editingTaskId){
+    const idx = state.tasks.findIndex(x=>x.id===state.editingTaskId);
+    if(idx>-1){
+      const merged = { ...state.tasks[idx], ...fields };
+      state.tasks[idx] = merged;
+      saveTasks();
+      pushToGAS('updateTask', merged);
+      state.date = merged.date;
+      showToast('✓ 작업이 수정되었습니다');
+    }
+    resetTaskForm();
+    document.getElementById('dateInput').value = state.date;
+    renderAll();
+    switchView('dashboard');
+    return;
+  }
+
+  const task = { id: cuid('t'), ...fields, createdAt: new Date().toISOString() };
+  state.tasks.push(task);
+  saveTasks();
+  pushToGAS('addTask', task);
+
+  const savedDate = task.date;
+  resetTaskForm();
+  showToast('✓ 작업이 등록되었습니다');
+  state.date = savedDate;
+  document.getElementById('dateInput').value = state.date;
+  renderAll();
+  switchView('dashboard');
+}
+
+/* =========================================================
+   SUBMIT: PUMP
+========================================================= */
+function handleSubmitPump(){
+  const company = document.getElementById('p_company').value.trim();
+  const location = document.getElementById('p_location').value.trim();
+  if(!company || !location){ showToast('업체명과 위치를 입력해 주세요'); return; }
+  if(!state.pumpPos){ showToast('배치도를 터치해 위치를 지정해 주세요'); return; }
+
+  const nextNo = state.pumps.length ? Math.max(...state.pumps.map(p=>p.no))+1 : 1;
+  const pump = {
+    id: cuid('p'), no: nextNo, company, location,
+    diameter: Number(document.getElementById('p_diameter').value)||0,
+    count: Number(document.getElementById('p_count').value)||1,
+    status: document.getElementById('p_status').value,
+    regDate: document.getElementById('p_date').value || todayStr(),
+    x: state.pumpPos.x, y: state.pumpPos.y
+  };
+  state.pumps.push(pump);
+  savePumps();
+  pushToGAS('addPump', pump);
+
+  document.getElementById('p_company').value='';
+  document.getElementById('p_location').value='';
+  document.getElementById('p_diameter').value='';
+  document.getElementById('p_count').value='1';
+  state.pumpPos = null;
+  document.getElementById('pumpPosStatus').textContent = '위치 미지정';
+  document.getElementById('pumpMapWrap').querySelectorAll('.pin').forEach(p=>p.remove());
+
+  showToast('✓ 양수기가 등록되었습니다');
+  renderAll();
+}
+function deletePump(id){
+  state.pumps = state.pumps.filter(p=>p.id!==id);
+  savePumps();
+  pushToGAS('deletePump', {id});
+  renderPumpList();
+  renderDashboard();
+  showToast('양수기가 삭제되었습니다');
+}
+function renderPumpList(){
+  document.getElementById('pumpListMeta').textContent = `${state.pumps.length}대`;
+  const el = document.getElementById('pumpList');
+  if(!el) return;
+  if(!state.pumps.length){
+    el.innerHTML = `<div class="empty-state"><div class="ic">💧</div><div class="t">등록된 양수기가 없습니다</div></div>`;
+    return;
+  }
+  el.innerHTML = state.pumps.map(p=>`
+    <div class="pump-card">
+      <div class="pump-top"><span class="no">양수기 No.${p.no}</span><span class="st st-${p.status}">${p.status}</span></div>
+      <h4 class="pump-name">💧 ${p.company}</h4>
+      <div class="pump-meta">
+        <span>📍 ${p.location}</span>
+        <span>📏 ${p.diameter}인치 × ${p.count}대</span>
+        <span>📅 ${p.regDate}</span>
+      </div>
+      <div class="pump-actions">
+        <button class="del" onclick="deletePump('${p.id}')">삭제</button>
+      </div>
+    </div>`).join('');
+}
+
+/* =========================================================
+   TASK DETAIL SHEET
+========================================================= */
+function openDetail(id){
+  const t = state.tasks.find(x=>x.id===id);
+  if(!t) return;
+  const risky = isHighRisk(t);
+  document.getElementById('detailBody').innerHTML = `
+    <div class="detail-company">${t.company}</div>
+    <h3 class="detail-title">${t.taskName}</h3>
+    <div class="status-edit-row" id="statusEditRow">
+      ${['예정','진행중','완료'].map(s=>`
+        <button type="button" class="status-edit-btn status-${s} ${t.status===s?'on':''}" onclick="changeTaskStatus('${t.id}','${s}')">${s}</button>
+      `).join('')}
+    </div>
+
+    <div class="detail-grid">
+      <div class="detail-cell"><div class="k">📅 작업일</div><div class="v">${t.date}</div></div>
+      <div class="detail-cell"><div class="k">🕒 시간</div><div class="v">${t.timeStart}~${t.timeEnd}</div></div>
+      <div class="detail-cell"><div class="k">👥 인원</div><div class="v">${t.workers}명</div></div>
+      <div class="detail-cell"><div class="k">🏢 위치</div><div class="v">${fmtBuildings(t)} ${fmtFloors(t)}</div></div>
+    </div>
+
+    ${risky ? `<div class="detail-banner"><div class="t">⚠ 고위험 작업</div>
+      <div class="s">${t.highRisk.filter(r=>r!=='해당 없음').join(', ')||'위험성평가 상등급'}</div></div>` : ''}
+
+    ${t.detail ? `<div class="detail-info"><div class="k">작업 내용</div><div class="v">${t.detail}</div></div>` : ''}
+    ${t.equipmentUsed ? `<div class="detail-info"><div class="k">🔧 사용 장비</div><div class="v">${t.equipmentType||'미기재'}</div></div>` : ''}
+    ${t.director ? `<div class="detail-info"><div class="k">작업지휘자</div><div class="v">${t.director}</div></div>` : ''}
+    ${t.supervisorCo ? `<div class="detail-info"><div class="k">관리감독자 (협력사)</div><div class="v">${t.supervisorCo}</div></div>` : ''}
+    ${t.supervisorHDC ? `<div class="detail-info"><div class="k">관리감독자 (HDC)</div><div class="v">${t.supervisorHDC}</div></div>` : ''}
+    ${t.safetyManagerHDC ? `<div class="detail-info"><div class="k">안전관리자 (HDC)</div><div class="v">${t.safetyManagerHDC}</div></div>` : ''}
+    ${t.guardDeployed && t.guardName ? `<div class="detail-guard"><div class="k">감시단 / 안전전담자</div><div class="v">${t.guardName}</div></div>` : ''}
+    ${t.workPlanRequired ? `<div class="detail-info"><div class="k">작업계획서/사전작업허가서(P.T.W)</div><div class="v">해당</div></div>` : ''}
+    ${t.hazardType ? `<div class="detail-info"><div class="k">재해유형</div><div class="v">${t.hazardType}</div></div>` : ''}
+    ${t.earlyStart ? `<div class="detail-info"><div class="k">조출여부</div><div class="v">조출 (${t.earlyStartTime||''})</div></div>` : ''}
+    ${t.exclusionZone ? `<div class="detail-info"><div class="k">작업제외구역</div><div class="v">${t.exclusionZone}</div></div>` : ''}
+    ${t.mobileCCTV ? `<div class="detail-info"><div class="k">이동식 CCTV</div><div class="v">설치</div></div>` : ''}
+    ${t.remarks ? `<div class="detail-info"><div class="k">비고</div><div class="v">${t.remarks}</div></div>` : ''}
+
+    <div class="detail-actions">
+      <button onclick="editTask('${t.id}')">✎ 수정</button>
+      <button class="danger" onclick="deleteTask('${t.id}')">🗑 삭제</button>
+      <button class="primary" onclick="closeDetail()">확인</button>
+    </div>
+
+    <div class="detail-map-title">도면 위치</div>
+    <div class="detail-map" id="detailMap">
+      <img src="${currentSiteImage}" alt="배치도">
+      ${t.region ? `<div class="region-box" style="left:${t.region.x}%;top:${t.region.y}%;width:${t.region.w}%;height:${t.region.h}%;"></div>` : ''}
+    </div>
+  `;
+  document.getElementById('detailMap').style.position = 'relative';
+  document.getElementById('detailSheet').classList.add('show');
+}
+function closeDetail(){ document.getElementById('detailSheet').classList.remove('show'); }
+function changeTaskStatus(id, status){
+  const t = state.tasks.find(x=>x.id===id);
+  if(!t) return;
+  if(t.status === status) return;
+  t.status = status;
+  saveTasks();
+  pushToGAS('updateTask', t);
+  document.querySelectorAll('#statusEditRow .status-edit-btn').forEach(b=>{
+    b.classList.toggle('on', b.textContent.trim()===status);
+  });
+  renderAll();
+  showToast(`✓ 상태가 "${status}"(으)로 변경되었습니다`);
+}
+function deleteTask(id){
+  state.tasks = state.tasks.filter(t=>t.id!==id);
+  saveTasks();
+  pushToGAS('deleteTask', {id});
+  closeDetail();
+  renderAll();
+  showToast('작업이 삭제되었습니다');
+}
+function editTask(id){
+  const t = state.tasks.find(x=>x.id===id);
+  if(!t) return;
+  closeDetail();
+  populateFormForEdit(t);
+  switchView('register');
+  switchRegisterTab('task');
+  showToast('내용을 수정한 뒤 "수정 완료"를 눌러주세요');
+}
+function populateFormForEdit(t){
+  state.editingTaskId = t.id;
+
+  document.getElementById('f_date').value = t.date;
+  document.getElementById('f_company').value = t.company;
+  document.getElementById('f_taskname').value = t.taskName;
+
+  const wtSel = document.getElementById('f_worktype');
+  const knownTypes = [...wtSel.options].map(o=>o.value).filter(v=>v!=='직접입력');
+  if(knownTypes.includes(t.workType)){
+    wtSel.value = t.workType;
+    document.getElementById('f_worktype_custom').style.display = 'none';
+  } else {
+    wtSel.value = '직접입력';
+    document.getElementById('f_worktype_custom').style.display = '';
+    document.getElementById('f_worktype_custom').value = t.workType || '';
+  }
+
+  document.getElementById('f_status').value = t.status;
+
+  state.formBuildingSel = [...(t.buildings||[])];
+  document.querySelectorAll('#buildingChips .chip').forEach(el=>{
+    el.classList.toggle('on', state.formBuildingSel.includes(el.dataset.b));
+  });
+  document.getElementById('buildingSelLine').textContent = '선택: ' + (state.formBuildingSel.length ? state.formBuildingSel.join(', ') : '없음');
+
+  state.formFloorSel = [...(t.floors||[])];
+  document.querySelectorAll('#floorGrid .floor-chip').forEach(el=>{
+    el.classList.toggle('on', state.formFloorSel.includes(el.dataset.f));
+  });
+  document.getElementById('floorSelLine').textContent = '선택: ' + (state.formFloorSel.length ? state.formFloorSel.join(', ') : '없음');
+
+  document.getElementById('f_location').value = t.location || '';
+  document.getElementById('f_workers').value = t.workers || '';
+  document.getElementById('f_timestart').value = t.timeStart || '07:00';
+  document.getElementById('f_timeend').value = t.timeEnd || '16:00';
+  document.getElementById('f_detail').value = t.detail || '';
+
+  document.getElementById('f_equipment').checked = !!t.equipmentUsed;
+  onEquipmentToggle();
+  document.getElementById('f_equipment_type').value = t.equipmentType || '';
+
+  state.formRiskSel = [...(t.highRisk||[])];
+  document.querySelectorAll('#riskChips .chip').forEach(el=>{
+    const on = state.formRiskSel.includes(el.dataset.r);
+    el.classList.toggle('on', on);
+    el.classList.toggle('risk-on', on && el.dataset.r!=='해당 없음');
+  });
+  document.getElementById('f_risk_custom').style.display = state.formRiskSel.includes('기타(직접입력)') ? '' : 'none';
+
+  document.getElementById('f_platform').value = t.platform || '';
+  document.getElementById('f_cuttool').value = t.cutTool || '';
+
+  setToggle('riskgrade', !!t.riskGradeHigh);
+  setToggle('hazmat', !!t.hazmat);
+  setToggle('workplan', !!t.workPlanRequired);
+
+  document.getElementById('f_director').value = t.director || '';
+  document.getElementById('f_supervisorco').value = t.supervisorCo || '';
+  document.getElementById('f_supervisorhdc').value = t.supervisorHDC || '';
+  document.getElementById('f_safetymanager').value = t.safetyManagerHDC || '';
+
+  setGuardToggle(!!t.guardDeployed);
+  document.getElementById('f_guardname').value = t.guardName || '';
+
+  document.getElementById('f_hazardtype').value = t.hazardType || '';
+  setEarlyToggle(!!t.earlyStart);
+  document.getElementById('f_earlytime').value = t.earlyStartTime || '06:00';
+  document.getElementById('f_exclusionzone').value = t.exclusionZone || '';
+  setCctvToggle(!!t.mobileCCTV);
+
+  document.getElementById('f_remarks').value = t.remarks || '';
+
+  if(t.region){
+    window._setDrawBox && window._setDrawBox(t.region);
+    state.region = {...t.region};
+    document.getElementById('drawStatus').textContent = '✓ 작업구간 확정됨 (수정하려면 초기화)';
+  } else {
+    window._clearDrawBox && window._clearDrawBox();
+    state.region = null; state.drawing = null;
+    document.getElementById('drawStatus').textContent = '구간 미지정';
+  }
+
+  document.getElementById('submitBtn').textContent = '✎ 수정 완료';
+}
+
+/* =========================================================
+   TOAST
+========================================================= */
+let toastTimer;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 2600);
+}
+
+/* =========================================================
+/* =========================================================
+   ADMIN (관리) — 비밀번호 게이트
+========================================================= */
+let adminUnlocked = false;
+const ADMIN_PASSWORD = '6942';
+function tryAdminLogin(){
+  const input = document.getElementById('adminPwInput');
+  if(input.value === ADMIN_PASSWORD){
+    adminUnlocked = true;
+    input.value = '';
+    showAdminPanel();
+    document.getElementById('gasUrlInput').value = getGasUrl();
+    document.getElementById('sheetUrlInput').value = getSheetUrl();
+    updateSyncStatus();
+  } else {
+    showToast('비밀번호가 올바르지 않습니다');
+    input.value = '';
+  }
+}
+function lockAdmin(){
+  adminUnlocked = false;
+  showAdminLocked();
+  switchView('dashboard');
+}
+function showAdminPanel(){
+  document.getElementById('adminLocked').style.display = 'none';
+  document.getElementById('adminPanel').style.display = '';
+}
+function showAdminLocked(){
+  document.getElementById('adminLocked').style.display = '';
+  document.getElementById('adminPanel').style.display = 'none';
+}
+
+/* =========================================================
+   GAS SYNC
+========================================================= */
+function updateSyncStatus(){
+  const el = document.getElementById('syncStatus');
+  if(el) el.textContent = getGasUrl() ? '연동됨' : '미설정 (로컬 저장)';
+}
+function getSheetUrl(){ return localStorage.getItem(SHEET_URL_KEY) || ''; }
+function saveSettings(){
+  const url = document.getElementById('gasUrlInput').value.trim();
+  const sheetUrl = document.getElementById('sheetUrlInput').value.trim();
+  if(url) localStorage.setItem(GAS_URL_KEY, url); else localStorage.removeItem(GAS_URL_KEY);
+  if(sheetUrl) localStorage.setItem(SHEET_URL_KEY, sheetUrl); else localStorage.removeItem(SHEET_URL_KEY);
+  updateSyncStatus();
+  if(url) pullFromGAS();
+  showToast(url ? 'Google Sheets 연동이 설정되었습니다' : '로컬 저장 모드로 전환되었습니다');
+}
+function openSheetLink(){
+  const url = getSheetUrl();
+  if(!url){ showToast('구글시트 바로가기 URL을 먼저 등록해주세요'); return; }
+  window.open(url, '_blank');
+}
+function pushToGAS(action, payload){
+  const url = getGasUrl();
+  if(!url) return;
+  fetch(url, {method:'POST', mode:'no-cors', redirect:'follow',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify({action, ...payload && (action.includes('Pump') ? {pump:payload} : {task:payload})})
+  }).catch(()=>{ showToast('⚠ 동기화 실패: 네트워크를 확인하세요'); });
+}
+
+/* GAS 웹앱은 fetch()로 GET 응답을 직접 읽으면 CORS에 막히므로 JSONP(스크립트 태그) 방식으로 불러온다 */
+let _jsonpSeq = 0;
+function jsonpRequest(url, timeoutMs){
+  return new Promise((resolve, reject)=>{
+    const cbName = '_gasCb_' + (_jsonpSeq++) + '_' + Date.now();
+    const script = document.createElement('script');
+    let done = false;
+    const cleanup = ()=>{
+      delete window[cbName];
+      if(script.parentNode) script.parentNode.removeChild(script);
+      clearTimeout(timer);
+    };
+    const timer = setTimeout(()=>{
+      if(!done){ done = true; cleanup(); reject(new Error('timeout')); }
+    }, timeoutMs || 12000);
+    window[cbName] = function(data){
+      if(done) return;
+      done = true; cleanup(); resolve(data);
+    };
+    script.onerror = function(){
+      if(done) return;
+      done = true; cleanup(); reject(new Error('load error'));
+    };
+    const sep = url.indexOf('?') > -1 ? '&' : '?';
+    script.src = url + sep + 'callback=' + cbName;
+    document.body.appendChild(script);
+  });
+}
+function pullFromGAS(silent){
+  const url = getGasUrl();
+  if(!url) return;
+  jsonpRequest(url + '?action=getAll').then(data=>{
+    if(Array.isArray(data.tasks)){ state.tasks = data.tasks; saveTasks(); }
+    if(Array.isArray(data.pumps)){ state.pumps = data.pumps; savePumps(); }
+    renderAll();
+    if(!silent) showToast('✓ Google Sheets에서 데이터를 불러왔습니다');
+  }).catch(()=>{ if(!silent) showToast('⚠ 불러오기 실패: URL 또는 배포 설정을 확인하세요'); });
+}
+
+/* =========================================================
+   SITE (전경) IMAGE — 변경 / 삭제(이전 사진 복원) / 확대보기
+========================================================= */
+function loadSiteImage(){
+  try{
+    const cur = localStorage.getItem(SITE_IMG_CUR_KEY);
+    const prev = localStorage.getItem(SITE_IMG_PREV_KEY);
+    if(cur) currentSiteImage = cur;
+    if(prev) previousSiteImage = prev;
+  }catch(e){}
+  applySiteImage();
+}
+function applySiteImage(){
+  document.querySelectorAll('.map-wrap img.bg').forEach(img=>{ img.src = currentSiteImage; });
+}
+function triggerSiteImageUpload(){
+  document.getElementById('siteImageInput').click();
+}
+function handleSiteImageChange(e){
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    const img = new Image();
+    img.onload = function(){
+      const maxW = 1600;
+      const scale = Math.min(1, maxW/img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width*scale);
+      canvas.height = Math.round(img.height*scale);
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+      previousSiteImage = currentSiteImage;
+      currentSiteImage = dataUrl;
+      try{
+        localStorage.setItem(SITE_IMG_PREV_KEY, previousSiteImage);
+        localStorage.setItem(SITE_IMG_CUR_KEY, currentSiteImage);
+      }catch(err){
+        showToast('⚠ 이미지 저장 공간이 부족합니다. 더 작은 사진을 사용해 주세요');
+      }
+      applySiteImage();
+      showToast('✓ 전경사진이 변경되었습니다');
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+function deleteSiteImage(){
+  if(!previousSiteImage || previousSiteImage === currentSiteImage){
+    showToast('되돌릴 이전 사진이 없습니다');
+    return;
+  }
+  currentSiteImage = previousSiteImage;
+  try{ localStorage.setItem(SITE_IMG_CUR_KEY, currentSiteImage); }catch(e){}
+  applySiteImage();
+  showToast('✓ 이전 사진으로 되돌렸습니다');
+}
+function openImageLightbox(){
+  const img = document.getElementById('lightboxImg');
+  img.src = currentSiteImage;
+  img.classList.remove('zoomed');
+  document.getElementById('imageLightboxSheet').classList.add('show');
+}
+function closeImageLightbox(){
+  document.getElementById('imageLightboxSheet').classList.remove('show');
+}
+function toggleLightboxZoom(){
+  document.getElementById('lightboxImg').classList.toggle('zoomed');
+}
+
+/* =========================================================
+   EXPORT: 일일 고위험 작업 현황 (구글시트로 내보내기)
+========================================================= */
+function riskLevel(t){
+  if(t.riskGradeHigh) return 'grade';       // 상등급 (적색)
+  if(isHighRisk(t)) return 'risk';          // 고위험 (노랑)
+  return 'normal';                          // 일상작업 (흰색)
+}
+function orderedForExport(list){
+  const byCompany = {};
+  const order = [];
+  list.forEach(t=>{
+    if(!byCompany[t.company]){ byCompany[t.company]=[]; order.push(t.company); }
+    byCompany[t.company].push(t);
+  });
+  const flat = [];
+  order.forEach(c=> flat.push(...byCompany[c]));
+  return flat;
+}
+function buildRiskNote(t){
+  const lines = [];
+  if(t.detail) lines.push(t.detail.trim());
+  const items = (t.highRisk||[]).filter(r=>r!=='해당 없음');
+  items.forEach((r,i)=> lines.push(`${i+1}. ${r} 관련 안전수칙 준수 및 작업 전 점검`));
+  if(t.riskGradeHigh) lines.push('※ 위험성평가 상등급 대상 — 작업 전 관리감독자 현장 점검 필수');
+  if(t.hazmat) lines.push('※ 유해위험물질 반입 — 취급수칙 준수 및 MSDS 비치');
+  if(t.exclusionZone) lines.push('※ 작업제외구역(이격거리): ' + t.exclusionZone);
+  if(t.remarks) lines.push('비고: ' + t.remarks);
+  return lines.join('\n');
+}
+function buildExportMapImage(list){
+  return new Promise((resolve)=>{
+    const srcImg = document.querySelector('#mapWrap img.bg');
+    const img = new Image();
+    img.onload = ()=>{
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img,0,0);
+      const r = Math.max(20, canvas.width*0.022);
+      list.forEach((t,i)=>{
+        const c = taskCenter(t);
+        const px = c.x/100*canvas.width, py = c.y/100*canvas.height;
+        const lvl = riskLevel(t);
+        const color = lvl==='grade' ? '#E5484D' : (lvl==='risk' ? '#F5A623' : '#2F6FE0');
+        ctx.beginPath(); ctx.arc(px,py,r,0,Math.PI*2);
+        ctx.fillStyle = color; ctx.fill();
+        ctx.lineWidth = Math.max(2,r*0.12); ctx.strokeStyle = '#fff'; ctx.stroke();
+        ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.round(r*1.05)}px sans-serif`;
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(String(i+1), px, py+r*0.06);
+      });
+      resolve(canvas.toDataURL('image/png').split(',')[1]);
+    };
+    img.crossOrigin = 'anonymous';
+    img.src = srcImg.src;
+  });
+}
+
+/* 참고 양식(현대산업개발 "일일 고위험 작업 현황")과 동일한 열 구성 */
+const EXPORT_HEADERS = ['No','협력사명','동','층','작업내용','장비/작업발판','재해유형',
+  '작업인원(명)','중점포인트','관리감독자(협력사)','관리감독자(안전관리자)','감시단 OR 안전전담자',
+  '작업계획서 OR 사전작업허가서(P.T.W)','조출·야간(시간)','이동식CCTV'];
+
+function buildExportRows(ordered){
+  return ordered.map((t,i)=>({
+    no: i+1,
+    company: t.company,
+    buildings: fmtBuildings(t),
+    floors: fmtFloors(t) || t.location || '-',
+    equipment: t.equipmentUsed ? (t.equipmentType || '사용') : '-',
+    hazardType: t.hazardType || '-',
+    workers: t.workers || 0,
+    riskNote: buildRiskNote(t) || '-',
+    supervisorCo: t.supervisorCo || '-',
+    supervisorHDC: t.safetyManagerHDC || '-',
+    guardName: t.guardDeployed ? (t.guardName || '배치') : '미배치',
+    workPlan: t.workPlanRequired ? 'O' : 'X',
+    earlyStart: t.earlyStart ? ('조출(' + (t.earlyStartTime||'') + ')') : 'X',
+    mobileCCTV: t.mobileCCTV ? 'O' : 'X',
+    taskContent: t.taskName,
+    riskGradeHigh: !!t.riskGradeHigh,
+    hasHighRisk: isHighRisk(t)
+  }));
+}
+
+async function exportToSheet(){
+  const url = getGasUrl();
+  if(!url){ showToast('먼저 관리 탭에서 GAS 연동 URL을 등록해주세요'); switchView('admin'); return; }
+  const list = tasksForDate(state.date);
+  if(!list.length){ showToast('내보낼 작업이 없습니다'); return; }
+
+  const btn = document.getElementById('exportSheetBtn');
+  if(btn){ btn.disabled = true; btn.textContent = '⏳ 내보내는 중...'; }
+
+  try{
+    const ordered = orderedForExport(list);
+    const mapImageBase64 = await buildExportMapImage(ordered);
+    const rows = buildExportRows(ordered);
+
+    await fetch(url, {method:'POST', mode:'no-cors', redirect:'follow',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({
+        action:'exportDailyReport',
+        date: state.date,
+        siteName: document.getElementById('siteTitle').textContent,
+        rows, mapImageBase64
+      })
+    });
+    showToast('✓ 내보내기를 요청했습니다. 잠시 후 구글시트에서 확인해주세요');
+  }catch(err){
+    showToast('⚠ 내보내기 실패: 네트워크를 확인하세요');
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = '📤 구글시트로 내보내기'; }
+  }
+}
+
+/* =========================================================
+   EXCEL(.xlsx) 다운로드 — 인터넷/구글 연동 없이 기기에 바로 저장
+========================================================= */
+async function exportToExcel(){
+  if(typeof ExcelJS === 'undefined'){
+    showToast('⚠ 엑셀 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인해주세요');
+    return;
+  }
+  const list = tasksForDate(state.date);
+  if(!list.length){ showToast('내보낼 작업이 없습니다'); return; }
+
+  const btn = document.getElementById('exportExcelBtn');
+  if(btn){ btn.disabled = true; btn.textContent = '⏳ 엑셀 생성 중...'; }
+
+  try{
+    const ordered = orderedForExport(list);
+    const rows = buildExportRows(ordered);
+    const mapImageBase64 = await buildExportMapImage(ordered);
+    const siteName = document.getElementById('siteTitle').textContent;
+    const colCount = EXPORT_HEADERS.length;
+
+    const wb = new ExcelJS.Workbook();
+    wb.creator = siteName;
+    const ws = wb.addWorksheet('일일현황_' + state.date, { views:[{state:'frozen', ySplit:5}] });
+
+    // 열 너비
+    const widths = [5,12,8,8,26,18,12,10,32,14,16,16,16,12,10];
+    ws.columns = widths.map(w=>({ width:w }));
+
+    // 제목 (K열부터는 결재란이 들어가므로 J열까지만 병합)
+    ws.mergeCells(1,1,1,10);
+    const titleCell = ws.getCell(1,1);
+    titleCell.value = '일일 고위험 작업 현황';
+    titleCell.font = { bold:true, size:16, name:'맑은 고딕' };
+    titleCell.alignment = { horizontal:'center', vertical:'middle' };
+    ws.getRow(1).height = 28;
+
+    // 현장명 / 작업일
+    ws.mergeCells(2,1,2,4);
+    ws.getCell(2,1).value = '현장명: ' + siteName;
+    ws.getCell(2,1).font = { bold:true, name:'맑은 고딕' };
+    ws.mergeCells(2,6,2,9);
+    ws.getCell(2,6).value = '작업일: ' + state.date;
+    ws.getCell(2,6).font = { bold:true, name:'맑은 고딕' };
+
+    // 범례 (한 줄씩 아래로: A열=색상 네모, B열=설명)
+    const thinBorder = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
+    ws.getCell(3,1).fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFF4CCCC'} };
+    ws.getCell(3,1).border = thinBorder;
+    ws.getCell(3,2).value = '상등급 작업(작업전 점검 대상)';
+
+    ws.getCell(4,1).fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFFFF2CC'} };
+    ws.getCell(4,1).border = thinBorder;
+    ws.getCell(4,2).value = '고위험 작업(관리자 및 SSK 수시점검)';
+
+    ws.getCell(5,1).fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFFFFFFF'} };
+    ws.getCell(5,1).border = thinBorder;
+    ws.getCell(5,2).value = '일상작업';
+
+    // 결재란 (K~O열: 담당 / 토목 / 건축 / 안전 / 현장소장)
+    const signOff = ['담당','토목','건축','안전','현장소장'];
+    signOff.forEach((label, idx)=>{
+      const col = 11 + idx; // K=11
+      const headerCell = ws.getCell(1, col);
+      headerCell.value = label;
+      headerCell.font = { bold:true, name:'맑은 고딕' };
+      headerCell.alignment = { horizontal:'center', vertical:'middle' };
+      headerCell.border = thinBorder;
+      headerCell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFEFEFEF'} };
+
+      ws.mergeCells(2, col, 5, col); // 서명란: 2~5행 병합된 빈 칸
+      const boxCell = ws.getCell(2, col);
+      boxCell.border = thinBorder;
+    });
+
+    // 헤더
+    const headerRowIdx = 7;
+    const headerRow = ws.getRow(headerRowIdx);
+    EXPORT_HEADERS.forEach((h,idx)=>{ headerRow.getCell(idx+1).value = h; });
+    headerRow.font = { bold:true, name:'맑은 고딕' };
+    headerRow.eachCell(c=>{
+      c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFEFEFEF'} };
+      c.alignment = { horizontal:'center', vertical:'middle', wrapText:true };
+      c.border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
+    });
+
+    // 데이터
+    rows.forEach((r,i)=>{
+      const rowIdx = headerRowIdx + 1 + i;
+      const values = [r.no, r.company, r.buildings, r.floors, r.taskContent, r.equipment,
+        r.hazardType, r.workers, r.riskNote, r.supervisorCo, r.supervisorHDC,
+        r.guardName, r.workPlan, r.earlyStart, r.mobileCCTV];
+      const row = ws.getRow(rowIdx);
+      values.forEach((v,idx)=>{ row.getCell(idx+1).value = v; });
+
+      let argb = 'FFFFFFFF';
+      if(r.riskGradeHigh) argb = 'FFF4CCCC';
+      else if(r.hasHighRisk) argb = 'FFFFF2CC';
+      row.eachCell({includeEmpty:true}, c=>{
+        c.fill = { type:'pattern', pattern:'solid', fgColor:{argb} };
+        c.alignment = { vertical:'top', wrapText:true };
+        c.border = { top:{style:'thin', color:{argb:'FFDDDDDD'}}, bottom:{style:'thin', color:{argb:'FFDDDDDD'}},
+          left:{style:'thin', color:{argb:'FFDDDDDD'}}, right:{style:'thin', color:{argb:'FFDDDDDD'}} };
+      });
+      row.getCell(1).alignment = { horizontal:'center', vertical:'top' };
+    });
+
+    // 위치도 이미지
+    if(mapImageBase64){
+      const imgRow = headerRowIdx + rows.length + 3;
+      ws.getCell(imgRow,1).value = '■ 작업 위치도 (번호: 표 No. 일치 / 🔴 상등급 🟠 고위험 🔵 일상)';
+      ws.getCell(imgRow,1).font = { bold:true, name:'맑은 고딕' };
+      const imgId = wb.addImage({ base64: 'data:image/png;base64,' + mapImageBase64, extension:'png' });
+      ws.addImage(imgId, {
+        tl: { col:0, row: imgRow },
+        ext: { width: 720, height: 720*572/1000 }
+      });
+    }
+
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `일일현황_${state.date}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+
+    showToast('✓ 엑셀 파일이 다운로드되었습니다');
+  }catch(err){
+    console.error(err);
+    showToast('⚠ 엑셀 생성 실패: ' + (err && err.message ? err.message : '알 수 없는 오류'));
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = '📥 엑셀 파일로 다운로드'; }
+  }
+}
+</script>
+</body>
+</html>
