@@ -1,0 +1,9 @@
+const firebaseConfig = {
+  apiKey: "AIzaSyDNNXP5TS48B_HUsldZS6wsk4hiz7Fut98",
+  authDomain: "safety-hdc-hakdong4.firebaseapp.com",
+  databaseURL: "https://safety-hdc-hakdong4-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "safety-hdc-hakdong4",
+  storageBucket: "safety-hdc-hakdong4.firebasestorage.app",
+  messagingSenderId: "1038141994542",
+  appId: "1:1038141994542:web:5c493bcb9b4f14d64d91bf"
+};
