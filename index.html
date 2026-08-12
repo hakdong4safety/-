@@ -39,8 +39,7 @@
   /* ===== Header ===== */
   .topbar{background:#fff; border-bottom:1px solid var(--line); padding:calc(14px + env(safe-area-inset-top)) 18px 14px;
     display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:15;}
-  .topbar .icon{width:44px;height:44px;border-radius:13px;background:var(--blue-600);
-    display:flex;align-items:center;justify-content:center;font-size:21px;flex-shrink:0;}
+  .topbar .icon{width:56px;height:auto;flex-shrink:0;object-fit:contain;}
   .topbar h1{margin:0;font-size:17px;font-weight:800;letter-spacing:-0.01em;}
   .topbar .sub{margin:1px 0 0;font-size:12px;color:var(--blue-600);font-weight:700;}
 
@@ -110,6 +109,7 @@
     background:var(--blue-100);color:var(--blue-700);font-size:13.5px;font-weight:800;font-family:inherit;}
   .export-btn:active{opacity:0.8;}
   .export-btn[disabled]{opacity:0.5;}
+  .export-btn.excel{border-color:var(--green);background:var(--green-bg);color:var(--green);margin-top:8px;}
 
   /* ===== Company group ===== */
   .company-group{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);
@@ -317,12 +317,13 @@
   .lightbox-hint{position:absolute;bottom:calc(20px + env(safe-area-inset-bottom));left:0;right:0;text-align:center;
     color:rgba(255,255,255,0.75);font-size:12px;font-weight:600;pointer-events:none;}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 </head>
 <body>
 <div id="app">
 
   <div class="topbar">
-    <div class="icon">👷</div>
+    <img class="icon" src="./logo.png" alt="로고">
     <div>
       <h1 id="siteTitle">광주 학동4구역 재개발정비사업</h1>
       <div class="sub">일일안전보건현황 관리시스템</div>
@@ -351,9 +352,7 @@
           <span class="meta" id="pinCountMeta"></span>
         </div>
         <div class="map-actions">
-          <button type="button" class="map-action-btn" onclick="triggerSiteImageUpload()">📷 사진변경</button>
-          <button type="button" class="map-action-btn" onclick="deleteSiteImage()">🗑 삭제</button>
-          <button type="button" class="map-action-btn" onclick="openImageLightbox()">↗ 확대보기</button>
+          <button type="button" class="map-action-btn" style="flex:none;width:100%;" onclick="openImageLightbox()">↗ 확대보기</button>
         </div>
         <input type="file" accept="image/*" id="siteImageInput" style="display:none" onchange="handleSiteImageChange(event)">
         <div class="map-wrap" id="mapWrap">
@@ -362,7 +361,7 @@
         <div class="map-legend" id="mapLegend"></div>
       </div>
       <div class="summary-grid" id="summaryGrid"></div>
-      <button class="export-btn" onclick="exportToSheet()">📤 일일 고위험 작업 현황 내보내기</button>
+      <button class="export-btn" id="exportExcelBtn" onclick="exportToExcel()">📤 일일 고위험 작업 현황 내보내기</button>
     </div>
 
     <div class="section">
@@ -447,6 +446,11 @@
               <input type="number" id="f_platform" min="0" placeholder="0"></div>
             <div class="field"><label>절단공구 수량</label><span class="hint2">그라인더, 고속절단기 포함</span>
               <input type="number" id="f_cuttool" min="0" placeholder="0"></div>
+            <div class="field"><label>작업계획서 또는 사전작업허가서(P.T.W)</label>
+              <div class="toggle-row">
+                <button type="button" class="toggle-btn" id="btn_workplan_o" onclick="setToggle('workplan',true)">해당 (O)</button>
+                <button type="button" class="toggle-btn on-x" id="btn_workplan_x" onclick="setToggle('workplan',false)">미해당 (X)</button>
+              </div></div>
             <div class="field"><label>위험성평가 상등급 해당 여부</label>
               <div class="toggle-row">
                 <button type="button" class="toggle-btn" id="btn_riskgrade_o" onclick="setToggle('riskgrade',true)">해당 (O)</button>
@@ -463,14 +467,14 @@
             <h3>책임자 · 감시단</h3>
             <div class="field"><label>작업지휘자</label><input type="text" id="f_director" placeholder="성명 입력"></div>
             <div class="field"><label>관리감독자 (협력사)</label><input type="text" id="f_supervisorco" placeholder="성명 입력"></div>
-            <div class="field"><label>관리감독자 (HDC)</label>
+            <div class="field"><label>관리감독자 (안전관리자)</label>
               <select id="f_supervisorhdc"><option value="">선택하세요</option></select></div>
-            <div class="field"><label>안전감시단 배치 여부</label>
+            <div class="field"><label>감시단 또는 안전전담자 배치 여부</label>
               <div class="toggle-row">
                 <button type="button" class="toggle-btn on-o" id="btn_guard_o" onclick="setGuardToggle(true)">배치</button>
                 <button type="button" class="toggle-btn" id="btn_guard_x" onclick="setGuardToggle(false)">미배치</button>
               </div>
-              <input type="text" id="f_guardname" placeholder="안전감시단 성명" style="margin-top:8px;"></div>
+              <input type="text" id="f_guardname" placeholder="감시단 또는 안전전담자 성명" style="margin-top:8px;"></div>
           </div>
 
           <div class="form-card">
@@ -510,7 +514,7 @@
             </div>
           </div>
 
-          <button type="submit" class="submit-btn">✓ 작업 등록하기</button>
+          <button type="submit" class="submit-btn" id="submitBtn">✓ 작업 등록하기</button>
         </form>
       </div>
 
@@ -562,12 +566,46 @@
     <div class="section"><div id="buildingTaskList"></div></div>
   </div>
 
-  <div class="section" style="padding-top:0;">
-    <div class="sync-bar">
-      <div class="txt">Google Sheets 연동: <b id="syncStatus">미설정</b></div>
-      <button class="sync-btn" onclick="openSettings()">⚙ 설정</button>
+  <!-- ===================== ADMIN (관리) ===================== -->
+  <div class="view" id="view-admin">
+    <div class="section">
+      <div id="adminLocked">
+        <div class="form-card" style="text-align:center;">
+          <h3 style="justify-content:center;">🔒 관리자 인증</h3>
+          <p class="hint" style="margin:0 0 14px;">전경사진 변경, Google Sheets 연동 등 관리 기능은 비밀번호 입력 후 사용할 수 있습니다.</p>
+          <input type="password" id="adminPwInput" placeholder="비밀번호" inputmode="numeric"
+            style="text-align:center;font-size:18px;letter-spacing:6px;padding:12px;border-radius:10px;border:1.5px solid var(--line);width:100%;box-sizing:border-box;"
+            onkeydown="if(event.key==='Enter') tryAdminLogin()">
+          <button class="submit-btn" style="margin-top:12px;" onclick="tryAdminLogin()">확인</button>
+        </div>
+      </div>
+
+      <div id="adminPanel" style="display:none;">
+        <div class="form-card">
+          <h3>📷 전경사진 관리</h3>
+          <p class="hint" style="margin-top:0;">대시보드 배치도 사진을 변경하거나, 변경 전 사진으로 되돌릴 수 있습니다.</p>
+          <div class="map-actions" style="border:none;padding:0;">
+            <button type="button" class="map-action-btn" onclick="triggerSiteImageUpload()">📷 사진변경</button>
+            <button type="button" class="map-action-btn" onclick="deleteSiteImage()">🗑 삭제(이전 사진)</button>
+          </div>
+        </div>
+
+        <div class="form-card">
+          <h3>🔗 Google Sheets 연동</h3>
+          <p class="hint" style="margin-top:0;">설정하면 작업/양수기 데이터가 구글 스프레드시트와 자동 동기화됩니다. 비워두면 이 기기에만 저장됩니다.</p>
+          <div class="field"><label>GAS 웹앱 URL</label>
+            <input type="text" id="gasUrlInput" placeholder="https://script.google.com/macros/s/xxxx/exec"></div>
+          <div class="field"><label>구글시트 바로가기 URL (선택)</label>
+            <input type="text" id="sheetUrlInput" placeholder="https://docs.google.com/spreadsheets/d/xxxx/edit"></div>
+          <button class="submit-btn" onclick="saveSettings()">저장 후 동기화</button>
+          <button class="map-action-btn" style="width:100%;margin-top:10px;padding:11px;" onclick="openSheetLink()">📄 구글시트 열기</button>
+          <p class="hint" style="text-align:center;margin:10px 0 0;">연동 상태: <b id="syncStatus">미설정</b></p>
+        </div>
+
+        <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-12 13:44 UTC</p>
+      </div>
     </div>
-    <div style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:-6px;">build 2026-08-12 11:58 UTC</div>
   </div>
 
   <div class="bottom-nav">
@@ -575,27 +613,10 @@
     <button class="nav-btn" data-view="register" onclick="switchView('register')"><span class="nic">📝</span><span class="nlb">작업등록</span></button>
     <button class="nav-btn" data-view="status" onclick="switchView('status')"><span class="nic">📋</span><span class="nlb">작업현황</span></button>
     <button class="nav-btn" data-view="building" onclick="switchView('building')"><span class="nic">🏢</span><span class="nlb">동별보기</span></button>
+    <button class="nav-btn" data-view="admin" onclick="switchView('admin')"><span class="nic">🔒</span><span class="nlb">관리</span></button>
   </div>
 
   <div class="toast" id="toast"></div>
-
-  <!-- Settings sheet -->
-  <div class="sheet" id="settingsSheet">
-    <div class="sheet-inner">
-      <h4>Google Apps Script 연동</h4>
-      <p class="desc">배포한 GAS 웹앱 URL을 입력하면 작업/양수기 데이터가 구글 스프레드시트와 동기화됩니다. 비워두면 이 기기에만(localStorage) 저장됩니다.</p>
-      <div class="field"><label>GAS 웹앱 URL</label>
-        <input type="text" id="gasUrlInput" placeholder="https://script.google.com/macros/s/xxxx/exec"></div>
-      <div class="field"><label>구글시트 바로가기 URL (선택)</label>
-        <input type="text" id="sheetUrlInput" placeholder="https://docs.google.com/spreadsheets/d/xxxx/edit"></div>
-      <div class="sheet-actions">
-        <button class="btn-secondary" onclick="closeSettings()">닫기</button>
-        <button class="btn-primary" onclick="saveSettings()">저장 후 동기화</button>
-      </div>
-      <button class="sync-btn" style="width:100%;margin-top:10px;" onclick="openSheetLink()">📄 구글시트 열기</button>
-      <div style="text-align:center;font-size:11px;color:var(--ink-400);font-weight:600;margin-top:10px;">현재 빌드: 2026-08-12 11:58 UTC</div>
-    </div>
-  </div>
 
   <!-- Task detail sheet -->
   <div class="sheet" id="detailSheet">
@@ -673,15 +694,16 @@ let state = {
   formRiskSel: [],
   formRiskGrade: false,
   formHazmat: false,
+  formWorkplan: false,
   formGuard: true,
   formEarly: false,
   formCctv: false,
+  editingTaskId: null,
   region: null,      // {x,y,w,h} in percent, confirmed
   drawing: null,      // in-progress rect while drawing
   pumpPos: null,      // {x,y} percent for new pump
   tasks: [],
-  pumps: [],
-  editingTaskId: null
+  pumps: []
 };
 
 function todayStr(){ return ymdLocal(new Date()); }
@@ -803,6 +825,7 @@ function switchView(name){
   document.getElementById('view-'+name).classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.view===name));
   if(name==='register'){ document.getElementById('f_date').value = state.date; }
+  if(name==='admin'){ adminUnlocked ? showAdminPanel() : showAdminLocked(); }
   window.scrollTo({top:0, behavior:'smooth'});
 }
 function switchRegisterTab(tab){
@@ -927,7 +950,7 @@ function taskRowHTML(t){
         <span>👥 ${t.workers||0}명</span>
         <span>🕒 ${t.timeStart||'-'}~${t.timeEnd||'-'}</span>
       </div>
-      ${t.guardDeployed && t.guardName ? `<div class="task-guard">🛡 안전감시단: ${t.guardName}</div>` : ''}
+      ${t.guardDeployed && t.guardName ? `<div class="task-guard">🛡 감시단/안전전담자: ${t.guardName}</div>` : ''}
     </div>`;
 }
 function bindTaskRowClicks(){
@@ -1031,7 +1054,6 @@ function onEquipmentToggle(){
   if(!checked) input.value = '';
 }
 function setToggle(key, val){
-  state['form'+key.charAt(0).toUpperCase()+key.slice(1).replace('grade','Grade')] = val;
   if(key==='riskgrade'){
     state.formRiskGrade = val;
     document.getElementById('btn_riskgrade_o').className = 'toggle-btn' + (val?' on-o':'');
@@ -1040,6 +1062,10 @@ function setToggle(key, val){
     state.formHazmat = val;
     document.getElementById('btn_hazmat_o').className = 'toggle-btn' + (val?' on-o':'');
     document.getElementById('btn_hazmat_x').className = 'toggle-btn' + (!val?' on-x':'');
+  } else if(key==='workplan'){
+    state.formWorkplan = val;
+    document.getElementById('btn_workplan_o').className = 'toggle-btn' + (val?' on-o':'');
+    document.getElementById('btn_workplan_x').className = 'toggle-btn' + (!val?' on-x':'');
   }
 }
 function setGuardToggle(val){
@@ -1110,6 +1136,17 @@ function setupDrawMap(){
   window._confirmDrawBox = ()=>{
     if(box){ box.classList.add('confirmed'); box.querySelector('.region-tag').textContent='확정'; locked = true; }
   };
+  window._setDrawBox = (region)=>{
+    if(box) box.remove();
+    box = document.createElement('div');
+    box.className = 'draw-box confirmed';
+    box.style.left=region.x+'%'; box.style.top=region.y+'%';
+    box.style.width=region.w+'%'; box.style.height=region.h+'%';
+    box.innerHTML = '<span class="region-tag">확정</span>';
+    wrap.appendChild(box);
+    state.drawing = {...region};
+    locked = true;
+  };
 }
 function clearRegion(){
   state.region = null; state.drawing = null;
@@ -1147,8 +1184,7 @@ function setupPumpMap(){
 /* =========================================================
    SUBMIT: TASK
 ========================================================= */
-function handleSubmitTask(e){
-  e.preventDefault();
+function collectFormTaskFields(){
   const worktype = document.getElementById('f_worktype').value;
   const worktypeFinal = worktype==='직접입력' ? (document.getElementById('f_worktype_custom').value.trim()||'기타') : worktype;
   const riskSel = [...state.formRiskSel];
@@ -1156,9 +1192,7 @@ function handleSubmitTask(e){
     const custom = document.getElementById('f_risk_custom').value.trim();
     if(custom){ riskSel[riskSel.indexOf('기타(직접입력)')] = custom; }
   }
-
-  const task = {
-    id: cuid('t'),
+  return {
     date: document.getElementById('f_date').value || state.date,
     company: document.getElementById('f_company').value.trim(),
     taskName: document.getElementById('f_taskname').value.trim(),
@@ -1178,9 +1212,10 @@ function handleSubmitTask(e){
     cutTool: Number(document.getElementById('f_cuttool').value)||0,
     riskGradeHigh: state.formRiskGrade,
     hazmat: state.formHazmat,
+    workPlanRequired: state.formWorkplan,
     director: document.getElementById('f_director').value.trim(),
     supervisorCo: document.getElementById('f_supervisorco').value.trim(),
-    supervisorHDC: document.getElementById('f_supervisorhdc').value.trim(),
+    supervisorHDC: document.getElementById('f_supervisorhdc').value,
     guardDeployed: state.formGuard,
     guardName: document.getElementById('f_guardname').value.trim(),
     remarks: document.getElementById('f_remarks').value.trim(),
@@ -1189,25 +1224,19 @@ function handleSubmitTask(e){
     earlyStartTime: state.formEarly ? document.getElementById('f_earlytime').value : '',
     exclusionZone: document.getElementById('f_exclusionzone').value.trim(),
     mobileCCTV: state.formCctv,
-    region: state.region ? {...state.region} : null,
-    createdAt: new Date().toISOString()
+    region: state.region ? {...state.region} : null
   };
+}
 
-  if(!task.company || !task.taskName){ showToast('협력업체명과 작업명을 입력해 주세요'); return; }
-  if(!task.buildings.length){ showToast('동을 최소 1개 이상 선택해 주세요'); return; }
-
-  state.tasks.push(task);
-  saveTasks();
-  pushToGAS('addTask', task);
-
-  e.target.reset();
+function resetTaskForm(){
+  document.getElementById('taskForm').reset();
   state.formBuildingSel=[]; state.formFloorSel=[]; state.formRiskSel=[];
-  state.formRiskGrade=false; state.formHazmat=false; state.formGuard=true;
+  state.formRiskGrade=false; state.formHazmat=false; state.formWorkplan=false; state.formGuard=true;
   state.formEarly=false; state.formCctv=false;
   state.region=null; state.drawing=null;
   buildRegisterChips();
   clearRegion();
-  setToggle('riskgrade', false); setToggle('hazmat', false); setGuardToggle(true);
+  setToggle('riskgrade', false); setToggle('hazmat', false); setToggle('workplan', false); setGuardToggle(true);
   setEarlyToggle(false); setCctvToggle(false);
   document.getElementById('f_status').value='진행중';
   document.getElementById('f_timestart').value='08:00';
@@ -1215,9 +1244,44 @@ function handleSubmitTask(e){
   document.getElementById('f_worktype_custom').style.display='none';
   document.getElementById('f_risk_custom').style.display='none';
   document.getElementById('f_equipment_type').style.display='none';
+  document.getElementById('f_date').value = state.date;
+  state.editingTaskId = null;
+  document.getElementById('submitBtn').textContent = '✓ 작업 등록하기';
+}
 
+function handleSubmitTask(e){
+  e.preventDefault();
+  const fields = collectFormTaskFields();
+
+  if(!fields.company || !fields.taskName){ showToast('협력업체명과 작업명을 입력해 주세요'); return; }
+  if(!fields.buildings.length){ showToast('동을 최소 1개 이상 선택해 주세요'); return; }
+
+  if(state.editingTaskId){
+    const idx = state.tasks.findIndex(x=>x.id===state.editingTaskId);
+    if(idx>-1){
+      const merged = { ...state.tasks[idx], ...fields };
+      state.tasks[idx] = merged;
+      saveTasks();
+      pushToGAS('updateTask', merged);
+      state.date = merged.date;
+      showToast('✓ 작업이 수정되었습니다');
+    }
+    resetTaskForm();
+    document.getElementById('dateInput').value = state.date;
+    renderAll();
+    switchView('dashboard');
+    return;
+  }
+
+  const task = { id: cuid('t'), ...fields, createdAt: new Date().toISOString() };
+  state.tasks.push(task);
+  saveTasks();
+  pushToGAS('addTask', task);
+
+  const savedDate = task.date;
+  resetTaskForm();
   showToast('✓ 작업이 등록되었습니다');
-  state.date = task.date;
+  state.date = savedDate;
   document.getElementById('dateInput').value = state.date;
   renderAll();
   switchView('dashboard');
@@ -1317,8 +1381,9 @@ function openDetail(id){
     ${t.equipmentUsed ? `<div class="detail-info"><div class="k">🔧 사용 장비</div><div class="v">${t.equipmentType||'미기재'}</div></div>` : ''}
     ${t.director ? `<div class="detail-info"><div class="k">작업지휘자</div><div class="v">${t.director}</div></div>` : ''}
     ${t.supervisorCo ? `<div class="detail-info"><div class="k">관리감독자 (협력사)</div><div class="v">${t.supervisorCo}</div></div>` : ''}
-    ${t.supervisorHDC ? `<div class="detail-info"><div class="k">관리감독자 (HDC)</div><div class="v">${t.supervisorHDC}</div></div>` : ''}
-    ${t.guardDeployed && t.guardName ? `<div class="detail-guard"><div class="k">안전감시단</div><div class="v">${t.guardName}</div></div>` : ''}
+    ${t.supervisorHDC ? `<div class="detail-info"><div class="k">관리감독자 (안전관리자)</div><div class="v">${t.supervisorHDC}</div></div>` : ''}
+    ${t.guardDeployed && t.guardName ? `<div class="detail-guard"><div class="k">감시단 / 안전전담자</div><div class="v">${t.guardName}</div></div>` : ''}
+    ${t.workPlanRequired ? `<div class="detail-info"><div class="k">작업계획서/사전작업허가서(P.T.W)</div><div class="v">해당</div></div>` : ''}
     ${t.hazardType ? `<div class="detail-info"><div class="k">재해유형</div><div class="v">${t.hazardType}</div></div>` : ''}
     ${t.earlyStart ? `<div class="detail-info"><div class="k">조출여부</div><div class="v">조출 (${t.earlyStartTime||''})</div></div>` : ''}
     ${t.exclusionZone ? `<div class="detail-info"><div class="k">작업제외구역</div><div class="v">${t.exclusionZone}</div></div>` : ''}
@@ -1326,7 +1391,7 @@ function openDetail(id){
     ${t.remarks ? `<div class="detail-info"><div class="k">비고</div><div class="v">${t.remarks}</div></div>` : ''}
 
     <div class="detail-actions">
-      <button onclick="duplicateTask('${t.id}')">⧉ 복사</button>
+      <button onclick="editTask('${t.id}')">✎ 수정</button>
       <button class="danger" onclick="deleteTask('${t.id}')">🗑 삭제</button>
       <button class="primary" onclick="closeDetail()">확인</button>
     </div>
@@ -1362,16 +1427,98 @@ function deleteTask(id){
   renderAll();
   showToast('작업이 삭제되었습니다');
 }
-function duplicateTask(id){
+function editTask(id){
   const t = state.tasks.find(x=>x.id===id);
   if(!t) return;
-  const copy = {...t, id:cuid('t'), createdAt:new Date().toISOString()};
-  state.tasks.push(copy);
-  saveTasks();
-  pushToGAS('addTask', copy);
   closeDetail();
-  renderAll();
-  showToast('작업이 복사되었습니다');
+  populateFormForEdit(t);
+  switchView('register');
+  switchRegisterTab('task');
+  showToast('내용을 수정한 뒤 "수정 완료"를 눌러주세요');
+}
+function populateFormForEdit(t){
+  state.editingTaskId = t.id;
+
+  document.getElementById('f_date').value = t.date;
+  document.getElementById('f_company').value = t.company;
+  document.getElementById('f_taskname').value = t.taskName;
+
+  const wtSel = document.getElementById('f_worktype');
+  const knownTypes = [...wtSel.options].map(o=>o.value).filter(v=>v!=='직접입력');
+  if(knownTypes.includes(t.workType)){
+    wtSel.value = t.workType;
+    document.getElementById('f_worktype_custom').style.display = 'none';
+  } else {
+    wtSel.value = '직접입력';
+    document.getElementById('f_worktype_custom').style.display = '';
+    document.getElementById('f_worktype_custom').value = t.workType || '';
+  }
+
+  document.getElementById('f_status').value = t.status;
+
+  state.formBuildingSel = [...(t.buildings||[])];
+  document.querySelectorAll('#buildingChips .chip').forEach(el=>{
+    el.classList.toggle('on', state.formBuildingSel.includes(el.dataset.b));
+  });
+  document.getElementById('buildingSelLine').textContent = '선택: ' + (state.formBuildingSel.length ? state.formBuildingSel.join(', ') : '없음');
+
+  state.formFloorSel = [...(t.floors||[])];
+  document.querySelectorAll('#floorGrid .floor-chip').forEach(el=>{
+    el.classList.toggle('on', state.formFloorSel.includes(el.dataset.f));
+  });
+  document.getElementById('floorSelLine').textContent = '선택: ' + (state.formFloorSel.length ? state.formFloorSel.join(', ') : '없음');
+
+  document.getElementById('f_location').value = t.location || '';
+  document.getElementById('f_workers').value = t.workers || '';
+  document.getElementById('f_timestart').value = t.timeStart || '08:00';
+  document.getElementById('f_timeend').value = t.timeEnd || '17:00';
+  document.getElementById('f_detail').value = t.detail || '';
+
+  document.getElementById('f_equipment').checked = !!t.equipmentUsed;
+  onEquipmentToggle();
+  document.getElementById('f_equipment_type').value = t.equipmentType || '';
+
+  state.formRiskSel = [...(t.highRisk||[])];
+  document.querySelectorAll('#riskChips .chip').forEach(el=>{
+    const on = state.formRiskSel.includes(el.dataset.r);
+    el.classList.toggle('on', on);
+    el.classList.toggle('risk-on', on && el.dataset.r!=='해당 없음');
+  });
+  document.getElementById('f_risk_custom').style.display = state.formRiskSel.includes('기타(직접입력)') ? '' : 'none';
+
+  document.getElementById('f_platform').value = t.platform || '';
+  document.getElementById('f_cuttool').value = t.cutTool || '';
+
+  setToggle('riskgrade', !!t.riskGradeHigh);
+  setToggle('hazmat', !!t.hazmat);
+  setToggle('workplan', !!t.workPlanRequired);
+
+  document.getElementById('f_director').value = t.director || '';
+  document.getElementById('f_supervisorco').value = t.supervisorCo || '';
+  document.getElementById('f_supervisorhdc').value = t.supervisorHDC || '';
+
+  setGuardToggle(!!t.guardDeployed);
+  document.getElementById('f_guardname').value = t.guardName || '';
+
+  document.getElementById('f_hazardtype').value = t.hazardType || '';
+  setEarlyToggle(!!t.earlyStart);
+  document.getElementById('f_earlytime').value = t.earlyStartTime || '06:00';
+  document.getElementById('f_exclusionzone').value = t.exclusionZone || '';
+  setCctvToggle(!!t.mobileCCTV);
+
+  document.getElementById('f_remarks').value = t.remarks || '';
+
+  if(t.region){
+    window._setDrawBox && window._setDrawBox(t.region);
+    state.region = {...t.region};
+    document.getElementById('drawStatus').textContent = '✓ 작업구간 확정됨 (수정하려면 초기화)';
+  } else {
+    window._clearDrawBox && window._clearDrawBox();
+    state.region = null; state.drawing = null;
+    document.getElementById('drawStatus').textContent = '구간 미지정';
+  }
+
+  document.getElementById('submitBtn').textContent = '✎ 수정 완료';
 }
 
 /* =========================================================
@@ -1386,30 +1533,59 @@ function showToast(msg){
 }
 
 /* =========================================================
+/* =========================================================
+   ADMIN (관리) — 비밀번호 게이트
+========================================================= */
+let adminUnlocked = false;
+const ADMIN_PASSWORD = '6942';
+function tryAdminLogin(){
+  const input = document.getElementById('adminPwInput');
+  if(input.value === ADMIN_PASSWORD){
+    adminUnlocked = true;
+    input.value = '';
+    showAdminPanel();
+    document.getElementById('gasUrlInput').value = getGasUrl();
+    document.getElementById('sheetUrlInput').value = getSheetUrl();
+    updateSyncStatus();
+  } else {
+    showToast('비밀번호가 올바르지 않습니다');
+    input.value = '';
+  }
+}
+function lockAdmin(){
+  adminUnlocked = false;
+  showAdminLocked();
+  switchView('dashboard');
+}
+function showAdminPanel(){
+  document.getElementById('adminLocked').style.display = 'none';
+  document.getElementById('adminPanel').style.display = '';
+}
+function showAdminLocked(){
+  document.getElementById('adminLocked').style.display = '';
+  document.getElementById('adminPanel').style.display = 'none';
+}
+
+/* =========================================================
    GAS SYNC
 ========================================================= */
 function updateSyncStatus(){
-  document.getElementById('syncStatus').textContent = getGasUrl() ? '연동됨' : '미설정 (로컬 저장)';
+  const el = document.getElementById('syncStatus');
+  if(el) el.textContent = getGasUrl() ? '연동됨' : '미설정 (로컬 저장)';
 }
 function getSheetUrl(){ return localStorage.getItem(SHEET_URL_KEY) || ''; }
-function openSettings(){
-  document.getElementById('gasUrlInput').value = getGasUrl();
-  document.getElementById('sheetUrlInput').value = getSheetUrl();
-  document.getElementById('settingsSheet').classList.add('show');
-}
-function closeSettings(){ document.getElementById('settingsSheet').classList.remove('show'); }
 function saveSettings(){
   const url = document.getElementById('gasUrlInput').value.trim();
   const sheetUrl = document.getElementById('sheetUrlInput').value.trim();
   if(url) localStorage.setItem(GAS_URL_KEY, url); else localStorage.removeItem(GAS_URL_KEY);
   if(sheetUrl) localStorage.setItem(SHEET_URL_KEY, sheetUrl); else localStorage.removeItem(SHEET_URL_KEY);
-  updateSyncStatus(); closeSettings();
+  updateSyncStatus();
   if(url) pullFromGAS();
   showToast(url ? 'Google Sheets 연동이 설정되었습니다' : '로컬 저장 모드로 전환되었습니다');
 }
 function openSheetLink(){
   const url = getSheetUrl();
-  if(!url){ showToast('설정에서 구글시트 바로가기 URL을 먼저 등록해주세요'); return; }
+  if(!url){ showToast('구글시트 바로가기 URL을 먼저 등록해주세요'); return; }
   window.open(url, '_blank');
 }
 function pushToGAS(action, payload){
@@ -1553,12 +1729,15 @@ function orderedForExport(list){
   return flat;
 }
 function buildRiskNote(t){
+  const lines = [];
+  if(t.detail) lines.push(t.detail.trim());
   const items = (t.highRisk||[]).filter(r=>r!=='해당 없음');
-  const lines = items.map((r,i)=>`${i+1}. ${r} 관련 안전수칙 준수 및 작업 전 점검`);
+  items.forEach((r,i)=> lines.push(`${i+1}. ${r} 관련 안전수칙 준수 및 작업 전 점검`));
   if(t.riskGradeHigh) lines.push('※ 위험성평가 상등급 대상 — 작업 전 관리감독자 현장 점검 필수');
   if(t.hazmat) lines.push('※ 유해위험물질 반입 — 취급수칙 준수 및 MSDS 비치');
+  if(t.exclusionZone) lines.push('※ 작업제외구역(이격거리): ' + t.exclusionZone);
   if(t.remarks) lines.push('비고: ' + t.remarks);
-  return lines.join('\\n');
+  return lines.join('\n');
 }
 function buildExportMapImage(list){
   return new Promise((resolve)=>{
@@ -1588,38 +1767,47 @@ function buildExportMapImage(list){
     img.src = srcImg.src;
   });
 }
+
+/* 참고 양식(현대산업개발 "일일 고위험 작업 현황")과 동일한 열 구성 */
+const EXPORT_HEADERS = ['No','협력사명','동','층','작업내용','장비/작업발판','재해유형',
+  '작업인원(명)','중점포인트','관리감독자(협력사)','관리감독자(안전관리자)','감시단 OR 안전전담자',
+  '작업계획서 OR 사전작업허가서(P.T.W)','조출·야간(시간)','이동식CCTV'];
+
+function buildExportRows(ordered){
+  return ordered.map((t,i)=>({
+    no: i+1,
+    company: t.company,
+    buildings: fmtBuildings(t),
+    floors: fmtFloors(t) || t.location || '-',
+    equipment: t.equipmentUsed ? (t.equipmentType || '사용') : '-',
+    hazardType: t.hazardType || '-',
+    workers: t.workers || 0,
+    riskNote: buildRiskNote(t) || '-',
+    supervisorCo: t.supervisorCo || '-',
+    supervisorHDC: t.supervisorHDC || '-',
+    guardName: t.guardDeployed ? (t.guardName || '배치') : '미배치',
+    workPlan: t.workPlanRequired ? 'O' : 'X',
+    earlyStart: t.earlyStart ? ('조출(' + (t.earlyStartTime||'') + ')') : 'X',
+    mobileCCTV: t.mobileCCTV ? 'O' : 'X',
+    taskContent: t.taskName,
+    riskGradeHigh: !!t.riskGradeHigh,
+    hasHighRisk: isHighRisk(t)
+  }));
+}
+
 async function exportToSheet(){
   const url = getGasUrl();
-  if(!url){ showToast('먼저 설정에서 GAS 연동 URL을 등록해주세요'); openSettings(); return; }
+  if(!url){ showToast('먼저 관리 탭에서 GAS 연동 URL을 등록해주세요'); switchView('admin'); return; }
   const list = tasksForDate(state.date);
   if(!list.length){ showToast('내보낼 작업이 없습니다'); return; }
 
-  const btn = document.querySelector('.export-btn');
+  const btn = document.getElementById('exportSheetBtn');
   if(btn){ btn.disabled = true; btn.textContent = '⏳ 내보내는 중...'; }
 
   try{
     const ordered = orderedForExport(list);
     const mapImageBase64 = await buildExportMapImage(ordered);
-    const rows = ordered.map((t,i)=>({
-      no: i+1,
-      company: t.company,
-      buildings: fmtBuildings(t),
-      location: t.location || fmtFloors(t) || '-',
-      taskName: t.taskName,
-      detail: t.detail || '',
-      equipment: t.equipmentUsed ? (t.equipmentType || '사용') : '-',
-      hazardType: t.hazardType || '',
-      workers: t.workers || 0,
-      earlyStart: t.earlyStart ? ('조출 ' + (t.earlyStartTime||'')) : '정규',
-      riskNote: buildRiskNote(t),
-      supervisorHDC: t.supervisorHDC || '',
-      supervisorCo: t.supervisorCo || '',
-      guardName: t.guardDeployed ? (t.guardName || '배치') : '미배치',
-      exclusionZone: t.exclusionZone || '',
-      mobileCCTV: t.mobileCCTV ? 'O' : 'X',
-      riskGradeHigh: !!t.riskGradeHigh,
-      hasHighRisk: isHighRisk(t)
-    }));
+    const rows = buildExportRows(ordered);
 
     await fetch(url, {method:'POST', mode:'no-cors', redirect:'follow',
       headers:{'Content-Type':'text/plain;charset=utf-8'},
@@ -1634,7 +1822,125 @@ async function exportToSheet(){
   }catch(err){
     showToast('⚠ 내보내기 실패: 네트워크를 확인하세요');
   }finally{
-    if(btn){ btn.disabled = false; btn.textContent = '📤 일일 고위험 작업 현황 내보내기'; }
+    if(btn){ btn.disabled = false; btn.textContent = '📤 구글시트로 내보내기'; }
+  }
+}
+
+/* =========================================================
+   EXCEL(.xlsx) 다운로드 — 인터넷/구글 연동 없이 기기에 바로 저장
+========================================================= */
+async function exportToExcel(){
+  if(typeof ExcelJS === 'undefined'){
+    showToast('⚠ 엑셀 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인해주세요');
+    return;
+  }
+  const list = tasksForDate(state.date);
+  if(!list.length){ showToast('내보낼 작업이 없습니다'); return; }
+
+  const btn = document.getElementById('exportExcelBtn');
+  if(btn){ btn.disabled = true; btn.textContent = '⏳ 엑셀 생성 중...'; }
+
+  try{
+    const ordered = orderedForExport(list);
+    const rows = buildExportRows(ordered);
+    const mapImageBase64 = await buildExportMapImage(ordered);
+    const siteName = document.getElementById('siteTitle').textContent;
+    const colCount = EXPORT_HEADERS.length;
+
+    const wb = new ExcelJS.Workbook();
+    wb.creator = siteName;
+    const ws = wb.addWorksheet('일일현황_' + state.date, { views:[{state:'frozen', ySplit:5}] });
+
+    // 열 너비
+    const widths = [5,12,8,8,26,18,12,10,32,14,16,16,16,12,10];
+    ws.columns = widths.map(w=>({ width:w }));
+
+    // 제목
+    ws.mergeCells(1,1,1,colCount);
+    const titleCell = ws.getCell(1,1);
+    titleCell.value = '일일 고위험 작업 현황';
+    titleCell.font = { bold:true, size:16, name:'맑은 고딕' };
+    titleCell.alignment = { horizontal:'center', vertical:'middle' };
+    ws.getRow(1).height = 28;
+
+    // 현장명 / 작업일
+    ws.mergeCells(2,1,2,4);
+    ws.getCell(2,1).value = '현장명: ' + siteName;
+    ws.getCell(2,1).font = { bold:true, name:'맑은 고딕' };
+    ws.mergeCells(2,6,2,9);
+    ws.getCell(2,6).value = '작업일: ' + state.date;
+    ws.getCell(2,6).font = { bold:true, name:'맑은 고딕' };
+
+    // 범례
+    ws.mergeCells(3,1,3,3);
+    ws.getCell(3,1).value = '상등급 작업(작업전 점검 대상)';
+    ws.getCell(3,1).fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFF4CCCC'} };
+    ws.mergeCells(3,4,3,6);
+    ws.getCell(3,4).value = '고위험 작업(관리자 및 SSK 수시점검)';
+    ws.getCell(3,4).fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFFFF2CC'} };
+    ws.mergeCells(3,7,3,9);
+    ws.getCell(3,7).value = '일상작업';
+
+    // 헤더
+    const headerRowIdx = 5;
+    const headerRow = ws.getRow(headerRowIdx);
+    EXPORT_HEADERS.forEach((h,idx)=>{ headerRow.getCell(idx+1).value = h; });
+    headerRow.font = { bold:true, name:'맑은 고딕' };
+    headerRow.eachCell(c=>{
+      c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFEFEFEF'} };
+      c.alignment = { horizontal:'center', vertical:'middle', wrapText:true };
+      c.border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
+    });
+
+    // 데이터
+    rows.forEach((r,i)=>{
+      const rowIdx = headerRowIdx + 1 + i;
+      const values = [r.no, r.company, r.buildings, r.floors, r.taskContent, r.equipment,
+        r.hazardType, r.workers, r.riskNote, r.supervisorCo, r.supervisorHDC,
+        r.guardName, r.workPlan, r.earlyStart, r.mobileCCTV];
+      const row = ws.getRow(rowIdx);
+      values.forEach((v,idx)=>{ row.getCell(idx+1).value = v; });
+
+      let argb = 'FFFFFFFF';
+      if(r.riskGradeHigh) argb = 'FFF4CCCC';
+      else if(r.hasHighRisk) argb = 'FFFFF2CC';
+      row.eachCell({includeEmpty:true}, c=>{
+        c.fill = { type:'pattern', pattern:'solid', fgColor:{argb} };
+        c.alignment = { vertical:'top', wrapText:true };
+        c.border = { top:{style:'thin', color:{argb:'FFDDDDDD'}}, bottom:{style:'thin', color:{argb:'FFDDDDDD'}},
+          left:{style:'thin', color:{argb:'FFDDDDDD'}}, right:{style:'thin', color:{argb:'FFDDDDDD'}} };
+      });
+      row.getCell(1).alignment = { horizontal:'center', vertical:'top' };
+    });
+
+    // 위치도 이미지
+    if(mapImageBase64){
+      const imgRow = headerRowIdx + rows.length + 3;
+      ws.getCell(imgRow,1).value = '■ 작업 위치도 (번호: 표 No. 일치 / 🔴 상등급 🟠 고위험 🔵 일상)';
+      ws.getCell(imgRow,1).font = { bold:true, name:'맑은 고딕' };
+      const imgId = wb.addImage({ base64: 'data:image/png;base64,' + mapImageBase64, extension:'png' });
+      ws.addImage(imgId, {
+        tl: { col:0, row: imgRow },
+        ext: { width: 720, height: 720*572/1000 }
+      });
+    }
+
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `일일현황_${state.date}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+
+    showToast('✓ 엑셀 파일이 다운로드되었습니다');
+  }catch(err){
+    console.error(err);
+    showToast('⚠ 엑셀 생성 실패: ' + (err && err.message ? err.message : '알 수 없는 오류'));
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = '📥 엑셀 파일로 다운로드'; }
   }
 }
 </script>
