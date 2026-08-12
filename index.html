@@ -422,9 +422,9 @@
             <div class="field"><label>출역 인원 (명) <span class="req">*</span></label>
               <input type="number" id="f_workers" min="0" placeholder="0" required></div>
             <div class="field"><label>작업 시작 <span class="req">*</span></label>
-              <input type="time" id="f_timestart" value="08:00"></div>
+              <input type="time" id="f_timestart" value="07:00"></div>
             <div class="field"><label>작업 종료 <span class="req">*</span></label>
-              <input type="time" id="f_timeend" value="17:00"></div>
+              <input type="time" id="f_timeend" value="16:00"></div>
             <div class="field"><label>작업 내용 상세</label>
               <textarea id="f_detail" placeholder="작업 상세 내용을 입력하세요"></textarea></div>
           </div>
@@ -467,8 +467,10 @@
             <h3>책임자 · 감시단</h3>
             <div class="field"><label>작업지휘자</label><input type="text" id="f_director" placeholder="성명 입력"></div>
             <div class="field"><label>관리감독자 (협력사)</label><input type="text" id="f_supervisorco" placeholder="성명 입력"></div>
-            <div class="field"><label>관리감독자 (안전관리자)</label>
+            <div class="field"><label>관리감독자 (HDC)</label>
               <select id="f_supervisorhdc"><option value="">선택하세요</option></select></div>
+            <div class="field"><label>안전관리자 (HDC)</label>
+              <select id="f_safetymanager"><option value="">선택하세요</option></select></div>
             <div class="field"><label>감시단 또는 안전전담자 배치 여부</label>
               <div class="toggle-row">
                 <button type="button" class="toggle-btn on-o" id="btn_guard_o" onclick="setGuardToggle(true)">배치</button>
@@ -603,7 +605,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-12 13:44 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-12 22:26 UTC</p>
       </div>
     </div>
   </div>
@@ -665,14 +667,23 @@ const SUPERVISORS_HDC = ['김양선(토목)','김진수(전기)','박수환(건�
   '우승주(건축)','위광용(건축)','이민우(건축)','이성원(건축)','이정호(건축)','임규운(전기)',
   '조석곤(기계)','채수혁(토목)','최성환(건축)'];
 
+const SAFETY_MANAGERS_HDC = ['서진수(안전총괄책임자)','노을(안전)','최교훈(안전관)','김대량(안전)',
+  '김백호(안전)','박두봉(안전)','이상재(안전)','임경찬(안전)','이상훈(안전)','편정훈(안전)'];
+
 const DEFAULT_SITE_IMAGE = './map.jpg';
 let currentSiteImage = DEFAULT_SITE_IMAGE;
 let previousSiteImage = DEFAULT_SITE_IMAGE;
 
-const COMPANY_COLORS = ['#2F5FDB','#E5484D','#1E9E5A','#D9822B','#7C5CDB','#0EA5A5','#C2410C','#4B5563'];
+const COMPANY_COLORS = ['#2F5FDB','#E5484D','#1E9E5A','#D9822B','#7C5CDB','#0EA5A5','#C2410C','#4B5563',
+  '#0891B2','#BE185D','#65A30D','#9333EA'];
+let companyColorMap = {};
+let companyColorSeq = 0;
 function companyColor(name){
-  let h=0; for(let i=0;i<name.length;i++) h = (h*31 + name.charCodeAt(i))>>>0;
-  return COMPANY_COLORS[h % COMPANY_COLORS.length];
+  if(!companyColorMap[name]){
+    companyColorMap[name] = COMPANY_COLORS[companyColorSeq % COMPANY_COLORS.length];
+    companyColorSeq++;
+  }
+  return companyColorMap[name];
 }
 
 const STORAGE_TASKS = 'siteSafetyTasks_v2';
@@ -725,7 +736,7 @@ function seedTasks(){
      workType:'비계', status:'진행중', buildings:['103동'], floors:['지하1층'], location:'주차장 지하 1층',
      workers:7, timeStart:'08:00', timeEnd:'17:00', detail:'시스템 동바리 설치 및 고정 작업',
      equipmentUsed:true, equipmentType:'시스템동바리, 크레인', highRisk:['시스템비계 및 동바리 설치/해체'], platform:2, cutTool:0,
-     riskGradeHigh:false, hazmat:false, director:'박민수', supervisorCo:'김낙진', supervisorHDC:'김승원(건축, 103/104동)',
+     riskGradeHigh:false, hazmat:false, director:'박민수', supervisorCo:'김낙진', supervisorHDC:'김승원(건축, 103/104동)', safetyManagerHDC:'서진수(안전총괄책임자)',
      guardDeployed:true, guardName:'조영인', remarks:'',
      hazardType:'협착', earlyStart:true, earlyStartTime:'06:00', exclusionZone:'5m 이격 통제', mobileCCTV:true,
      region:{x:66,y:6,w:31,h:34}, createdAt:new Date().toISOString()},
@@ -733,7 +744,7 @@ function seedTasks(){
      workType:'골조', status:'진행중', buildings:['109동'], floors:['12층'], location:'북측 코어',
      workers:12, timeStart:'08:30', timeEnd:'18:00', detail:'RCS 시스템 인양 및 고정',
      equipmentUsed:true, equipmentType:'타워크레인', highRisk:['RCS 설치/인상/해체'], platform:0, cutTool:0,
-     riskGradeHigh:true, hazmat:false, director:'이재현', supervisorCo:'정우성', supervisorHDC:'김승원(건축, 109동)',
+     riskGradeHigh:true, hazmat:false, director:'이재현', supervisorCo:'정우성', supervisorHDC:'김승원(건축, 109동)', safetyManagerHDC:'최교훈(안전관)',
      guardDeployed:true, guardName:'장서준', remarks:'',
      hazardType:'낙하물', earlyStart:false, earlyStartTime:'', exclusionZone:'', mobileCCTV:false,
      region:null, createdAt:new Date().toISOString()},
@@ -1012,6 +1023,8 @@ function buildRegisterChips(){
     <button type="button" class="chip" data-r="${r}" onclick="toggleRiskChip(this)">${r}</button>`).join('');
   document.getElementById('f_supervisorhdc').innerHTML = '<option value="">선택하세요</option>' +
     SUPERVISORS_HDC.map(s=>`<option value="${s}">${s}</option>`).join('');
+  document.getElementById('f_safetymanager').innerHTML = '<option value="">선택하세요</option>' +
+    SAFETY_MANAGERS_HDC.map(s=>`<option value="${s}">${s}</option>`).join('');
   document.getElementById('f_date').value = state.date;
 }
 function toggleFormChip(el, arrKey, lineId){
@@ -1216,6 +1229,7 @@ function collectFormTaskFields(){
     director: document.getElementById('f_director').value.trim(),
     supervisorCo: document.getElementById('f_supervisorco').value.trim(),
     supervisorHDC: document.getElementById('f_supervisorhdc').value,
+    safetyManagerHDC: document.getElementById('f_safetymanager').value,
     guardDeployed: state.formGuard,
     guardName: document.getElementById('f_guardname').value.trim(),
     remarks: document.getElementById('f_remarks').value.trim(),
@@ -1239,8 +1253,8 @@ function resetTaskForm(){
   setToggle('riskgrade', false); setToggle('hazmat', false); setToggle('workplan', false); setGuardToggle(true);
   setEarlyToggle(false); setCctvToggle(false);
   document.getElementById('f_status').value='진행중';
-  document.getElementById('f_timestart').value='08:00';
-  document.getElementById('f_timeend').value='17:00';
+  document.getElementById('f_timestart').value='07:00';
+  document.getElementById('f_timeend').value='16:00';
   document.getElementById('f_worktype_custom').style.display='none';
   document.getElementById('f_risk_custom').style.display='none';
   document.getElementById('f_equipment_type').style.display='none';
@@ -1381,7 +1395,8 @@ function openDetail(id){
     ${t.equipmentUsed ? `<div class="detail-info"><div class="k">🔧 사용 장비</div><div class="v">${t.equipmentType||'미기재'}</div></div>` : ''}
     ${t.director ? `<div class="detail-info"><div class="k">작업지휘자</div><div class="v">${t.director}</div></div>` : ''}
     ${t.supervisorCo ? `<div class="detail-info"><div class="k">관리감독자 (협력사)</div><div class="v">${t.supervisorCo}</div></div>` : ''}
-    ${t.supervisorHDC ? `<div class="detail-info"><div class="k">관리감독자 (안전관리자)</div><div class="v">${t.supervisorHDC}</div></div>` : ''}
+    ${t.supervisorHDC ? `<div class="detail-info"><div class="k">관리감독자 (HDC)</div><div class="v">${t.supervisorHDC}</div></div>` : ''}
+    ${t.safetyManagerHDC ? `<div class="detail-info"><div class="k">안전관리자 (HDC)</div><div class="v">${t.safetyManagerHDC}</div></div>` : ''}
     ${t.guardDeployed && t.guardName ? `<div class="detail-guard"><div class="k">감시단 / 안전전담자</div><div class="v">${t.guardName}</div></div>` : ''}
     ${t.workPlanRequired ? `<div class="detail-info"><div class="k">작업계획서/사전작업허가서(P.T.W)</div><div class="v">해당</div></div>` : ''}
     ${t.hazardType ? `<div class="detail-info"><div class="k">재해유형</div><div class="v">${t.hazardType}</div></div>` : ''}
@@ -1470,8 +1485,8 @@ function populateFormForEdit(t){
 
   document.getElementById('f_location').value = t.location || '';
   document.getElementById('f_workers').value = t.workers || '';
-  document.getElementById('f_timestart').value = t.timeStart || '08:00';
-  document.getElementById('f_timeend').value = t.timeEnd || '17:00';
+  document.getElementById('f_timestart').value = t.timeStart || '07:00';
+  document.getElementById('f_timeend').value = t.timeEnd || '16:00';
   document.getElementById('f_detail').value = t.detail || '';
 
   document.getElementById('f_equipment').checked = !!t.equipmentUsed;
@@ -1496,6 +1511,7 @@ function populateFormForEdit(t){
   document.getElementById('f_director').value = t.director || '';
   document.getElementById('f_supervisorco').value = t.supervisorCo || '';
   document.getElementById('f_supervisorhdc').value = t.supervisorHDC || '';
+  document.getElementById('f_safetymanager').value = t.safetyManagerHDC || '';
 
   setGuardToggle(!!t.guardDeployed);
   document.getElementById('f_guardname').value = t.guardName || '';
@@ -1784,7 +1800,7 @@ function buildExportRows(ordered){
     workers: t.workers || 0,
     riskNote: buildRiskNote(t) || '-',
     supervisorCo: t.supervisorCo || '-',
-    supervisorHDC: t.supervisorHDC || '-',
+    supervisorHDC: t.safetyManagerHDC || '-',
     guardName: t.guardDeployed ? (t.guardName || '배치') : '미배치',
     workPlan: t.workPlanRequired ? 'O' : 'X',
     earlyStart: t.earlyStart ? ('조출(' + (t.earlyStartTime||'') + ')') : 'X',
@@ -1855,8 +1871,8 @@ async function exportToExcel(){
     const widths = [5,12,8,8,26,18,12,10,32,14,16,16,16,12,10];
     ws.columns = widths.map(w=>({ width:w }));
 
-    // 제목
-    ws.mergeCells(1,1,1,colCount);
+    // 제목 (K열부터는 결재란이 들어가므로 J열까지만 병합)
+    ws.mergeCells(1,1,1,10);
     const titleCell = ws.getCell(1,1);
     titleCell.value = '일일 고위험 작업 현황';
     titleCell.font = { bold:true, size:16, name:'맑은 고딕' };
@@ -1871,18 +1887,38 @@ async function exportToExcel(){
     ws.getCell(2,6).value = '작업일: ' + state.date;
     ws.getCell(2,6).font = { bold:true, name:'맑은 고딕' };
 
-    // 범례
-    ws.mergeCells(3,1,3,3);
-    ws.getCell(3,1).value = '상등급 작업(작업전 점검 대상)';
+    // 범례 (한 줄씩 아래로: A열=색상 네모, B열=설명)
+    const thinBorder = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
     ws.getCell(3,1).fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFF4CCCC'} };
-    ws.mergeCells(3,4,3,6);
-    ws.getCell(3,4).value = '고위험 작업(관리자 및 SSK 수시점검)';
-    ws.getCell(3,4).fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFFFF2CC'} };
-    ws.mergeCells(3,7,3,9);
-    ws.getCell(3,7).value = '일상작업';
+    ws.getCell(3,1).border = thinBorder;
+    ws.getCell(3,2).value = '상등급 작업(작업전 점검 대상)';
+
+    ws.getCell(4,1).fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFFFF2CC'} };
+    ws.getCell(4,1).border = thinBorder;
+    ws.getCell(4,2).value = '고위험 작업(관리자 및 SSK 수시점검)';
+
+    ws.getCell(5,1).fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFFFFFFF'} };
+    ws.getCell(5,1).border = thinBorder;
+    ws.getCell(5,2).value = '일상작업';
+
+    // 결재란 (K~O열: 담당 / 토목 / 건축 / 안전 / 현장소장)
+    const signOff = ['담당','토목','건축','안전','현장소장'];
+    signOff.forEach((label, idx)=>{
+      const col = 11 + idx; // K=11
+      const headerCell = ws.getCell(1, col);
+      headerCell.value = label;
+      headerCell.font = { bold:true, name:'맑은 고딕' };
+      headerCell.alignment = { horizontal:'center', vertical:'middle' };
+      headerCell.border = thinBorder;
+      headerCell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFEFEFEF'} };
+
+      ws.mergeCells(2, col, 5, col); // 서명란: 2~5행 병합된 빈 칸
+      const boxCell = ws.getCell(2, col);
+      boxCell.border = thinBorder;
+    });
 
     // 헤더
-    const headerRowIdx = 5;
+    const headerRowIdx = 7;
     const headerRow = ws.getRow(headerRowIdx);
     EXPORT_HEADERS.forEach((h,idx)=>{ headerRow.getCell(idx+1).value = h; });
     headerRow.font = { bold:true, name:'맑은 고딕' };
