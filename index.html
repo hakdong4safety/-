@@ -605,7 +605,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-12 22:26 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-13 01:46 UTC</p>
       </div>
     </div>
   </div>
@@ -667,7 +667,7 @@ const SUPERVISORS_HDC = ['김양선(토목)','김진수(전기)','박수환(건�
   '우승주(건축)','위광용(건축)','이민우(건축)','이성원(건축)','이정호(건축)','임규운(전기)',
   '조석곤(기계)','채수혁(토목)','최성환(건축)'];
 
-const SAFETY_MANAGERS_HDC = ['서진수(안전총괄책임자)','노을(안전)','최교훈(안전관)','김대량(안전)',
+const SAFETY_MANAGERS_HDC = ['서진수(안전총괄책임자)','노을(안전)','최교훈(안전)','김대량(안전)',
   '김백호(안전)','박두봉(안전)','이상재(안전)','임경찬(안전)','이상훈(안전)','편정훈(안전)'];
 
 const DEFAULT_SITE_IMAGE = './map.jpg';
@@ -744,7 +744,7 @@ function seedTasks(){
      workType:'골조', status:'진행중', buildings:['109동'], floors:['12층'], location:'북측 코어',
      workers:12, timeStart:'08:30', timeEnd:'18:00', detail:'RCS 시스템 인양 및 고정',
      equipmentUsed:true, equipmentType:'타워크레인', highRisk:['RCS 설치/인상/해체'], platform:0, cutTool:0,
-     riskGradeHigh:true, hazmat:false, director:'이재현', supervisorCo:'정우성', supervisorHDC:'김승원(건축, 109동)', safetyManagerHDC:'최교훈(안전관)',
+     riskGradeHigh:true, hazmat:false, director:'이재현', supervisorCo:'정우성', supervisorHDC:'김승원(건축, 109동)', safetyManagerHDC:'최교훈(안전)',
      guardDeployed:true, guardName:'장서준', remarks:'',
      hazardType:'낙하물', earlyStart:false, earlyStartTime:'', exclusionZone:'', mobileCCTV:false,
      region:null, createdAt:new Date().toISOString()},
@@ -1733,6 +1733,24 @@ function riskLevel(t){
   if(isHighRisk(t)) return 'risk';          // 고위험 (노랑)
   return 'normal';                          // 일상작업 (흰색)
 }
+/* 업체별로 등장 순서에 따라 고유 번호를 하나씩 배정 (같은 업체는 항상 같은 번호 공유) */
+function computeCompanyNumbers(list){
+  const map = {};
+  let seq = 1;
+  list.forEach(t=>{
+    if(!(t.company in map)){ map[t.company] = seq++; }
+  });
+  return map;
+}
+/* 정렬: 고위험(맨 위) → 상등급 → 일반, 각 구간 안에서는 업체 번호 순 (같은 업체 작업은 붙어서 나옴) */
+const EXPORT_CATEGORY_RANK = { risk:0, grade:1, normal:2 };
+function sortForExport(list, companyNum){
+  return [...list].sort((a,b)=>{
+    const ra = EXPORT_CATEGORY_RANK[riskLevel(a)], rb = EXPORT_CATEGORY_RANK[riskLevel(b)];
+    if(ra !== rb) return ra - rb;
+    return (companyNum[a.company]||0) - (companyNum[b.company]||0);
+  });
+}
 function orderedForExport(list){
   const byCompany = {};
   const order = [];
@@ -1755,7 +1773,7 @@ function buildRiskNote(t){
   if(t.remarks) lines.push('비고: ' + t.remarks);
   return lines.join('\n');
 }
-function buildExportMapImage(list){
+function buildExportMapImage(list, companyNum){
   return new Promise((resolve)=>{
     const srcImg = document.querySelector('#mapWrap img.bg');
     const img = new Image();
@@ -1765,17 +1783,18 @@ function buildExportMapImage(list){
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img,0,0);
       const r = Math.max(20, canvas.width*0.022);
-      list.forEach((t,i)=>{
+      list.forEach((t)=>{
         const c = taskCenter(t);
         const px = c.x/100*canvas.width, py = c.y/100*canvas.height;
         const lvl = riskLevel(t);
         const color = lvl==='grade' ? '#E5484D' : (lvl==='risk' ? '#F5A623' : '#2F6FE0');
+        const num = companyNum[t.company] || '';
         ctx.beginPath(); ctx.arc(px,py,r,0,Math.PI*2);
         ctx.fillStyle = color; ctx.fill();
         ctx.lineWidth = Math.max(2,r*0.12); ctx.strokeStyle = '#fff'; ctx.stroke();
         ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.round(r*1.05)}px sans-serif`;
         ctx.textAlign='center'; ctx.textBaseline='middle';
-        ctx.fillText(String(i+1), px, py+r*0.06);
+        ctx.fillText(String(num), px, py+r*0.06);
       });
       resolve(canvas.toDataURL('image/png').split(',')[1]);
     };
@@ -1789,9 +1808,9 @@ const EXPORT_HEADERS = ['No','협력사명','동','층','작업내용','장비/�
   '작업인원(명)','중점포인트','관리감독자(협력사)','관리감독자(안전관리자)','감시단 OR 안전전담자',
   '작업계획서 OR 사전작업허가서(P.T.W)','조출·야간(시간)','이동식CCTV'];
 
-function buildExportRows(ordered){
-  return ordered.map((t,i)=>({
-    no: i+1,
+function buildExportRows(ordered, companyNum){
+  return ordered.map((t)=>({
+    no: companyNum[t.company] || '',
     company: t.company,
     buildings: fmtBuildings(t),
     floors: fmtFloors(t) || t.location || '-',
@@ -1821,9 +1840,10 @@ async function exportToSheet(){
   if(btn){ btn.disabled = true; btn.textContent = '⏳ 내보내는 중...'; }
 
   try{
-    const ordered = orderedForExport(list);
-    const mapImageBase64 = await buildExportMapImage(ordered);
-    const rows = buildExportRows(ordered);
+    const companyNum = computeCompanyNumbers(list);
+    const ordered = sortForExport(list, companyNum);
+    const mapImageBase64 = await buildExportMapImage(ordered, companyNum);
+    const rows = buildExportRows(ordered, companyNum);
 
     await fetch(url, {method:'POST', mode:'no-cors', redirect:'follow',
       headers:{'Content-Type':'text/plain;charset=utf-8'},
@@ -1857,9 +1877,10 @@ async function exportToExcel(){
   if(btn){ btn.disabled = true; btn.textContent = '⏳ 엑셀 생성 중...'; }
 
   try{
-    const ordered = orderedForExport(list);
-    const rows = buildExportRows(ordered);
-    const mapImageBase64 = await buildExportMapImage(ordered);
+    const companyNum = computeCompanyNumbers(list);
+    const ordered = sortForExport(list, companyNum);
+    const rows = buildExportRows(ordered, companyNum);
+    const mapImageBase64 = await buildExportMapImage(ordered, companyNum);
     const siteName = document.getElementById('siteTitle').textContent;
     const colCount = EXPORT_HEADERS.length;
 
