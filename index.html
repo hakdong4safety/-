@@ -101,11 +101,11 @@
   .legend-swatch{width:9px;height:9px;border-radius:3px;flex-shrink:0;}
 
   /* ===== Summary ===== */
-  .summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px;}
+  .summary-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:12px;}
   .stat-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);
-    padding:11px 4px;text-align:center;box-shadow:var(--shadow);}
-  .stat-card .num{font-size:19px;font-weight:800;letter-spacing:-0.02em;}
-  .stat-card .lbl{font-size:10px;color:var(--ink-400);font-weight:700;margin-top:2px;}
+    padding:10px 2px;text-align:center;box-shadow:var(--shadow);}
+  .stat-card .num{font-size:16.5px;font-weight:800;letter-spacing:-0.02em;}
+  .stat-card .lbl{font-size:9px;color:var(--ink-400);font-weight:700;margin-top:2px;line-height:1.2;}
   .stat-card.risk .num{color:var(--red);}
   .stat-card.grade .num{color:var(--amber);}
   .export-btn{width:100%;margin-top:10px;padding:13px;border:1.5px dashed var(--blue-600);border-radius:12px;
@@ -630,13 +630,20 @@
 
       <div id="adminPanel" style="display:none;">
         <div class="form-card">
-          <h3>📋 전체 작업 현황</h3>
-          <p class="hint" style="margin-top:0;">날짜와 무관하게 상태별로 전체 작업을 한눈에 확인합니다.</p>
-          <div class="filter-scroll" id="adminStatusFilters"></div>
-          <div style="margin-top:10px; display:flex; justify-content:flex-end;">
-            <span class="meta" id="adminTaskCountMeta" style="font-size:12px;color:var(--ink-400);font-weight:700;"></span>
+          <h3>🗂 일괄 작업 상태 변경</h3>
+          <p class="hint" style="margin-top:0;">날짜를 선택하면 그날 등록된 작업 전체를 한 번에 예정/진행중/완료로 바꿀 수 있습니다.</p>
+          <div class="field"><label>대상 날짜</label>
+            <input type="date" id="adminBulkDate" onchange="renderAdminBulkList()"></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin:4px 0 8px;">
+            <span style="font-size:12.5px;font-weight:700;color:var(--ink-600);">해당 날짜 작업</span>
+            <span class="meta" id="adminBulkCountMeta" style="font-size:12px;color:var(--ink-400);font-weight:700;"></span>
           </div>
-          <div id="adminTaskList" style="margin-top:8px;"></div>
+          <div id="adminBulkList" style="margin-bottom:12px;"></div>
+          <div class="toggle-row" style="gap:8px;">
+            <button type="button" class="toggle-btn" style="background:var(--blue-100);border-color:var(--blue-600);color:var(--blue-600);" onclick="bulkSetStatus('예정')">전체 예정</button>
+            <button type="button" class="toggle-btn" style="background:var(--blue-600);border-color:var(--blue-600);color:#fff;" onclick="bulkSetStatus('진행중')">전체 진행중</button>
+            <button type="button" class="toggle-btn" style="background:var(--ink-900);border-color:var(--ink-900);color:#fff;" onclick="bulkSetStatus('완료')">전체 완료</button>
+          </div>
         </div>
 
         <div class="form-card">
@@ -655,7 +662,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-13 21:46 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-13 22:50 UTC</p>
       </div>
     </div>
   </div>
@@ -709,6 +716,26 @@
       <div class="sheet-actions">
         <button class="btn-secondary" onclick="closeSiteImageDatePrompt()">취소</button>
         <button class="btn-primary" onclick="confirmSiteImageDate()">이 날짜부터 적용</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Attendance (총 출역인원) input popup -->
+  <div class="sheet" id="attendanceSheet">
+    <div class="sheet-inner">
+      <h4>총 출역인원 입력</h4>
+      <p class="desc" id="attendanceDateLabel">업체별 출역인원을 입력하세요.</p>
+      <div class="attendance-header" style="display:flex;gap:6px;padding:0 0 6px;font-size:11.5px;font-weight:800;color:var(--ink-400);">
+        <span style="width:20px;text-align:center;">No.</span>
+        <span style="flex:2;">업체명</span>
+        <span style="flex:1;">인원</span>
+        <span style="width:28px;"></span>
+      </div>
+      <div id="attendanceRows"></div>
+      <button type="button" class="map-action-btn" style="width:100%;margin-top:6px;padding:11px;" onclick="addAttendanceRow()">＋ 직접추가</button>
+      <div class="sheet-actions">
+        <button class="btn-secondary" onclick="closeAttendanceSheet()">닫기</button>
+        <button class="btn-primary" onclick="saveAttendance()">저장</button>
       </div>
     </div>
   </div>
@@ -774,6 +801,7 @@ function companyColor(name){
 const STORAGE_TASKS = 'siteSafetyTasks_v2';
 const STORAGE_PUMPS = 'siteSafetyPumps_v2';
 const SITE_IMG_VERSIONS_KEY = 'siteSafetySiteImgVersions_v1';
+const ATTENDANCE_KEY = 'siteSafetyAttendance_v1';
 
 /* Firebase 프로젝트 설정 (Realtime Database + 익명 인증으로 실시간 동기화) */
 const firebaseConfig = {
@@ -805,9 +833,10 @@ let state = {
   editingTaskId: null,
   editingPumpId: null,
   clipboardTask: null,
-  adminStatusFilter: '오늘날짜',
   siteImageVersions: {},   // { 'YYYY-MM-DD': dataUrl, ... } 날짜별 전경사진 버전
   pendingSiteImage: null,  // 방금 선택했지만 아직 적용 날짜를 확정 안 한 사진
+  attendanceByDate: {},    // { 'YYYY-MM-DD': [{company, workers}, ...] } 날짜별 총 출역인원 입력값
+  attendanceDraft: [],     // 팝업에서 편집 중인 임시 목록
   regions: [],        // [{x,y,w,h}, ...] in percent, 확정된 다중 작업구간
   drawing: null,      // in-progress rect while drawing
   pumpPos: null,      // {x,y} percent for new pump
@@ -890,10 +919,12 @@ function savePumps(){ localStorage.setItem(STORAGE_PUMPS, JSON.stringify(state.p
    INIT
 ========================================================= */
 document.addEventListener('DOMContentLoaded', () => {
+  state.date = todayStr(); // 페이지를 열 때는 항상 오늘 날짜로 시작
   document.getElementById('dateInput').value = state.date;
   document.getElementById('p_date').value = todayStr();
   loadData();
   loadSiteImageVersions();
+  loadAttendance();
   buildRegisterChips();
   setupDrawMap();
   setupPumpMap();
@@ -911,7 +942,7 @@ function renderAll(){
   renderBuildingFilters();
   renderBuildingList();
   renderPumpList();
-  if(adminUnlocked){ renderAdminTaskList(); }
+  if(adminUnlocked){ renderAdminBulkList(); }
 }
 
 /* =========================================================
@@ -1026,7 +1057,9 @@ function renderDashboard(){
   const totalTasks = list.length;
   const highRiskCount = list.filter(isHighRisk).length;
   const gradeCount = list.filter(t=>t.riskGradeHigh).length;
+  const totalAttendance = (state.attendanceByDate[state.date]||[]).reduce((s,r)=>s+(Number(r.workers)||0),0);
   document.getElementById('summaryGrid').innerHTML = `
+    <div class="stat-card" onclick="openAttendanceSheet()" style="cursor:pointer;"><div class="num">${totalAttendance}</div><div class="lbl">총 출역인원</div></div>
     <div class="stat-card"><div class="num">${highRiskWorkers}</div><div class="lbl">고위험작업인원</div></div>
     <div class="stat-card"><div class="num">${totalTasks}</div><div class="lbl">작업건수</div></div>
     <div class="stat-card risk"><div class="num">${highRiskCount}</div><div class="lbl">고위험</div></div>
@@ -1808,7 +1841,6 @@ function runConfirm(){
 }
 
 /* =========================================================
-/* =========================================================
    ADMIN (관리) — 비밀번호 게이트
 ========================================================= */
 let adminUnlocked = false;
@@ -1833,8 +1865,8 @@ function lockAdmin(){
 function showAdminPanel(){
   document.getElementById('adminLocked').style.display = 'none';
   document.getElementById('adminPanel').style.display = '';
-  renderAdminFilters();
-  renderAdminTaskList();
+  document.getElementById('adminBulkDate').value = state.date || todayStr();
+  renderAdminBulkList();
   renderSiteImageVersionList();
 }
 function showAdminLocked(){
@@ -1842,37 +1874,17 @@ function showAdminLocked(){
   document.getElementById('adminPanel').style.display = 'none';
 }
 
-/* ---- 전체 작업 현황 (날짜 무관, 상태별) ---- */
-const ADMIN_STATUS_FILTERS = ['오늘날짜','전체예정','전체진행중','전체완료'];
-const ADMIN_STATUS_LABELS = {'오늘날짜':'오늘날짜','전체예정':'전체 예정','전체진행중':'전체 진행중','전체완료':'전체 완료'};
-function renderAdminFilters(){
-  const el = document.getElementById('adminStatusFilters');
+/* ---- 일괄 작업 상태 변경 (선택한 날짜의 작업 전체를 한 번에 변경) ---- */
+function renderAdminBulkList(){
+  const el = document.getElementById('adminBulkList');
   if(!el) return;
-  el.innerHTML = ADMIN_STATUS_FILTERS.map(f=>`
-    <button class="filter-chip ${state.adminStatusFilter===f?'on':''}" onclick="setAdminStatusFilter('${f}')">${ADMIN_STATUS_LABELS[f]}</button>`).join('');
-}
-function setAdminStatusFilter(f){
-  state.adminStatusFilter = f;
-  renderAdminFilters();
-  renderAdminTaskList();
-}
-function renderAdminTaskList(){
-  const el = document.getElementById('adminTaskList');
-  if(!el) return;
-  const filter = state.adminStatusFilter;
-  let list;
-  if(filter === '오늘날짜'){
-    list = state.tasks.filter(t=>t.date === todayStr());
-  } else {
-    const statusMap = {'전체예정':'예정','전체진행중':'진행중','전체완료':'완료'};
-    const status = statusMap[filter];
-    list = state.tasks.filter(t=>t.status===status);
-  }
-  list = [...list].sort((a,b)=> (b.date||'').localeCompare(a.date||''));
-  document.getElementById('adminTaskCountMeta').textContent = `${list.length}건`;
+  const dateStr = document.getElementById('adminBulkDate').value || todayStr();
+  const list = [...state.tasks.filter(t=>t.date===dateStr)]
+    .sort((a,b)=> (a.company||'').localeCompare(b.company||''));
+  document.getElementById('adminBulkCountMeta').textContent = `${list.length}건`;
 
   if(!list.length){
-    el.innerHTML = `<div class="empty-state"><div class="ic">📭</div><div class="t">해당하는 작업이 없습니다</div></div>`;
+    el.innerHTML = `<div class="empty-state"><div class="ic">📭</div><div class="t">해당 날짜에 등록된 작업이 없습니다</div></div>`;
     return;
   }
   el.innerHTML = list.map(t=>`
@@ -1881,12 +1893,7 @@ function renderAdminTaskList(){
         <h4 class="name">${t.taskName}</h4>
         <span class="badge status-${t.status}">${t.status}</span>
       </div>
-      <div class="badges-row">
-        ${isHighRisk(t) ? '<span class="badge hi-risk">⚠ 고위험</span>' : ''}
-        ${t.riskGradeHigh ? '<span class="badge hi-grade">⊙ 상등급</span>' : ''}
-      </div>
       <div class="task-meta">
-        <span>📅 ${t.date}</span>
         <span>🏢 ${t.company}</span>
         <span>${fmtBuildings(t)}</span>
         <span>👥 ${t.workers||0}명</span>
@@ -1895,6 +1902,21 @@ function renderAdminTaskList(){
   `).join('');
   el.querySelectorAll('.task-row').forEach(row=>{
     row.onclick = ()=> openDetail(row.dataset.id);
+  });
+}
+function bulkSetStatus(status){
+  const dateStr = document.getElementById('adminBulkDate').value || todayStr();
+  const list = state.tasks.filter(t=>t.date===dateStr);
+  if(!list.length){ showToast('해당 날짜에 등록된 작업이 없습니다'); return; }
+  showConfirm(`${dateStr} 작업 ${list.length}건을 전부 "${status}" 상태로 변경하시겠습니까?`, ()=>{
+    list.forEach(t=>{
+      t.status = status;
+      fbSaveTask(t);
+    });
+    saveTasks();
+    renderAdminBulkList();
+    renderAll();
+    showToast(`✓ ${list.length}건을 "${status}"(으)로 일괄 변경했습니다`);
   });
 }
 
@@ -1964,6 +1986,16 @@ function attachFirebaseListeners(){
     renderSiteImageVersionList();
   }, err=>{
     console.error('전경사진 동기화 오류', err);
+    showToast('⚠ 실시간 동기화 오류: ' + err.message);
+  });
+
+  fbDb.ref('attendance').on('value', snap=>{
+    const val = snap.val() || {};
+    state.attendanceByDate = val;
+    try{ localStorage.setItem(ATTENDANCE_KEY, JSON.stringify(state.attendanceByDate)); }catch(e){}
+    renderDashboard();
+  }, err=>{
+    console.error('출역인원 동기화 오류', err);
     showToast('⚠ 실시간 동기화 오류: ' + err.message);
   });
 }
@@ -2110,6 +2142,75 @@ function renderSiteImageVersionList(){
     </div>
   `).join('');
 }
+
+/* =========================================================
+   총 출역인원 (날짜별 업체/인원 수기 입력, Firebase로 공유)
+========================================================= */
+function loadAttendance(){
+  try{
+    const raw = localStorage.getItem(ATTENDANCE_KEY);
+    if(raw) state.attendanceByDate = JSON.parse(raw);
+  }catch(e){}
+}
+function fbSaveAttendance(dateStr, rows){
+  if(!fbDb) return;
+  fbDb.ref('attendance/' + dateStr).set(rows).catch(err=>{
+    console.error('출역인원 저장 실패', err);
+    showToast('⚠ 실시간 저장 실패: ' + err.message);
+  });
+}
+function openAttendanceSheet(){
+  const existing = state.attendanceByDate[state.date] || [];
+  state.attendanceDraft = existing.length
+    ? existing.map(r=>({...r}))
+    : [{company:'', workers:''},{company:'', workers:''}];
+  document.getElementById('attendanceDateLabel').textContent = `${state.date} 기준 업체별 출역인원을 입력하세요.`;
+  renderAttendanceRows();
+  document.getElementById('attendanceSheet').classList.add('show');
+}
+function closeAttendanceSheet(){
+  document.getElementById('attendanceSheet').classList.remove('show');
+}
+function renderAttendanceRows(){
+  const el = document.getElementById('attendanceRows');
+  el.innerHTML = state.attendanceDraft.map((r,i)=>`
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
+      <span style="width:20px;text-align:center;font-weight:800;color:var(--ink-400);font-size:12.5px;flex-shrink:0;">${i+1}</span>
+      <input type="text" placeholder="업체명" value="${(r.company||'').replace(/"/g,'&quot;')}"
+        oninput="updateAttendanceDraft(${i},'company',this.value)"
+        style="flex:2;min-width:0;padding:9px 10px;border-radius:8px;border:1.5px solid var(--line);font-size:13.5px;font-family:inherit;">
+      <input type="number" placeholder="인원" min="0" value="${r.workers===''?'':r.workers}"
+        oninput="updateAttendanceDraft(${i},'workers',this.value)"
+        style="flex:1;min-width:0;padding:9px 10px;border-radius:8px;border:1.5px solid var(--line);font-size:13.5px;font-family:inherit;">
+      <button type="button" onclick="removeAttendanceRow(${i})"
+        style="flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--red-bg);color:var(--red);border:none;font-weight:800;font-size:14px;">×</button>
+    </div>
+  `).join('');
+}
+function updateAttendanceDraft(i, key, val){
+  if(!state.attendanceDraft[i]) return;
+  state.attendanceDraft[i][key] = key==='workers' ? (val===''? '' : Number(val)||0) : val;
+}
+function addAttendanceRow(){
+  state.attendanceDraft.push({company:'', workers:''});
+  renderAttendanceRows();
+}
+function removeAttendanceRow(i){
+  state.attendanceDraft.splice(i,1);
+  renderAttendanceRows();
+}
+function saveAttendance(){
+  const rows = state.attendanceDraft
+    .filter(r=>r.company && r.company.trim())
+    .map(r=>({company:r.company.trim(), workers:Number(r.workers)||0}));
+  state.attendanceByDate[state.date] = rows;
+  try{ localStorage.setItem(ATTENDANCE_KEY, JSON.stringify(state.attendanceByDate)); }catch(e){}
+  fbSaveAttendance(state.date, rows);
+  closeAttendanceSheet();
+  renderDashboard();
+  showToast('✓ 출역인원이 저장되었습니다');
+}
+
 function openImageLightbox(){
   const img = document.getElementById('lightboxImg');
   img.src = resolveSiteImageForDate(state.date);
