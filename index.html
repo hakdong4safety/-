@@ -603,7 +603,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-13 03:40 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-13 03:48 UTC</p>
       </div>
     </div>
   </div>
@@ -1869,7 +1869,7 @@ function computeCompanyNumbers(list){
   return map;
 }
 /* 정렬: 고위험(맨 위) → 상등급 → 일반, 각 구간 안에서는 업체 번호 순 (같은 업체 작업은 붙어서 나옴) */
-const EXPORT_CATEGORY_RANK = { risk:0, grade:1, normal:2 };
+const EXPORT_CATEGORY_RANK = { grade:0, risk:1, normal:2 };
 function sortForExport(list, companyNum){
   return [...list].sort((a,b)=>{
     const ra = EXPORT_CATEGORY_RANK[riskLevel(a)], rb = EXPORT_CATEGORY_RANK[riskLevel(b)];
@@ -1996,7 +1996,20 @@ async function exportToExcel(){
 
     const wb = new ExcelJS.Workbook();
     wb.creator = siteName;
-    const ws = wb.addWorksheet('일일현황_' + state.date, { views:[{state:'frozen', ySplit:5}] });
+    const ws = wb.addWorksheet('일일현황_' + state.date, {
+      views:[{ state:'frozen', ySplit:7, showGridLines:false }]
+    });
+
+    // 인쇄 설정: 가로 A3, 폭 1페이지에 맞춤(세로는 필요시 여러 페이지로 자동 확장)
+    ws.pageSetup = {
+      paperSize: 8, // A3
+      orientation: 'landscape',
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0,
+      horizontalCentered: true,
+      margins: { left:0.3, right:0.3, top:0.4, bottom:0.4, header:0.2, footer:0.2 }
+    };
 
     // 열 너비
     const widths = [5,12,8,8,26,18,12,10,32,14,16,16,16,12,10];
@@ -2074,8 +2087,8 @@ async function exportToExcel(){
       row.eachCell({includeEmpty:true}, c=>{
         c.fill = { type:'pattern', pattern:'solid', fgColor:{argb} };
         c.alignment = { vertical:'top', wrapText:true };
-        c.border = { top:{style:'thin', color:{argb:'FFDDDDDD'}}, bottom:{style:'thin', color:{argb:'FFDDDDDD'}},
-          left:{style:'thin', color:{argb:'FFDDDDDD'}}, right:{style:'thin', color:{argb:'FFDDDDDD'}} };
+        c.border = { top:{style:'thin'}, bottom:{style:'thin'},
+          left:{style:'thin'}, right:{style:'thin'} };
       });
       row.getCell(1).alignment = { horizontal:'center', vertical:'top' };
     });
