@@ -230,7 +230,11 @@
   .filter-chip.on{background:var(--blue-600);color:#fff;border-color:var(--blue-600);}
 
   /* ===== Building view ===== */
-  .bchip-scroll{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;}
+  .bchip-nav-row{display:flex;align-items:center;gap:6px;}
+  .bchip-nav-btn{flex-shrink:0;width:34px;height:34px;border-radius:10px;border:1.5px solid var(--line);
+    background:#fff;font-size:16px;font-weight:800;color:var(--ink-600);font-family:inherit;box-shadow:var(--shadow);}
+  .bchip-nav-btn:active{background:var(--blue-100);}
+  .bchip-scroll{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;flex:1;scroll-behavior:smooth;}
   .bchip-scroll::-webkit-scrollbar{display:none;}
   .bchip{flex-shrink:0;padding:9px 16px;border-radius:11px;background:#fff;border:1.5px solid var(--line);
     font-size:13.5px;font-weight:800;color:var(--ink-600);font-family:inherit;}
@@ -607,8 +611,16 @@
   <div class="view" id="view-building">
     <div class="section">
       <div class="section-head"><h2>동별 현황</h2><span class="meta">층별 작업 분포 확인</span></div>
-      <div class="bchip-scroll" id="buildingFilterChips"></div>
-      <div class="floor-filter-scroll" id="floorFilterChips"></div>
+      <div class="bchip-nav-row">
+        <button type="button" class="bchip-nav-btn" onclick="shiftBuildingFilter(-1)">‹</button>
+        <div class="bchip-scroll" id="buildingFilterChips"></div>
+        <button type="button" class="bchip-nav-btn" onclick="shiftBuildingFilter(1)">›</button>
+      </div>
+      <div class="bchip-nav-row" style="margin-top:10px;">
+        <button type="button" class="bchip-nav-btn" onclick="shiftFloorFilter(-1)">‹</button>
+        <div class="floor-filter-scroll" id="floorFilterChips" style="margin-top:0;"></div>
+        <button type="button" class="bchip-nav-btn" onclick="shiftFloorFilter(1)">›</button>
+      </div>
     </div>
     <div class="section"><div id="buildingTaskList"></div></div>
   </div>
@@ -662,7 +674,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-13 22:50 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-13 23:49 UTC</p>
       </div>
     </div>
   </div>
@@ -700,7 +712,7 @@
       <h4 style="margin:0 0 18px;font-size:16px;" id="confirmMessage">삭제하시겠습니까?</h4>
       <div class="sheet-actions">
         <button class="btn-secondary" onclick="closeConfirm()">취소</button>
-        <button class="btn-primary" style="background:var(--red);" onclick="runConfirm()">삭제</button>
+        <button class="btn-primary" id="confirmActionBtn" style="background:var(--red);" onclick="runConfirm()">삭제</button>
       </div>
     </div>
   </div>
@@ -772,6 +784,7 @@ const BUILDING_NAMES = BUILDINGS.map(b=>b.name);
 function buildingPos(name){ return BUILDINGS.find(b=>b.name===name) || {x:50,y:50}; }
 
 const FLOORS = ['지하3층','지하2층','지하1층',...Array.from({length:30},(_,i)=>(i+1)+'층'),'지붕층'];
+const FLOOR_FILTER_OPTIONS = ['전체층', ...FLOORS];
 
 const RISK_ITEMS = ['타워크레인 설치/인상/해체','호이스트 설치/인상/해체','RCS 설치/인상/해체',
   '시스템비계 및 동바리 설치/해체','옥탑 구조물 작업','로프,곤돌라 작업','제연덕트 설치 작업',
@@ -1142,12 +1155,41 @@ function renderStatusList(){
 function renderBuildingFilters(){
   document.getElementById('buildingFilterChips').innerHTML = BUILDING_NAMES.map(b=>`
     <button class="bchip ${state.buildingFilter===b?'on':''}" onclick="setBuildingFilter('${b}')">🏢 ${b}</button>`).join('');
-  const floors = ['전체층', ...FLOORS];
-  document.getElementById('floorFilterChips').innerHTML = floors.map(f=>`
+  document.getElementById('floorFilterChips').innerHTML = FLOOR_FILTER_OPTIONS.map(f=>`
     <button class="ffchip ${state.floorFilter===f?'on':''}" onclick="setFloorFilter('${f}')">${f}</button>`).join('');
 }
-function setBuildingFilter(b){ state.buildingFilter=b; renderBuildingFilters(); renderBuildingList(); }
-function setFloorFilter(f){ state.floorFilter=f; renderBuildingFilters(); renderBuildingList(); }
+function setBuildingFilter(b){
+  state.buildingFilter=b;
+  renderBuildingFilters();
+  renderBuildingList();
+  scrollActiveBuildingChipIntoView();
+}
+function shiftBuildingFilter(delta){
+  const idx = BUILDING_NAMES.indexOf(state.buildingFilter);
+  const nextIdx = Math.max(0, Math.min(BUILDING_NAMES.length-1, idx+delta));
+  setBuildingFilter(BUILDING_NAMES[nextIdx]);
+}
+function scrollActiveBuildingChipIntoView(){
+  const wrap = document.getElementById('buildingFilterChips');
+  const active = wrap.querySelector('.bchip.on');
+  if(active) active.scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'});
+}
+function scrollActiveFloorChipIntoView(){
+  const wrap = document.getElementById('floorFilterChips');
+  const active = wrap.querySelector('.ffchip.on');
+  if(active) active.scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'});
+}
+function shiftFloorFilter(delta){
+  const idx = FLOOR_FILTER_OPTIONS.indexOf(state.floorFilter);
+  const nextIdx = Math.max(0, Math.min(FLOOR_FILTER_OPTIONS.length-1, idx+delta));
+  setFloorFilter(FLOOR_FILTER_OPTIONS[nextIdx]);
+}
+function setFloorFilter(f){
+  state.floorFilter=f;
+  renderBuildingFilters();
+  renderBuildingList();
+  scrollActiveFloorChipIntoView();
+}
 function renderBuildingList(){
   let list = tasksForDate(state.date).filter(t=> (t.buildings||[]).includes(state.buildingFilter));
   if(state.floorFilter!=='전체층'){
@@ -1825,9 +1867,12 @@ function showToast(msg){
    CONFIRM (삭제 등 되돌릴 수 없는 작업 재확인 팝업)
 ========================================================= */
 let _confirmCallback = null;
-function showConfirm(message, onConfirm){
+function showConfirm(message, onConfirm, opts){
   document.getElementById('confirmMessage').textContent = message;
   _confirmCallback = onConfirm;
+  const btn = document.getElementById('confirmActionBtn');
+  btn.textContent = (opts && opts.label) || '삭제';
+  btn.style.background = (opts && opts.color) || 'var(--red)';
   document.getElementById('confirmSheet').classList.add('show');
 }
 function closeConfirm(){
@@ -1917,7 +1962,7 @@ function bulkSetStatus(status){
     renderAdminBulkList();
     renderAll();
     showToast(`✓ ${list.length}건을 "${status}"(으)로 일괄 변경했습니다`);
-  });
+  }, { label:'일괄 적용', color:'var(--blue-600)' });
 }
 
 /* =========================================================
