@@ -318,6 +318,9 @@
     color:rgba(255,255,255,0.75);font-size:12px;font-weight:600;pointer-events:none;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 </head>
 <body>
 <div id="app">
@@ -593,19 +596,13 @@
         </div>
 
         <div class="form-card">
-          <h3>🔗 Google Sheets 연동</h3>
-          <p class="hint" style="margin-top:0;">설정하면 작업/양수기 데이터가 구글 스프레드시트와 자동 동기화됩니다. 비워두면 이 기기에만 저장됩니다.</p>
-          <div class="field"><label>GAS 웹앱 URL</label>
-            <input type="text" id="gasUrlInput" placeholder="https://script.google.com/macros/s/xxxx/exec"></div>
-          <div class="field"><label>구글시트 바로가기 URL (선택)</label>
-            <input type="text" id="sheetUrlInput" placeholder="https://docs.google.com/spreadsheets/d/xxxx/edit"></div>
-          <button class="submit-btn" onclick="saveSettings()">저장 후 동기화</button>
-          <button class="map-action-btn" style="width:100%;margin-top:10px;padding:11px;" onclick="openSheetLink()">📄 구글시트 열기</button>
-          <p class="hint" style="text-align:center;margin:10px 0 0;">연동 상태: <b id="syncStatus">미설정</b></p>
+          <h3>🔥 Firebase 실시간 연동</h3>
+          <p class="hint" style="margin-top:0;">모든 기기가 자동으로 실시간 동기화됩니다. 별도 설정이 필요 없습니다.</p>
+          <p class="hint" style="text-align:center;margin:10px 0 0;">연결 상태: <b id="syncStatus">연결 중...</b></p>
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-13 01:46 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-13 02:51 UTC</p>
       </div>
     </div>
   </div>
@@ -688,10 +685,19 @@ function companyColor(name){
 
 const STORAGE_TASKS = 'siteSafetyTasks_v2';
 const STORAGE_PUMPS = 'siteSafetyPumps_v2';
-const GAS_URL_KEY = 'siteSafetyGasUrl_v2';
-const SHEET_URL_KEY = 'siteSafetySheetUrl_v2';
 const SITE_IMG_CUR_KEY = 'siteSafetySiteImgCur_v1';
 const SITE_IMG_PREV_KEY = 'siteSafetySiteImgPrev_v1';
+
+/* Firebase 프로젝트 설정 (Realtime Database + 익명 인증으로 실시간 동기화) */
+const firebaseConfig = {
+  apiKey: "AIzaSyDNNXP5TS48B_HUsldZS6wsk4hiz7Fut98",
+  authDomain: "safety-hdc-hakdong4.firebaseapp.com",
+  databaseURL: "https://safety-hdc-hakdong4-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "safety-hdc-hakdong4",
+  storageBucket: "safety-hdc-hakdong4.firebasestorage.app",
+  messagingSenderId: "1038141994542",
+  appId: "1:1038141994542:web:5c493bcb9b4f14d64d91bf"
+};
 
 let state = {
   date: todayStr(),
@@ -783,7 +789,6 @@ function loadData(){
 }
 function saveTasks(){ localStorage.setItem(STORAGE_TASKS, JSON.stringify(state.tasks)); }
 function savePumps(){ localStorage.setItem(STORAGE_PUMPS, JSON.stringify(state.pumps)); }
-function getGasUrl(){ return localStorage.getItem(GAS_URL_KEY) || ''; }
 
 /* =========================================================
    INIT
@@ -798,7 +803,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupPumpMap();
   updateSyncStatus();
   renderAll();
-  if(getGasUrl()) pullFromGAS(true);
+  initFirebase();
 });
 
 function renderAll(){
@@ -1276,7 +1281,7 @@ function handleSubmitTask(e){
       const merged = { ...state.tasks[idx], ...fields };
       state.tasks[idx] = merged;
       saveTasks();
-      pushToGAS('updateTask', merged);
+      fbSaveTask(merged);
       state.date = merged.date;
       showToast('✓ 작업이 수정되었습니다');
     }
@@ -1290,7 +1295,7 @@ function handleSubmitTask(e){
   const task = { id: cuid('t'), ...fields, createdAt: new Date().toISOString() };
   state.tasks.push(task);
   saveTasks();
-  pushToGAS('addTask', task);
+  fbSaveTask(task);
 
   const savedDate = task.date;
   resetTaskForm();
@@ -1321,7 +1326,7 @@ function handleSubmitPump(){
   };
   state.pumps.push(pump);
   savePumps();
-  pushToGAS('addPump', pump);
+  fbSavePump(pump);
 
   document.getElementById('p_company').value='';
   document.getElementById('p_location').value='';
@@ -1337,7 +1342,7 @@ function handleSubmitPump(){
 function deletePump(id){
   state.pumps = state.pumps.filter(p=>p.id!==id);
   savePumps();
-  pushToGAS('deletePump', {id});
+  fbDeletePump(id);
   renderPumpList();
   renderDashboard();
   showToast('양수기가 삭제되었습니다');
@@ -1427,7 +1432,7 @@ function changeTaskStatus(id, status){
   if(t.status === status) return;
   t.status = status;
   saveTasks();
-  pushToGAS('updateTask', t);
+  fbSaveTask(t);
   document.querySelectorAll('#statusEditRow .status-edit-btn').forEach(b=>{
     b.classList.toggle('on', b.textContent.trim()===status);
   });
@@ -1437,7 +1442,7 @@ function changeTaskStatus(id, status){
 function deleteTask(id){
   state.tasks = state.tasks.filter(t=>t.id!==id);
   saveTasks();
-  pushToGAS('deleteTask', {id});
+  fbDeleteTask(id);
   closeDetail();
   renderAll();
   showToast('작업이 삭제되었습니다');
@@ -1560,8 +1565,6 @@ function tryAdminLogin(){
     adminUnlocked = true;
     input.value = '';
     showAdminPanel();
-    document.getElementById('gasUrlInput').value = getGasUrl();
-    document.getElementById('sheetUrlInput').value = getSheetUrl();
     updateSyncStatus();
   } else {
     showToast('비밀번호가 올바르지 않습니다');
@@ -1583,73 +1586,91 @@ function showAdminLocked(){
 }
 
 /* =========================================================
-   GAS SYNC
+   FIREBASE SYNC (실시간 동기화)
 ========================================================= */
 function updateSyncStatus(){
   const el = document.getElementById('syncStatus');
-  if(el) el.textContent = getGasUrl() ? '연동됨' : '미설정 (로컬 저장)';
-}
-function getSheetUrl(){ return localStorage.getItem(SHEET_URL_KEY) || ''; }
-function saveSettings(){
-  const url = document.getElementById('gasUrlInput').value.trim();
-  const sheetUrl = document.getElementById('sheetUrlInput').value.trim();
-  if(url) localStorage.setItem(GAS_URL_KEY, url); else localStorage.removeItem(GAS_URL_KEY);
-  if(sheetUrl) localStorage.setItem(SHEET_URL_KEY, sheetUrl); else localStorage.removeItem(SHEET_URL_KEY);
-  updateSyncStatus();
-  if(url) pullFromGAS();
-  showToast(url ? 'Google Sheets 연동이 설정되었습니다' : '로컬 저장 모드로 전환되었습니다');
-}
-function openSheetLink(){
-  const url = getSheetUrl();
-  if(!url){ showToast('구글시트 바로가기 URL을 먼저 등록해주세요'); return; }
-  window.open(url, '_blank');
-}
-function pushToGAS(action, payload){
-  const url = getGasUrl();
-  if(!url) return;
-  fetch(url, {method:'POST', mode:'no-cors', redirect:'follow',
-    headers:{'Content-Type':'text/plain;charset=utf-8'},
-    body: JSON.stringify({action, ...payload && (action.includes('Pump') ? {pump:payload} : {task:payload})})
-  }).catch(()=>{ showToast('⚠ 동기화 실패: 네트워크를 확인하세요'); });
+  if(!el) return;
+  el.textContent = firebaseReady ? '연결됨 (실시간 동기화 중)' : '연결 중...';
 }
 
-/* GAS 웹앱은 fetch()로 GET 응답을 직접 읽으면 CORS에 막히므로 JSONP(스크립트 태그) 방식으로 불러온다 */
-let _jsonpSeq = 0;
-function jsonpRequest(url, timeoutMs){
-  return new Promise((resolve, reject)=>{
-    const cbName = '_gasCb_' + (_jsonpSeq++) + '_' + Date.now();
-    const script = document.createElement('script');
-    let done = false;
-    const cleanup = ()=>{
-      delete window[cbName];
-      if(script.parentNode) script.parentNode.removeChild(script);
-      clearTimeout(timer);
-    };
-    const timer = setTimeout(()=>{
-      if(!done){ done = true; cleanup(); reject(new Error('timeout')); }
-    }, timeoutMs || 12000);
-    window[cbName] = function(data){
-      if(done) return;
-      done = true; cleanup(); resolve(data);
-    };
-    script.onerror = function(){
-      if(done) return;
-      done = true; cleanup(); reject(new Error('load error'));
-    };
-    const sep = url.indexOf('?') > -1 ? '&' : '?';
-    script.src = url + sep + 'callback=' + cbName;
-    document.body.appendChild(script);
+let firebaseReady = false;
+let fbDb = null;
+let fbTasksLoaded = false;
+let fbPumpsLoaded = false;
+
+function initFirebase(){
+  try{
+    firebase.initializeApp(firebaseConfig);
+    fbDb = firebase.database();
+    firebase.auth().signInAnonymously().catch(err=>{
+      console.error('Firebase 인증 실패', err);
+      showToast('⚠ Firebase 인증 실패: ' + err.message);
+    });
+    firebase.auth().onAuthStateChanged(user=>{
+      if(user){
+        firebaseReady = true;
+        updateSyncStatus();
+        attachFirebaseListeners();
+      }
+    });
+  }catch(err){
+    console.error('Firebase 초기화 실패', err);
+    showToast('⚠ Firebase 초기화 실패: ' + err.message);
+  }
+}
+
+function attachFirebaseListeners(){
+  fbDb.ref('tasks').on('value', snap=>{
+    const val = snap.val() || {};
+    state.tasks = Object.keys(val).map(k=>val[k]);
+    saveTasks();
+    if(!fbTasksLoaded){ fbTasksLoaded = true; }
+    renderAll();
+  }, err=>{
+    console.error('tasks 동기화 오류', err);
+    showToast('⚠ 실시간 동기화 오류: ' + err.message);
+  });
+
+  fbDb.ref('pumps').on('value', snap=>{
+    const val = snap.val() || {};
+    state.pumps = Object.keys(val).map(k=>val[k]);
+    savePumps();
+    if(!fbPumpsLoaded){ fbPumpsLoaded = true; }
+    renderAll();
+  }, err=>{
+    console.error('pumps 동기화 오류', err);
+    showToast('⚠ 실시간 동기화 오류: ' + err.message);
   });
 }
-function pullFromGAS(silent){
-  const url = getGasUrl();
-  if(!url) return;
-  jsonpRequest(url + '?action=getAll').then(data=>{
-    if(Array.isArray(data.tasks)){ state.tasks = data.tasks; saveTasks(); }
-    if(Array.isArray(data.pumps)){ state.pumps = data.pumps; savePumps(); }
-    renderAll();
-    if(!silent) showToast('✓ Google Sheets에서 데이터를 불러왔습니다');
-  }).catch(()=>{ if(!silent) showToast('⚠ 불러오기 실패: URL 또는 배포 설정을 확인하세요'); });
+
+function fbSaveTask(task){
+  if(!fbDb) return;
+  fbDb.ref('tasks/' + task.id).set(task).catch(err=>{
+    console.error('작업 저장 실패', err);
+    showToast('⚠ 실시간 저장 실패: ' + err.message);
+  });
+}
+function fbDeleteTask(id){
+  if(!fbDb) return;
+  fbDb.ref('tasks/' + id).remove().catch(err=>{
+    console.error('작업 삭제 실패', err);
+    showToast('⚠ 실시간 삭제 실패: ' + err.message);
+  });
+}
+function fbSavePump(pump){
+  if(!fbDb) return;
+  fbDb.ref('pumps/' + pump.id).set(pump).catch(err=>{
+    console.error('양수기 저장 실패', err);
+    showToast('⚠ 실시간 저장 실패: ' + err.message);
+  });
+}
+function fbDeletePump(id){
+  if(!fbDb) return;
+  fbDb.ref('pumps/' + id).remove().catch(err=>{
+    console.error('양수기 삭제 실패', err);
+    showToast('⚠ 실시간 삭제 실패: ' + err.message);
+  });
 }
 
 /* =========================================================
@@ -1828,38 +1849,6 @@ function buildExportRows(ordered, companyNum){
     riskGradeHigh: !!t.riskGradeHigh,
     hasHighRisk: isHighRisk(t)
   }));
-}
-
-async function exportToSheet(){
-  const url = getGasUrl();
-  if(!url){ showToast('먼저 관리 탭에서 GAS 연동 URL을 등록해주세요'); switchView('admin'); return; }
-  const list = tasksForDate(state.date);
-  if(!list.length){ showToast('내보낼 작업이 없습니다'); return; }
-
-  const btn = document.getElementById('exportSheetBtn');
-  if(btn){ btn.disabled = true; btn.textContent = '⏳ 내보내는 중...'; }
-
-  try{
-    const companyNum = computeCompanyNumbers(list);
-    const ordered = sortForExport(list, companyNum);
-    const mapImageBase64 = await buildExportMapImage(ordered, companyNum);
-    const rows = buildExportRows(ordered, companyNum);
-
-    await fetch(url, {method:'POST', mode:'no-cors', redirect:'follow',
-      headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify({
-        action:'exportDailyReport',
-        date: state.date,
-        siteName: document.getElementById('siteTitle').textContent,
-        rows, mapImageBase64
-      })
-    });
-    showToast('✓ 내보내기를 요청했습니다. 잠시 후 구글시트에서 확인해주세요');
-  }catch(err){
-    showToast('⚠ 내보내기 실패: 네트워크를 확인하세요');
-  }finally{
-    if(btn){ btn.disabled = false; btn.textContent = '📤 구글시트로 내보내기'; }
-  }
 }
 
 /* =========================================================
