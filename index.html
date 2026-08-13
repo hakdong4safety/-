@@ -295,9 +295,9 @@
   .detail-guard{background:var(--amber-bg);border-radius:11px;padding:11px 12px;margin-bottom:8px;}
   .detail-guard .k{font-size:11px;color:var(--amber);font-weight:800;margin-bottom:2px;}
   .detail-guard .v{font-size:13.5px;font-weight:800;color:#8A5A16;}
-  .detail-actions{display:flex;gap:8px;margin:14px 0;}
-  .detail-actions button{flex:1;padding:12px;border-radius:10px;border:1.5px solid var(--line);background:#fff;
-    font-size:13px;font-weight:800;color:var(--ink-600);font-family:inherit;}
+  .detail-actions{display:flex;gap:6px;margin:14px 0;}
+  .detail-actions button{flex:1;padding:11px 4px;border-radius:10px;border:1.5px solid var(--line);background:#fff;
+    font-size:12px;font-weight:800;color:var(--ink-600);font-family:inherit;}
   .detail-actions button.danger{color:var(--red);border-color:#F3C6C7;}
   .detail-actions button.primary{background:var(--blue-600);border-color:var(--blue-600);color:#fff;}
   .detail-map-title{font-size:13.5px;font-weight:800;margin:6px 0 8px;}
@@ -383,6 +383,7 @@
 
       <!-- ---- 일일작업 등록 ---- -->
       <div id="registerTask">
+        <button type="button" class="map-action-btn" id="pasteTaskBtn" style="width:100%;margin-bottom:14px;padding:11px;" onclick="pasteTaskFromClipboard()">📋 복사한 작업 붙여넣기</button>
         <form id="taskForm" onsubmit="handleSubmitTask(event)">
           <div class="form-card">
             <h3>기본 정보</h3>
@@ -543,7 +544,7 @@
             <img class="bg" src="./map.jpg" alt="배치도" style="pointer-events:none;">
           </div>
           <div class="hint" id="pumpPosStatus" style="margin-top:8px;">위치 미지정</div>
-          <button type="button" class="submit-btn" style="margin-top:14px;" onclick="handleSubmitPump()">💧 양수기 등록하기</button>
+          <button type="button" class="submit-btn" id="pumpSubmitBtn" style="margin-top:14px;" onclick="handleSubmitPump()">💧 양수기 등록하기</button>
         </div>
 
         <div class="section-head" style="padding:0 0 8px;"><h2>등록된 양수기</h2><span class="meta" id="pumpListMeta"></span></div>
@@ -602,7 +603,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-13 02:51 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-13 03:40 UTC</p>
       </div>
     </div>
   </div>
@@ -622,6 +623,14 @@
     <div class="sheet-inner" style="position:relative;">
       <button class="detail-close" onclick="closeDetail()">✕</button>
       <div id="detailBody"></div>
+    </div>
+  </div>
+
+  <!-- Pump detail sheet -->
+  <div class="sheet" id="pumpDetailSheet">
+    <div class="sheet-inner" style="position:relative;">
+      <button class="detail-close" onclick="closePumpDetail()">✕</button>
+      <div id="pumpDetailBody"></div>
     </div>
   </div>
 
@@ -716,6 +725,8 @@ let state = {
   formEarly: false,
   formCctv: false,
   editingTaskId: null,
+  editingPumpId: null,
+  clipboardTask: null,
   region: null,      // {x,y,w,h} in percent, confirmed
   drawing: null,      // in-progress rect while drawing
   pumpPos: null,      // {x,y} percent for new pump
@@ -786,6 +797,10 @@ function loadData(){
     state.pumps = raw ? JSON.parse(raw) : seedPumps();
     if(!raw) savePumps();
   }catch(e){ state.pumps = seedPumps(); }
+  try{
+    const raw = localStorage.getItem('siteSafetyClipboardTask_v1');
+    if(raw) state.clipboardTask = JSON.parse(raw);
+  }catch(e){}
 }
 function saveTasks(){ localStorage.setItem(STORAGE_TASKS, JSON.stringify(state.tasks)); }
 function savePumps(){ localStorage.setItem(STORAGE_PUMPS, JSON.stringify(state.pumps)); }
@@ -897,10 +912,10 @@ function renderDashboard(){
     const pin = document.createElement('div');
     pin.className = 'pin pump';
     pin.style.left = p.x+'%'; pin.style.top = p.y+'%';
-    const col = p.status==='가동중' ? '#1E9E5A' : (p.status==='외부배수' ? '#2F5FDB' : '#8B93A3');
+    const col = companyColor(p.company);
     pin.innerHTML = `<div class="dot" style="background:${col}"><span>P</span></div>`;
     pin.title = `양수기 No.${p.no} · ${p.location}`;
-    pin.onclick = ()=> showToast(`💧 양수기 No.${p.no} · ${p.company} · ${p.location} (${p.status})`);
+    pin.onclick = ()=> openPumpDetail(p.id);
     mapWrap.appendChild(pin);
   });
 
@@ -1315,38 +1330,112 @@ function handleSubmitPump(){
   if(!company || !location){ showToast('업체명과 위치를 입력해 주세요'); return; }
   if(!state.pumpPos){ showToast('배치도를 터치해 위치를 지정해 주세요'); return; }
 
-  const nextNo = state.pumps.length ? Math.max(...state.pumps.map(p=>p.no))+1 : 1;
-  const pump = {
-    id: cuid('p'), no: nextNo, company, location,
+  const fields = {
+    company, location,
     diameter: Number(document.getElementById('p_diameter').value)||0,
     count: Number(document.getElementById('p_count').value)||1,
     status: document.getElementById('p_status').value,
     regDate: document.getElementById('p_date').value || todayStr(),
     x: state.pumpPos.x, y: state.pumpPos.y
   };
+
+  if(state.editingPumpId){
+    const idx = state.pumps.findIndex(x=>x.id===state.editingPumpId);
+    if(idx>-1){
+      const merged = { ...state.pumps[idx], ...fields };
+      state.pumps[idx] = merged;
+      savePumps();
+      fbSavePump(merged);
+      showToast('✓ 양수기가 수정되었습니다');
+    }
+    resetPumpForm();
+    renderAll();
+    return;
+  }
+
+  const nextNo = state.pumps.length ? Math.max(...state.pumps.map(p=>p.no))+1 : 1;
+  const pump = { id: cuid('p'), no: nextNo, ...fields };
   state.pumps.push(pump);
   savePumps();
   fbSavePump(pump);
 
+  resetPumpForm();
+  showToast('✓ 양수기가 등록되었습니다');
+  renderAll();
+}
+function resetPumpForm(){
   document.getElementById('p_company').value='';
   document.getElementById('p_location').value='';
   document.getElementById('p_diameter').value='';
   document.getElementById('p_count').value='1';
+  document.getElementById('p_status').value='가동중';
+  document.getElementById('p_date').value = todayStr();
   state.pumpPos = null;
+  state.editingPumpId = null;
   document.getElementById('pumpPosStatus').textContent = '위치 미지정';
   document.getElementById('pumpMapWrap').querySelectorAll('.pin').forEach(p=>p.remove());
+  const btn = document.getElementById('pumpSubmitBtn');
+  if(btn) btn.textContent = '💧 양수기 등록하기';
+}
+function editPump(id){
+  const p = state.pumps.find(x=>x.id===id);
+  if(!p) return;
+  closePumpDetail();
+  switchView('register');
+  switchRegisterTab('pump');
+  state.editingPumpId = id;
 
-  showToast('✓ 양수기가 등록되었습니다');
-  renderAll();
+  document.getElementById('p_company').value = p.company;
+  document.getElementById('p_location').value = p.location;
+  document.getElementById('p_diameter').value = p.diameter || '';
+  document.getElementById('p_count').value = p.count || 1;
+  document.getElementById('p_status').value = p.status;
+  document.getElementById('p_date').value = p.regDate || todayStr();
+
+  state.pumpPos = { x:p.x, y:p.y };
+  const wrap = document.getElementById('pumpMapWrap');
+  wrap.querySelectorAll('.pin').forEach(el=>el.remove());
+  const pin = document.createElement('div');
+  pin.className = 'pin pump';
+  pin.style.left = p.x+'%'; pin.style.top = p.y+'%';
+  pin.innerHTML = `<div class="dot" style="background:#2F5FDB"><span>P</span></div>`;
+  wrap.appendChild(pin);
+  document.getElementById('pumpPosStatus').textContent = `위치 지정됨 (${p.x.toFixed(1)}%, ${p.y.toFixed(1)}%)`;
+
+  document.getElementById('pumpSubmitBtn').textContent = '✎ 수정 완료';
+  showToast('내용을 수정한 뒤 "수정 완료"를 눌러주세요');
 }
 function deletePump(id){
   state.pumps = state.pumps.filter(p=>p.id!==id);
   savePumps();
   fbDeletePump(id);
+  closePumpDetail();
   renderPumpList();
   renderDashboard();
   showToast('양수기가 삭제되었습니다');
 }
+function openPumpDetail(id){
+  const p = state.pumps.find(x=>x.id===id);
+  if(!p) return;
+  document.getElementById('pumpDetailBody').innerHTML = `
+    <div class="detail-company">양수기 No.${p.no}</div>
+    <h3 class="detail-title">💧 ${p.company}</h3>
+    <div style="margin-bottom:12px;"><span class="badge st-${p.status}" style="padding:4px 10px;">${p.status}</span></div>
+    <div class="detail-grid">
+      <div class="detail-cell"><div class="k">📍 위치</div><div class="v">${p.location}</div></div>
+      <div class="detail-cell"><div class="k">📏 규격</div><div class="v">${p.diameter}인치 × ${p.count}대</div></div>
+      <div class="detail-cell"><div class="k">📅 등록일</div><div class="v">${p.regDate}</div></div>
+      <div class="detail-cell"><div class="k">🏢 상태</div><div class="v">${p.status}</div></div>
+    </div>
+    <div class="detail-actions">
+      <button onclick="editPump('${p.id}')">✎ 수정</button>
+      <button class="danger" onclick="deletePump('${p.id}')">🗑 삭제</button>
+      <button class="primary" onclick="closePumpDetail()">확인</button>
+    </div>
+  `;
+  document.getElementById('pumpDetailSheet').classList.add('show');
+}
+function closePumpDetail(){ document.getElementById('pumpDetailSheet').classList.remove('show'); }
 function renderPumpList(){
   document.getElementById('pumpListMeta').textContent = `${state.pumps.length}대`;
   const el = document.getElementById('pumpList');
@@ -1411,6 +1500,7 @@ function openDetail(id){
     ${t.remarks ? `<div class="detail-info"><div class="k">비고</div><div class="v">${t.remarks}</div></div>` : ''}
 
     <div class="detail-actions">
+      <button onclick="copyTaskToClipboard('${t.id}')">⧉ 복사</button>
       <button onclick="editTask('${t.id}')">✎ 수정</button>
       <button class="danger" onclick="deleteTask('${t.id}')">🗑 삭제</button>
       <button class="primary" onclick="closeDetail()">확인</button>
@@ -1451,14 +1541,31 @@ function editTask(id){
   const t = state.tasks.find(x=>x.id===id);
   if(!t) return;
   closeDetail();
-  populateFormForEdit(t);
   switchView('register');
   switchRegisterTab('task');
+  state.editingTaskId = t.id;
+  fillFormFromTask(t);
+  document.getElementById('submitBtn').textContent = '✎ 수정 완료';
   showToast('내용을 수정한 뒤 "수정 완료"를 눌러주세요');
 }
-function populateFormForEdit(t){
-  state.editingTaskId = t.id;
-
+function copyTaskToClipboard(id){
+  const t = state.tasks.find(x=>x.id===id);
+  if(!t) return;
+  state.clipboardTask = {...t};
+  try{ localStorage.setItem('siteSafetyClipboardTask_v1', JSON.stringify(t)); }catch(e){}
+  closeDetail();
+  showToast('✓ 작업이 복사되었습니다. 작업등록 탭에서 "붙여넣기"를 눌러주세요');
+}
+function pasteTaskFromClipboard(){
+  const t = state.clipboardTask;
+  if(!t){ showToast('복사된 작업이 없습니다. 먼저 작업 상세에서 "복사"를 눌러주세요'); return; }
+  state.editingTaskId = null;
+  fillFormFromTask(t);
+  document.getElementById('f_date').value = state.date;
+  document.getElementById('submitBtn').textContent = '✓ 작업 등록하기';
+  showToast('✓ 붙여넣었습니다. 필요한 부분을 수정한 뒤 등록해주세요');
+}
+function fillFormFromTask(t){
   document.getElementById('f_date').value = t.date;
   document.getElementById('f_company').value = t.company;
   document.getElementById('f_taskname').value = t.taskName;
@@ -1538,8 +1645,6 @@ function populateFormForEdit(t){
     state.region = null; state.drawing = null;
     document.getElementById('drawStatus').textContent = '구간 미지정';
   }
-
-  document.getElementById('submitBtn').textContent = '✎ 수정 완료';
 }
 
 /* =========================================================
@@ -1804,6 +1909,8 @@ function buildExportMapImage(list, companyNum){
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img,0,0);
       const r = Math.max(20, canvas.width*0.022);
+
+      // 작업 위치 핀 (숫자 = 업체 번호, 색 = 위험등급)
       list.forEach((t)=>{
         const c = taskCenter(t);
         const px = c.x/100*canvas.width, py = c.y/100*canvas.height;
@@ -1817,6 +1924,20 @@ function buildExportMapImage(list, companyNum){
         ctx.textAlign='center'; ctx.textBaseline='middle';
         ctx.fillText(String(num), px, py+r*0.06);
       });
+
+      // 양수기 위치 핀 (P 표시, 업체색)
+      const pr = r * 0.82;
+      state.pumps.forEach((p)=>{
+        const px = p.x/100*canvas.width, py = p.y/100*canvas.height;
+        const color = companyColor(p.company);
+        ctx.beginPath(); ctx.arc(px,py,pr,0,Math.PI*2);
+        ctx.fillStyle = color; ctx.fill();
+        ctx.lineWidth = Math.max(2,pr*0.14); ctx.strokeStyle = '#fff'; ctx.stroke();
+        ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.round(pr*1.0)}px sans-serif`;
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('P', px, py+pr*0.06);
+      });
+
       resolve(canvas.toDataURL('image/png').split(',')[1]);
     };
     img.crossOrigin = 'anonymous';
@@ -1961,9 +2082,7 @@ async function exportToExcel(){
 
     // 위치도 이미지
     if(mapImageBase64){
-      const imgRow = headerRowIdx + rows.length + 3;
-      ws.getCell(imgRow,1).value = '■ 작업 위치도 (번호: 표 No. 일치 / 🔴 상등급 🟠 고위험 🔵 일상)';
-      ws.getCell(imgRow,1).font = { bold:true, name:'맑은 고딕' };
+      const imgRow = headerRowIdx + rows.length + 2;
       const imgId = wb.addImage({ base64: 'data:image/png;base64,' + mapImageBase64, extension:'png' });
       ws.addImage(imgId, {
         tl: { col:0, row: imgRow },
