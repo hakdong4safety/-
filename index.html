@@ -310,20 +310,48 @@
     position:relative;overflow:hidden;}
   .lightbox-scroll{width:100%;height:100%;overflow:auto;display:flex;align-items:center;justify-content:center;
     -webkit-overflow-scrolling:touch;}
-  .lightbox-img{width:100%;max-width:100%;transition:transform .25s ease;transform-origin:center;}
-  .lightbox-img.zoomed{transform:scale(2.2);}
+  .lightbox-stage{position:relative;width:100%;transition:transform .25s ease;transform-origin:center;}
+  .lightbox-stage.zoomed{transform:scale(2.2);}
+  .lightbox-img{width:100%;max-width:100%;display:block;}
   .lightbox-close{position:absolute;top:calc(14px + env(safe-area-inset-top));right:14px;width:38px;height:38px;
     border-radius:50%;background:rgba(255,255,255,0.16);border:none;font-size:18px;color:#fff;z-index:5;}
   .lightbox-hint{position:absolute;bottom:calc(20px + env(safe-area-inset-bottom));left:0;right:0;text-align:center;
     color:rgba(255,255,255,0.75);font-size:12px;font-weight:600;pointer-events:none;}
 
-  /* ===== Desktop layout (모바일 화면은 그대로 유지, PC에서만 대시보드 2단 배치) ===== */
+  /* ===== Desktop layout (모바일 화면은 그대로 유지, PC에서만 레이아웃 확장) ===== */
   @media (min-width: 900px){
     #app{max-width:1100px;}
     .bottom-nav{max-width:1100px;}
+
+    /* 대시보드: 좌측 배치도 고정, 우측 작업목록만 독립 스크롤 */
     #view-dashboard{
       display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr);
       align-items:start; column-gap:20px;
+    }
+    #view-dashboard .section:nth-child(2){
+      position:sticky; top:16px;
+      max-height:calc(100vh - 32px);
+      overflow-y:auto;
+      -webkit-overflow-scrolling:touch;
+    }
+
+    /* 작업등록/작업현황/동별보기: 현재 PC 화면 크기에 맞춰 넓게 표시 */
+    #app.wide-view{max-width:1500px;}
+    #app.wide-view .bottom-nav{max-width:1500px;}
+    #app.wide-view #registerTask form,
+    #app.wide-view #pumpList,
+    #app.wide-view #statusTaskList,
+    #app.wide-view #buildingTaskList{
+      column-count:2; column-gap:20px;
+    }
+    #app.wide-view #registerTask form > .submit-btn,
+    #app.wide-view #registerTask > .submit-btn{
+      column-span:all;
+    }
+    #app.wide-view .form-card,
+    #app.wide-view .company-group,
+    #app.wide-view .pump-card{
+      break-inside:avoid; -webkit-column-break-inside:avoid;
     }
   }
 </style>
@@ -613,7 +641,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-13 06:53 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-13 07:38 UTC</p>
       </div>
     </div>
   </div>
@@ -661,9 +689,11 @@
     <div class="lightbox-inner">
       <button class="lightbox-close" onclick="closeImageLightbox()">✕</button>
       <div class="lightbox-scroll" id="lightboxScroll">
-        <img id="lightboxImg" class="lightbox-img" src="" alt="전경사진 확대보기" onclick="toggleLightboxZoom()">
+        <div class="lightbox-stage" id="lightboxStage" onclick="toggleLightboxZoom()">
+          <img id="lightboxImg" class="lightbox-img" src="" alt="전경사진 확대보기">
+        </div>
       </div>
-      <div class="lightbox-hint">이미지를 탭하면 확대/축소됩니다</div>
+      <div class="lightbox-hint">이미지를 탭하면 확대/축소됩니다 · 핀을 탭하면 상세보기가 열립니다</div>
     </div>
   </div>
 
@@ -879,6 +909,7 @@ function switchView(name){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.view===name));
   if(name==='register'){ document.getElementById('f_date').value = state.date; }
   if(name==='admin'){ adminUnlocked ? showAdminPanel() : showAdminLocked(); }
+  document.getElementById('app').classList.toggle('wide-view', ['register','status','building'].includes(name));
   window.scrollTo({top:0, behavior:'smooth'});
 }
 function switchRegisterTab(tab){
@@ -906,40 +937,42 @@ function taskCenter(t){
 /* =========================================================
    DASHBOARD
 ========================================================= */
-function renderDashboard(){
-  const list = tasksForDate(state.date);
-  const pumps = state.pumps;
-
-  const mapWrap = document.getElementById('mapWrap');
-  mapWrap.querySelectorAll('.pin,.region-box').forEach(el=>el.remove());
-
-  list.forEach(t=>{
+function renderPinsInto(container, taskList, pumpList){
+  container.querySelectorAll('.pin,.region-box').forEach(el=>el.remove());
+  taskList.forEach(t=>{
     if(t.region){
       const rb = document.createElement('div');
       rb.className = 'region-box';
       rb.style.left = t.region.x+'%'; rb.style.top = t.region.y+'%';
       rb.style.width = t.region.w+'%'; rb.style.height = t.region.h+'%';
-      mapWrap.appendChild(rb);
+      container.appendChild(rb);
     }
     const c = taskCenter(t);
     const pin = document.createElement('div');
     pin.className = 'pin' + (isHighRisk(t) ? ' risk':'');
     pin.style.left = c.x+'%'; pin.style.top = c.y+'%';
     pin.innerHTML = `<div class="dot" style="background:${companyColor(t.company)}"><span>😊 ${t.workers||0}</span></div>`;
-    pin.onclick = ()=> openDetail(t.id);
-    mapWrap.appendChild(pin);
+    pin.onclick = (e)=>{ e.stopPropagation(); openDetail(t.id); };
+    container.appendChild(pin);
   });
-
-  pumps.forEach(p=>{
+  pumpList.forEach(p=>{
     const pin = document.createElement('div');
     pin.className = 'pin pump';
     pin.style.left = p.x+'%'; pin.style.top = p.y+'%';
     const col = companyColor(p.company);
     pin.innerHTML = `<div class="dot" style="background:${col}"><span>P</span></div>`;
     pin.title = `양수기 No.${p.no} · ${p.location}`;
-    pin.onclick = ()=> openPumpDetail(p.id);
-    mapWrap.appendChild(pin);
+    pin.onclick = (e)=>{ e.stopPropagation(); openPumpDetail(p.id); };
+    container.appendChild(pin);
   });
+}
+
+function renderDashboard(){
+  const list = tasksForDate(state.date);
+  const pumps = state.pumps;
+
+  const mapWrap = document.getElementById('mapWrap');
+  renderPinsInto(mapWrap, list, pumps);
 
   document.getElementById('pinCountMeta').textContent = `작업 ${list.length} · 양수기 ${pumps.length}`;
 
@@ -1889,14 +1922,15 @@ function deleteSiteImage(){
 function openImageLightbox(){
   const img = document.getElementById('lightboxImg');
   img.src = currentSiteImage;
-  img.classList.remove('zoomed');
+  document.getElementById('lightboxStage').classList.remove('zoomed');
   document.getElementById('imageLightboxSheet').classList.add('show');
+  renderPinsInto(document.getElementById('lightboxStage'), tasksForDate(state.date), state.pumps);
 }
 function closeImageLightbox(){
   document.getElementById('imageLightboxSheet').classList.remove('show');
 }
 function toggleLightboxZoom(){
-  document.getElementById('lightboxImg').classList.toggle('zoomed');
+  document.getElementById('lightboxStage').classList.toggle('zoomed');
 }
 
 /* =========================================================
