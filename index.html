@@ -603,7 +603,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-13 03:48 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-13 04:41 UTC</p>
       </div>
     </div>
   </div>
@@ -631,6 +631,18 @@
     <div class="sheet-inner" style="position:relative;">
       <button class="detail-close" onclick="closePumpDetail()">✕</button>
       <div id="pumpDetailBody"></div>
+    </div>
+  </div>
+
+  <!-- Confirm dialog -->
+  <div class="sheet" id="confirmSheet">
+    <div class="sheet-inner" style="text-align:center;">
+      <div style="font-size:32px;margin-bottom:8px;">⚠️</div>
+      <h4 style="margin:0 0 18px;font-size:16px;" id="confirmMessage">삭제하시겠습니까?</h4>
+      <div class="sheet-actions">
+        <button class="btn-secondary" onclick="closeConfirm()">취소</button>
+        <button class="btn-primary" style="background:var(--red);" onclick="runConfirm()">삭제</button>
+      </div>
     </div>
   </div>
 
@@ -927,11 +939,12 @@ function renderDashboard(){
   `).join('') : `<div class="legend-item">등록된 작업이 없습니다</div>`;
 
   const totalWorkers = list.reduce((s,t)=>s+(Number(t.workers)||0),0);
+  const highRiskWorkers = list.filter(isHighRisk).reduce((s,t)=>s+(Number(t.workers)||0),0);
   const totalTasks = list.length;
   const highRiskCount = list.filter(isHighRisk).length;
   const gradeCount = list.filter(t=>t.riskGradeHigh).length;
   document.getElementById('summaryGrid').innerHTML = `
-    <div class="stat-card"><div class="num">${totalWorkers}</div><div class="lbl">출역인원(명)</div></div>
+    <div class="stat-card"><div class="num">${highRiskWorkers}</div><div class="lbl">고위험작업인원</div></div>
     <div class="stat-card"><div class="num">${totalTasks}</div><div class="lbl">작업건수</div></div>
     <div class="stat-card risk"><div class="num">${highRiskCount}</div><div class="lbl">고위험</div></div>
     <div class="stat-card grade"><div class="num">${gradeCount}</div><div class="lbl">상등급</div></div>
@@ -1406,6 +1419,9 @@ function editPump(id){
   showToast('내용을 수정한 뒤 "수정 완료"를 눌러주세요');
 }
 function deletePump(id){
+  showConfirm('이 양수기를 삭제하시겠습니까?', ()=> deletePumpConfirmed(id));
+}
+function deletePumpConfirmed(id){
   state.pumps = state.pumps.filter(p=>p.id!==id);
   savePumps();
   fbDeletePump(id);
@@ -1530,6 +1546,9 @@ function changeTaskStatus(id, status){
   showToast(`✓ 상태가 "${status}"(으)로 변경되었습니다`);
 }
 function deleteTask(id){
+  showConfirm('이 작업을 삭제하시겠습니까?', ()=> deleteTaskConfirmed(id));
+}
+function deleteTaskConfirmed(id){
   state.tasks = state.tasks.filter(t=>t.id!==id);
   saveTasks();
   fbDeleteTask(id);
@@ -1656,6 +1675,25 @@ function showToast(msg){
   t.textContent = msg; t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(()=>t.classList.remove('show'), 2600);
+}
+
+/* =========================================================
+   CONFIRM (삭제 등 되돌릴 수 없는 작업 재확인 팝업)
+========================================================= */
+let _confirmCallback = null;
+function showConfirm(message, onConfirm){
+  document.getElementById('confirmMessage').textContent = message;
+  _confirmCallback = onConfirm;
+  document.getElementById('confirmSheet').classList.add('show');
+}
+function closeConfirm(){
+  document.getElementById('confirmSheet').classList.remove('show');
+  _confirmCallback = null;
+}
+function runConfirm(){
+  const cb = _confirmCallback;
+  closeConfirm();
+  if(cb) cb();
 }
 
 /* =========================================================
