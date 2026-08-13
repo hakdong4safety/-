@@ -627,11 +627,11 @@
       <div id="adminPanel" style="display:none;">
         <div class="form-card">
           <h3>📷 전경사진 관리</h3>
-          <p class="hint" style="margin-top:0;">대시보드 배치도 사진을 변경하거나, 변경 전 사진으로 되돌릴 수 있습니다.</p>
+          <p class="hint" style="margin-top:0;">사진을 바꾸면 적용 시작일을 지정합니다. 대시보드에서 날짜를 이동하면 그 날짜에 맞는 사진이 자동으로 표시됩니다. (모든 기기에 실시간 공유됩니다)</p>
           <div class="map-actions" style="border:none;padding:0;">
-            <button type="button" class="map-action-btn" onclick="triggerSiteImageUpload()">📷 사진변경</button>
-            <button type="button" class="map-action-btn" onclick="deleteSiteImage()">🗑 삭제(이전 사진)</button>
+            <button type="button" class="map-action-btn" style="flex:none;width:100%;" onclick="triggerSiteImageUpload()">📷 새 사진 추가</button>
           </div>
+          <div id="siteImageVersionList" style="margin-top:10px;display:flex;flex-direction:column;gap:8px;"></div>
         </div>
 
         <div class="form-card">
@@ -641,7 +641,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-13 07:38 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-13 08:18 UTC</p>
       </div>
     </div>
   </div>
@@ -680,6 +680,21 @@
       <div class="sheet-actions">
         <button class="btn-secondary" onclick="closeConfirm()">취소</button>
         <button class="btn-primary" style="background:var(--red);" onclick="runConfirm()">삭제</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Site image effective-date prompt -->
+  <div class="sheet" id="siteImageDateSheet">
+    <div class="sheet-inner">
+      <h4>새 전경사진 적용 날짜</h4>
+      <p class="desc">이 사진을 언제부터 배치도에 적용할까요? 지정한 날짜부터 이후 날짜에는 계속 이 사진이 사용되고(다음 버전이 등록되기 전까지), 그 이전 날짜는 기존 사진이 그대로 유지됩니다.</p>
+      <img id="siteImageDatePreview" src="" alt="미리보기" style="width:100%;border-radius:12px;margin-bottom:14px;border:1px solid var(--line);">
+      <div class="field"><label>적용 시작일</label>
+        <input type="date" id="siteImageDateInput"></div>
+      <div class="sheet-actions">
+        <button class="btn-secondary" onclick="closeSiteImageDatePrompt()">취소</button>
+        <button class="btn-primary" onclick="confirmSiteImageDate()">이 날짜부터 적용</button>
       </div>
     </div>
   </div>
@@ -729,8 +744,6 @@ const SAFETY_MANAGERS_HDC = ['서진수(안전총괄책임자)','노을(안전)'
   '김백호(안전)','박두봉(안전)','이상재(안전)','임경찬(안전)','이상훈(안전)','편정훈(안전)'];
 
 const DEFAULT_SITE_IMAGE = './map.jpg';
-let currentSiteImage = DEFAULT_SITE_IMAGE;
-let previousSiteImage = DEFAULT_SITE_IMAGE;
 
 const COMPANY_COLORS = ['#2F5FDB','#E5484D','#1E9E5A','#D9822B','#7C5CDB','#0EA5A5','#C2410C','#4B5563',
   '#0891B2','#BE185D','#65A30D','#9333EA'];
@@ -746,8 +759,7 @@ function companyColor(name){
 
 const STORAGE_TASKS = 'siteSafetyTasks_v2';
 const STORAGE_PUMPS = 'siteSafetyPumps_v2';
-const SITE_IMG_CUR_KEY = 'siteSafetySiteImgCur_v1';
-const SITE_IMG_PREV_KEY = 'siteSafetySiteImgPrev_v1';
+const SITE_IMG_VERSIONS_KEY = 'siteSafetySiteImgVersions_v1';
 
 /* Firebase 프로젝트 설정 (Realtime Database + 익명 인증으로 실시간 동기화) */
 const firebaseConfig = {
@@ -779,6 +791,8 @@ let state = {
   editingTaskId: null,
   editingPumpId: null,
   clipboardTask: null,
+  siteImageVersions: {},   // { 'YYYY-MM-DD': dataUrl, ... } 날짜별 전경사진 버전
+  pendingSiteImage: null,  // 방금 선택했지만 아직 적용 날짜를 확정 안 한 사진
   region: null,      // {x,y,w,h} in percent, confirmed
   drawing: null,      // in-progress rect while drawing
   pumpPos: null,      // {x,y} percent for new pump
@@ -864,7 +878,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('dateInput').value = state.date;
   document.getElementById('p_date').value = todayStr();
   loadData();
-  loadSiteImage();
+  loadSiteImageVersions();
   buildRegisterChips();
   setupDrawMap();
   setupPumpMap();
@@ -875,6 +889,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function renderAll(){
   renderDateLabel();
+  applySiteImage();
   renderDashboard();
   renderStatusFilters();
   renderStatusList();
@@ -1567,7 +1582,7 @@ function openDetail(id){
 
     <div class="detail-map-title">도면 위치</div>
     <div class="detail-map" id="detailMap">
-      <img src="${currentSiteImage}" alt="배치도">
+      <img src="${resolveSiteImageForDate(t.date)}" alt="배치도">
       ${t.region ? `<div class="region-box" style="left:${t.region.x}%;top:${t.region.y}%;width:${t.region.w}%;height:${t.region.h}%;"></div>` : ''}
     </div>
   `;
@@ -1828,6 +1843,17 @@ function attachFirebaseListeners(){
     console.error('pumps 동기화 오류', err);
     showToast('⚠ 실시간 동기화 오류: ' + err.message);
   });
+
+  fbDb.ref('siteImages').on('value', snap=>{
+    const val = snap.val() || {};
+    state.siteImageVersions = val;
+    try{ localStorage.setItem(SITE_IMG_VERSIONS_KEY, JSON.stringify(state.siteImageVersions)); }catch(e){}
+    applySiteImage();
+    renderSiteImageVersionList();
+  }, err=>{
+    console.error('전경사진 동기화 오류', err);
+    showToast('⚠ 실시간 동기화 오류: ' + err.message);
+  });
 }
 
 function fbSaveTask(task){
@@ -1858,21 +1884,45 @@ function fbDeletePump(id){
     showToast('⚠ 실시간 삭제 실패: ' + err.message);
   });
 }
-
-/* =========================================================
-   SITE (전경) IMAGE — 변경 / 삭제(이전 사진 복원) / 확대보기
-========================================================= */
-function loadSiteImage(){
+function fbSaveSiteImage(dateStr, dataUrl){
+  if(!fbDb) return;
+  fbDb.ref('siteImages/' + dateStr).set(dataUrl).catch(err=>{
+    console.error('전경사진 저장 실패', err);
+    showToast('⚠ 실시간 저장 실패: ' + err.message);
+  });
+}
+function fbDeleteSiteImage(dateStr){
+  if(!fbDb) return;
+  fbDb.ref('siteImages/' + dateStr).remove().catch(err=>{
+    console.error('전경사진 삭제 실패', err);
+    showToast('⚠ 실시간 삭제 실패: ' + err.message);
+  });
+}
+function loadSiteImageVersions(){
   try{
-    const cur = localStorage.getItem(SITE_IMG_CUR_KEY);
-    const prev = localStorage.getItem(SITE_IMG_PREV_KEY);
-    if(cur) currentSiteImage = cur;
-    if(prev) previousSiteImage = prev;
+    const raw = localStorage.getItem(SITE_IMG_VERSIONS_KEY);
+    if(raw) state.siteImageVersions = JSON.parse(raw);
   }catch(e){}
   applySiteImage();
+  renderSiteImageVersionList();
+}
+
+/* =========================================================
+   SITE (전경) IMAGE — 날짜별 버전 관리, Firebase로 전원 공유
+   siteImages/{YYYY-MM-DD}: 그 날짜부터 적용되는 배치도 사진
+   특정 날짜 조회 시: 그 날짜 이전(포함) 중 가장 최근 버전을 사용
+========================================================= */
+function resolveSiteImageForDate(dateStr){
+  const dates = Object.keys(state.siteImageVersions).sort();
+  let chosen = null;
+  for(const d of dates){
+    if(d <= dateStr) chosen = d; else break;
+  }
+  return chosen ? state.siteImageVersions[chosen] : DEFAULT_SITE_IMAGE;
 }
 function applySiteImage(){
-  document.querySelectorAll('.map-wrap img.bg').forEach(img=>{ img.src = currentSiteImage; });
+  const img = resolveSiteImageForDate(state.date);
+  document.querySelectorAll('.map-wrap img.bg').forEach(el=>{ el.src = img; });
 }
 function triggerSiteImageUpload(){
   document.getElementById('siteImageInput').click();
@@ -1892,36 +1942,65 @@ function handleSiteImageChange(e){
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img,0,0,canvas.width,canvas.height);
       const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-
-      previousSiteImage = currentSiteImage;
-      currentSiteImage = dataUrl;
-      try{
-        localStorage.setItem(SITE_IMG_PREV_KEY, previousSiteImage);
-        localStorage.setItem(SITE_IMG_CUR_KEY, currentSiteImage);
-      }catch(err){
-        showToast('⚠ 이미지 저장 공간이 부족합니다. 더 작은 사진을 사용해 주세요');
-      }
-      applySiteImage();
-      showToast('✓ 전경사진이 변경되었습니다');
+      openSiteImageDatePrompt(dataUrl);
     };
     img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
   e.target.value = '';
 }
-function deleteSiteImage(){
-  if(!previousSiteImage || previousSiteImage === currentSiteImage){
-    showToast('되돌릴 이전 사진이 없습니다');
+function openSiteImageDatePrompt(dataUrl){
+  state.pendingSiteImage = dataUrl;
+  document.getElementById('siteImageDateInput').value = state.date;
+  document.getElementById('siteImageDatePreview').src = dataUrl;
+  document.getElementById('siteImageDateSheet').classList.add('show');
+}
+function closeSiteImageDatePrompt(){
+  document.getElementById('siteImageDateSheet').classList.remove('show');
+  state.pendingSiteImage = null;
+}
+function confirmSiteImageDate(){
+  const dateStr = document.getElementById('siteImageDateInput').value;
+  if(!dateStr){ showToast('적용 날짜를 선택해주세요'); return; }
+  if(!state.pendingSiteImage) return;
+  state.siteImageVersions[dateStr] = state.pendingSiteImage;
+  try{ localStorage.setItem(SITE_IMG_VERSIONS_KEY, JSON.stringify(state.siteImageVersions)); }catch(e){}
+  fbSaveSiteImage(dateStr, state.pendingSiteImage);
+  closeSiteImageDatePrompt();
+  applySiteImage();
+  renderSiteImageVersionList();
+  showToast(`✓ ${dateStr}부터 적용되는 전경사진이 저장되었습니다`);
+}
+function deleteSiteImageVersion(dateStr){
+  showConfirm(`${dateStr}부터 적용되던 사진을 삭제하시겠습니까?`, ()=>{
+    delete state.siteImageVersions[dateStr];
+    try{ localStorage.setItem(SITE_IMG_VERSIONS_KEY, JSON.stringify(state.siteImageVersions)); }catch(e){}
+    fbDeleteSiteImage(dateStr);
+    applySiteImage();
+    renderSiteImageVersionList();
+    showToast('삭제되었습니다');
+  });
+}
+function renderSiteImageVersionList(){
+  const el = document.getElementById('siteImageVersionList');
+  if(!el) return;
+  const dates = Object.keys(state.siteImageVersions).sort().reverse();
+  if(!dates.length){
+    el.innerHTML = `<p class="hint" style="margin:0;">등록된 사진 버전이 없습니다 (기본 배치도가 표시됩니다)</p>`;
     return;
   }
-  currentSiteImage = previousSiteImage;
-  try{ localStorage.setItem(SITE_IMG_CUR_KEY, currentSiteImage); }catch(e){}
-  applySiteImage();
-  showToast('✓ 이전 사진으로 되돌렸습니다');
+  el.innerHTML = dates.map(d=>`
+    <div class="pump-card" style="padding:10px 12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-weight:800;font-size:13px;">📅 ${d} 부터 적용</span>
+        <button class="pump-actions del" style="flex:none;padding:6px 10px;border:1.5px solid #F3C6C7;border-radius:8px;background:#fff;color:var(--red);font-weight:800;font-size:12px;" onclick="deleteSiteImageVersion('${d}')">삭제</button>
+      </div>
+    </div>
+  `).join('');
 }
 function openImageLightbox(){
   const img = document.getElementById('lightboxImg');
-  img.src = currentSiteImage;
+  img.src = resolveSiteImageForDate(state.date);
   document.getElementById('lightboxStage').classList.remove('zoomed');
   document.getElementById('imageLightboxSheet').classList.add('show');
   renderPinsInto(document.getElementById('lightboxStage'), tasksForDate(state.date), state.pumps);
