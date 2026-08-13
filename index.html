@@ -316,6 +316,16 @@
     border-radius:50%;background:rgba(255,255,255,0.16);border:none;font-size:18px;color:#fff;z-index:5;}
   .lightbox-hint{position:absolute;bottom:calc(20px + env(safe-area-inset-bottom));left:0;right:0;text-align:center;
     color:rgba(255,255,255,0.75);font-size:12px;font-weight:600;pointer-events:none;}
+
+  /* ===== Desktop layout (모바일 화면은 그대로 유지, PC에서만 대시보드 2단 배치) ===== */
+  @media (min-width: 900px){
+    #app{max-width:1100px;}
+    .bottom-nav{max-width:1100px;}
+    #view-dashboard{
+      display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+      align-items:start; column-gap:20px;
+    }
+  }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -603,7 +613,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-13 04:41 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-13 06:53 UTC</p>
       </div>
     </div>
   </div>
