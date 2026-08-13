@@ -92,6 +92,9 @@
   .region-tag{position:absolute;top:-11px;left:6px;background:var(--amber);color:#fff;font-size:10.5px;
     font-weight:800;padding:2px 8px;border-radius:20px;}
   .draw-box.confirmed .region-tag{background:var(--green);content:"확정";}
+  .region-del{position:absolute;top:-11px;right:-8px;width:20px;height:20px;border-radius:50%;
+    background:var(--red);color:#fff;border:2px solid #fff;font-size:12px;font-weight:800;line-height:1;
+    display:flex;align-items:center;justify-content:center;padding:0;}
 
   .map-legend{display:flex;flex-wrap:wrap;gap:8px 14px;padding:12px 14px;border-top:1px solid var(--line);}
   .legend-item{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--ink-600);}
@@ -547,7 +550,7 @@
 
           <div class="form-card">
             <h3>작업 위치 표시</h3>
-            <p class="hint" style="margin-top:0;">드래그로 작업구간을 지정하고, 확정 버튼을 눌러주세요.</p>
+            <p class="hint" style="margin-top:0;">드래그로 작업구간을 지정하고 확정 버튼을 눌러주세요. 확정 후에도 계속 드래그하면 구간을 여러 개 추가할 수 있습니다. 각 구간 오른쪽 위 ×로 개별 삭제도 가능합니다.</p>
             <div class="draw-toolbar">
               <span class="draw-status" id="drawStatus">구간 미지정</span>
               <button type="button" class="draw-btn" onclick="clearRegion()">🗑 초기화</button>
@@ -613,6 +616,7 @@
   <!-- ===================== ADMIN (관리) ===================== -->
   <div class="view" id="view-admin">
     <div class="section">
+      <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:700;margin:0 0 10px;">제작자: 이상훈M</p>
       <div id="adminLocked">
         <div class="form-card" style="text-align:center;">
           <h3 style="justify-content:center;">🔒 관리자 인증</h3>
@@ -625,6 +629,16 @@
       </div>
 
       <div id="adminPanel" style="display:none;">
+        <div class="form-card">
+          <h3>📋 전체 작업 현황</h3>
+          <p class="hint" style="margin-top:0;">날짜와 무관하게 상태별로 전체 작업을 한눈에 확인합니다.</p>
+          <div class="filter-scroll" id="adminStatusFilters"></div>
+          <div style="margin-top:10px; display:flex; justify-content:flex-end;">
+            <span class="meta" id="adminTaskCountMeta" style="font-size:12px;color:var(--ink-400);font-weight:700;"></span>
+          </div>
+          <div id="adminTaskList" style="margin-top:8px;"></div>
+        </div>
+
         <div class="form-card">
           <h3>📷 전경사진 관리</h3>
           <p class="hint" style="margin-top:0;">사진을 바꾸면 적용 시작일을 지정합니다. 대시보드에서 날짜를 이동하면 그 날짜에 맞는 사진이 자동으로 표시됩니다. (모든 기기에 실시간 공유됩니다)</p>
@@ -641,7 +655,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-13 08:18 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-13 21:46 UTC</p>
       </div>
     </div>
   </div>
@@ -730,7 +744,7 @@ const BUILDINGS = [
 const BUILDING_NAMES = BUILDINGS.map(b=>b.name);
 function buildingPos(name){ return BUILDINGS.find(b=>b.name===name) || {x:50,y:50}; }
 
-const FLOORS = ['지하2층','지하1층',...Array.from({length:30},(_,i)=>(i+1)+'층'),'지붕층'];
+const FLOORS = ['지하3층','지하2층','지하1층',...Array.from({length:30},(_,i)=>(i+1)+'층'),'지붕층'];
 
 const RISK_ITEMS = ['타워크레인 설치/인상/해체','호이스트 설치/인상/해체','RCS 설치/인상/해체',
   '시스템비계 및 동바리 설치/해체','옥탑 구조물 작업','로프,곤돌라 작업','제연덕트 설치 작업',
@@ -791,9 +805,10 @@ let state = {
   editingTaskId: null,
   editingPumpId: null,
   clipboardTask: null,
+  adminStatusFilter: '오늘날짜',
   siteImageVersions: {},   // { 'YYYY-MM-DD': dataUrl, ... } 날짜별 전경사진 버전
   pendingSiteImage: null,  // 방금 선택했지만 아직 적용 날짜를 확정 안 한 사진
-  region: null,      // {x,y,w,h} in percent, confirmed
+  regions: [],        // [{x,y,w,h}, ...] in percent, 확정된 다중 작업구간
   drawing: null,      // in-progress rect while drawing
   pumpPos: null,      // {x,y} percent for new pump
   tasks: [],
@@ -896,6 +911,7 @@ function renderAll(){
   renderBuildingFilters();
   renderBuildingList();
   renderPumpList();
+  if(adminUnlocked){ renderAdminTaskList(); }
 }
 
 /* =========================================================
@@ -943,8 +959,14 @@ function isHighRisk(t){ return (t.highRisk && t.highRisk.some(r=>r!=='해당 없
 function fmtBuildings(t){ return (t.buildings||[]).join(', ') || '-'; }
 function fmtFloors(t){ return (t.floors||[]).join(', '); }
 
+function taskRegions(t){
+  if(Array.isArray(t.regions)) return t.regions;
+  if(t.region) return [t.region]; // 예전(단일 구간) 데이터 호환
+  return [];
+}
 function taskCenter(t){
-  if(t.region) return {x:t.region.x + t.region.w/2, y:t.region.y + t.region.h/2};
+  const regions = taskRegions(t);
+  if(regions.length) return {x:regions[0].x + regions[0].w/2, y:regions[0].y + regions[0].h/2};
   if(t.buildings && t.buildings.length) return buildingPos(t.buildings[0]);
   return {x:50,y:50};
 }
@@ -955,20 +977,23 @@ function taskCenter(t){
 function renderPinsInto(container, taskList, pumpList){
   container.querySelectorAll('.pin,.region-box').forEach(el=>el.remove());
   taskList.forEach(t=>{
-    if(t.region){
+    const regions = taskRegions(t);
+    regions.forEach(r=>{
       const rb = document.createElement('div');
       rb.className = 'region-box';
-      rb.style.left = t.region.x+'%'; rb.style.top = t.region.y+'%';
-      rb.style.width = t.region.w+'%'; rb.style.height = t.region.h+'%';
+      rb.style.left = r.x+'%'; rb.style.top = r.y+'%';
+      rb.style.width = r.w+'%'; rb.style.height = r.h+'%';
       container.appendChild(rb);
-    }
-    const c = taskCenter(t);
-    const pin = document.createElement('div');
-    pin.className = 'pin' + (isHighRisk(t) ? ' risk':'');
-    pin.style.left = c.x+'%'; pin.style.top = c.y+'%';
-    pin.innerHTML = `<div class="dot" style="background:${companyColor(t.company)}"><span>😊 ${t.workers||0}</span></div>`;
-    pin.onclick = (e)=>{ e.stopPropagation(); openDetail(t.id); };
-    container.appendChild(pin);
+    });
+    const points = regions.length ? regions.map(r=>({x:r.x+r.w/2, y:r.y+r.h/2})) : [taskCenter(t)];
+    points.forEach(c=>{
+      const pin = document.createElement('div');
+      pin.className = 'pin' + (isHighRisk(t) ? ' risk':'');
+      pin.style.left = c.x+'%'; pin.style.top = c.y+'%';
+      pin.innerHTML = `<div class="dot" style="background:${companyColor(t.company)}"><span>😊 ${t.workers||0}</span></div>`;
+      pin.onclick = (e)=>{ e.stopPropagation(); openDetail(t.id); };
+      container.appendChild(pin);
+    });
   });
   pumpList.forEach(p=>{
     const pin = document.createElement('div');
@@ -1190,13 +1215,13 @@ function setCctvToggle(val){
 }
 
 /* =========================================================
-   DRAW REGION ON MAP (drag to define work area)
+   DRAW REGION ON MAP (drag to define work area — 다중 구간 지원)
 ========================================================= */
 function setupDrawMap(){
   const wrap = document.getElementById('drawMapWrap');
   let startPt = null;
-  let box = null;
-  let locked = false;
+  let activeBox = null;       // 아직 확정 안 한 드래그 중인 박스
+  let confirmedBoxes = [];    // [{el, region}] 확정된 구간들
 
   function pct(e){
     const r = wrap.getBoundingClientRect();
@@ -1206,26 +1231,41 @@ function setupDrawMap(){
     x = Math.max(0,Math.min(100,x)); y = Math.max(0,Math.min(100,y));
     return {x,y};
   }
-  function drawBox(p1,p2){
-    if(box) box.remove();
-    box = document.createElement('div');
-    box.className = 'draw-box';
+  function updateDrawStatus(){
+    const el = document.getElementById('drawStatus');
+    if(!el) return;
+    const n = confirmedBoxes.length;
+    if(n===0 && !state.drawing) el.textContent = '구간 미지정';
+    else if(state.drawing) el.textContent = n>0 ? `✓ ${n}개 구간 확정됨 · 새 구간 확정 대기 중` : '구간이 지정되었습니다 (확정 필요)';
+    else el.textContent = `✓ ${n}개 구간 확정됨 · 계속 드래그하면 구간이 추가됩니다`;
+  }
+  function drawActiveBox(p1,p2){
+    if(activeBox) activeBox.remove();
+    activeBox = document.createElement('div');
+    activeBox.className = 'draw-box';
     const x = Math.min(p1.x,p2.x), y = Math.min(p1.y,p2.y);
     const w = Math.abs(p2.x-p1.x), h = Math.abs(p2.y-p1.y);
-    box.style.left=x+'%'; box.style.top=y+'%'; box.style.width=w+'%'; box.style.height=h+'%';
-    box.innerHTML = '<span class="region-tag">미확정</span>';
-    wrap.appendChild(box);
+    activeBox.style.left=x+'%'; activeBox.style.top=y+'%'; activeBox.style.width=w+'%'; activeBox.style.height=h+'%';
+    activeBox.innerHTML = '<span class="region-tag">미확정</span>';
+    wrap.appendChild(activeBox);
     state.drawing = {x,y,w,h};
-    document.getElementById('drawStatus').textContent = '구간이 지정되었습니다';
+    updateDrawStatus();
   }
-  function onDown(e){
-    if(locked){ showToast('구간을 다시 지정하려면 먼저 초기화해주세요'); return; }
-    startPt = pct(e);
+  function addConfirmedBox(region){
+    const el = document.createElement('div');
+    el.className = 'draw-box confirmed';
+    el.style.left=region.x+'%'; el.style.top=region.y+'%';
+    el.style.width=region.w+'%'; el.style.height=region.h+'%';
+    el.innerHTML = '<span class="region-tag">확정</span>'
+      + '<button type="button" class="region-del" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()" onclick="event.stopPropagation(); window._removeDrawBox(this)">×</button>';
+    wrap.appendChild(el);
+    confirmedBoxes.push({el, region});
   }
+  function onDown(e){ startPt = pct(e); }
   function onMove(e){
-    if(!startPt || locked) return;
+    if(!startPt) return;
     e.preventDefault();
-    drawBox(startPt, pct(e));
+    drawActiveBox(startPt, pct(e));
   }
   function onUp(){ startPt = null; }
 
@@ -1236,33 +1276,51 @@ function setupDrawMap(){
   wrap.addEventListener('touchmove', onMove, {passive:false});
   window.addEventListener('touchend', onUp);
 
-  window._clearDrawBox = ()=>{ if(box){ box.remove(); box=null; } locked = false; };
   window._confirmDrawBox = ()=>{
-    if(box){ box.classList.add('confirmed'); box.querySelector('.region-tag').textContent='확정'; locked = true; }
+    if(!state.drawing) return false;
+    addConfirmedBox(state.drawing);
+    state.regions.push({...state.drawing});
+    if(activeBox){ activeBox.remove(); activeBox=null; }
+    state.drawing = null;
+    updateDrawStatus();
+    return true;
   };
-  window._setDrawBox = (region)=>{
-    if(box) box.remove();
-    box = document.createElement('div');
-    box.className = 'draw-box confirmed';
-    box.style.left=region.x+'%'; box.style.top=region.y+'%';
-    box.style.width=region.w+'%'; box.style.height=region.h+'%';
-    box.innerHTML = '<span class="region-tag">확정</span>';
-    wrap.appendChild(box);
-    state.drawing = {...region};
-    locked = true;
+  window._clearAllDrawBoxes = ()=>{
+    confirmedBoxes.forEach(b=>b.el.remove());
+    confirmedBoxes = [];
+    if(activeBox){ activeBox.remove(); activeBox=null; }
+    state.regions = [];
+    state.drawing = null;
+    updateDrawStatus();
+  };
+  window._removeDrawBox = (btnEl)=>{
+    const boxEl = btnEl.closest('.draw-box');
+    const idx = confirmedBoxes.findIndex(b=>b.el===boxEl);
+    if(idx>-1){
+      confirmedBoxes[idx].el.remove();
+      confirmedBoxes.splice(idx,1);
+      state.regions = confirmedBoxes.map(b=>b.region);
+      updateDrawStatus();
+      showToast('구간이 삭제되었습니다');
+    }
+  };
+  window._setDrawBoxes = (regions)=>{
+    confirmedBoxes.forEach(b=>b.el.remove());
+    confirmedBoxes = [];
+    if(activeBox){ activeBox.remove(); activeBox=null; }
+    state.drawing = null;
+    (regions||[]).forEach(r=> addConfirmedBox(r));
+    state.regions = (regions||[]).map(r=>({...r}));
+    updateDrawStatus();
   };
 }
 function clearRegion(){
-  state.region = null; state.drawing = null;
-  window._clearDrawBox && window._clearDrawBox();
-  document.getElementById('drawStatus').textContent = '구간 미지정';
+  window._clearAllDrawBoxes && window._clearAllDrawBoxes();
 }
 function confirmRegion(){
   if(!state.drawing){ showToast('먼저 지도를 드래그해 구간을 지정하세요'); return; }
-  state.region = {...state.drawing};
-  window._confirmDrawBox && window._confirmDrawBox();
-  document.getElementById('drawStatus').textContent = '✓ 작업구간 확정됨 (수정하려면 초기화)';
-  showToast('작업구간이 확정되었습니다. 삭제 전까지 유지됩니다');
+  const ok = window._confirmDrawBox && window._confirmDrawBox();
+  if(ok){ showToast(`✓ 구간이 확정되었습니다 (총 ${state.regions.length}개). 계속 드래그하면 구간을 추가할 수 있습니다`); }
 }
 
 /* =========================================================
@@ -1329,7 +1387,7 @@ function collectFormTaskFields(){
     earlyStartTime: state.formEarly ? document.getElementById('f_earlytime').value : '',
     exclusionZone: document.getElementById('f_exclusionzone').value.trim(),
     mobileCCTV: state.formCctv,
-    region: state.region ? {...state.region} : null
+    regions: state.regions.map(r=>({...r}))
   };
 }
 
@@ -1338,7 +1396,7 @@ function resetTaskForm(){
   state.formBuildingSel=[]; state.formFloorSel=[]; state.formRiskSel=[];
   state.formRiskGrade=false; state.formHazmat=false; state.formWorkplan=false; state.formGuard=true;
   state.formEarly=false; state.formCctv=false;
-  state.region=null; state.drawing=null;
+  state.regions=[]; state.drawing=null;
   buildRegisterChips();
   clearRegion();
   setToggle('riskgrade', false); setToggle('hazmat', false); setToggle('workplan', false); setGuardToggle(true);
@@ -1583,7 +1641,7 @@ function openDetail(id){
     <div class="detail-map-title">도면 위치</div>
     <div class="detail-map" id="detailMap">
       <img src="${resolveSiteImageForDate(t.date)}" alt="배치도">
-      ${t.region ? `<div class="region-box" style="left:${t.region.x}%;top:${t.region.y}%;width:${t.region.w}%;height:${t.region.h}%;"></div>` : ''}
+      ${taskRegions(t).map(r=>`<div class="region-box" style="left:${r.x}%;top:${r.y}%;width:${r.w}%;height:${r.h}%;"></div>`).join('')}
     </div>
   `;
   document.getElementById('detailMap').style.position = 'relative';
@@ -1713,15 +1771,10 @@ function fillFormFromTask(t){
 
   document.getElementById('f_remarks').value = t.remarks || '';
 
-  if(t.region){
-    window._setDrawBox && window._setDrawBox(t.region);
-    state.region = {...t.region};
-    document.getElementById('drawStatus').textContent = '✓ 작업구간 확정됨 (수정하려면 초기화)';
-  } else {
-    window._clearDrawBox && window._clearDrawBox();
-    state.region = null; state.drawing = null;
-    document.getElementById('drawStatus').textContent = '구간 미지정';
-  }
+  const regions = taskRegions(t);
+  window._setDrawBoxes && window._setDrawBoxes(regions);
+  state.regions = regions.map(r=>({...r}));
+  state.drawing = null;
 }
 
 /* =========================================================
@@ -1780,10 +1833,69 @@ function lockAdmin(){
 function showAdminPanel(){
   document.getElementById('adminLocked').style.display = 'none';
   document.getElementById('adminPanel').style.display = '';
+  renderAdminFilters();
+  renderAdminTaskList();
+  renderSiteImageVersionList();
 }
 function showAdminLocked(){
   document.getElementById('adminLocked').style.display = '';
   document.getElementById('adminPanel').style.display = 'none';
+}
+
+/* ---- 전체 작업 현황 (날짜 무관, 상태별) ---- */
+const ADMIN_STATUS_FILTERS = ['오늘날짜','전체예정','전체진행중','전체완료'];
+const ADMIN_STATUS_LABELS = {'오늘날짜':'오늘날짜','전체예정':'전체 예정','전체진행중':'전체 진행중','전체완료':'전체 완료'};
+function renderAdminFilters(){
+  const el = document.getElementById('adminStatusFilters');
+  if(!el) return;
+  el.innerHTML = ADMIN_STATUS_FILTERS.map(f=>`
+    <button class="filter-chip ${state.adminStatusFilter===f?'on':''}" onclick="setAdminStatusFilter('${f}')">${ADMIN_STATUS_LABELS[f]}</button>`).join('');
+}
+function setAdminStatusFilter(f){
+  state.adminStatusFilter = f;
+  renderAdminFilters();
+  renderAdminTaskList();
+}
+function renderAdminTaskList(){
+  const el = document.getElementById('adminTaskList');
+  if(!el) return;
+  const filter = state.adminStatusFilter;
+  let list;
+  if(filter === '오늘날짜'){
+    list = state.tasks.filter(t=>t.date === todayStr());
+  } else {
+    const statusMap = {'전체예정':'예정','전체진행중':'진행중','전체완료':'완료'};
+    const status = statusMap[filter];
+    list = state.tasks.filter(t=>t.status===status);
+  }
+  list = [...list].sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+  document.getElementById('adminTaskCountMeta').textContent = `${list.length}건`;
+
+  if(!list.length){
+    el.innerHTML = `<div class="empty-state"><div class="ic">📭</div><div class="t">해당하는 작업이 없습니다</div></div>`;
+    return;
+  }
+  el.innerHTML = list.map(t=>`
+    <div class="task-row" data-id="${t.id}" style="border:1px solid var(--line);border-radius:12px;margin-bottom:8px;">
+      <div class="top">
+        <h4 class="name">${t.taskName}</h4>
+        <span class="badge status-${t.status}">${t.status}</span>
+      </div>
+      <div class="badges-row">
+        ${isHighRisk(t) ? '<span class="badge hi-risk">⚠ 고위험</span>' : ''}
+        ${t.riskGradeHigh ? '<span class="badge hi-grade">⊙ 상등급</span>' : ''}
+      </div>
+      <div class="task-meta">
+        <span>📅 ${t.date}</span>
+        <span>🏢 ${t.company}</span>
+        <span>${fmtBuildings(t)}</span>
+        <span>👥 ${t.workers||0}명</span>
+      </div>
+    </div>
+  `).join('');
+  el.querySelectorAll('.task-row').forEach(row=>{
+    row.onclick = ()=> openDetail(row.dataset.id);
+  });
 }
 
 /* =========================================================
@@ -2071,19 +2183,22 @@ function buildExportMapImage(list, companyNum){
       ctx.drawImage(img,0,0);
       const r = Math.max(20, canvas.width*0.022);
 
-      // 작업 위치 핀 (숫자 = 업체 번호, 색 = 위험등급)
+      // 작업 위치 핀 (숫자 = 업체 번호, 색 = 위험등급) — 구간이 여러 개면 구간마다 핀 표시
       list.forEach((t)=>{
-        const c = taskCenter(t);
-        const px = c.x/100*canvas.width, py = c.y/100*canvas.height;
+        const regions = taskRegions(t);
+        const points = regions.length ? regions.map(rg=>({x:rg.x+rg.w/2, y:rg.y+rg.h/2})) : [taskCenter(t)];
         const lvl = riskLevel(t);
         const color = lvl==='grade' ? '#E5484D' : (lvl==='risk' ? '#F5A623' : '#2F6FE0');
         const num = companyNum[t.company] || '';
-        ctx.beginPath(); ctx.arc(px,py,r,0,Math.PI*2);
-        ctx.fillStyle = color; ctx.fill();
-        ctx.lineWidth = Math.max(2,r*0.12); ctx.strokeStyle = '#fff'; ctx.stroke();
-        ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.round(r*1.05)}px sans-serif`;
-        ctx.textAlign='center'; ctx.textBaseline='middle';
-        ctx.fillText(String(num), px, py+r*0.06);
+        points.forEach(c=>{
+          const px = c.x/100*canvas.width, py = c.y/100*canvas.height;
+          ctx.beginPath(); ctx.arc(px,py,r,0,Math.PI*2);
+          ctx.fillStyle = color; ctx.fill();
+          ctx.lineWidth = Math.max(2,r*0.12); ctx.strokeStyle = '#fff'; ctx.stroke();
+          ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.round(r*1.05)}px sans-serif`;
+          ctx.textAlign='center'; ctx.textBaseline='middle';
+          ctx.fillText(String(num), px, py+r*0.06);
+        });
       });
 
       // 양수기 위치 핀 (P 표시, 업체색)
