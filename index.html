@@ -230,6 +230,11 @@
   .filter-chip.on{background:var(--blue-600);color:#fff;border-color:var(--blue-600);}
 
   /* ===== Building view ===== */
+  .building-hotspot{position:absolute;width:32px;height:32px;transform:translate(-50%,-50%);
+    border-radius:50%;border:2px solid transparent;background:rgba(47,95,219,0);cursor:pointer;padding:0;z-index:3;}
+  .building-hotspot:active{background:rgba(47,95,219,0.28);}
+  .building-hotspot.active{border-color:var(--blue-600);background:rgba(47,95,219,0.22);
+    box-shadow:0 0 0 3px rgba(47,95,219,0.28);}
   .bchip-nav-row{display:flex;align-items:center;gap:6px;}
   .bchip-nav-btn{flex-shrink:0;width:34px;height:34px;border-radius:10px;border:1.5px solid var(--line);
     background:#fff;font-size:16px;font-weight:800;color:var(--ink-600);font-family:inherit;box-shadow:var(--shadow);}
@@ -610,6 +615,14 @@
   <!-- ===================== BUILDING ===================== -->
   <div class="view" id="view-building">
     <div class="section">
+      <div class="section-head"><h2>단지 배치도</h2><span class="meta">동을 탭하면 해당 동으로 이동</span></div>
+      <div class="map-card">
+        <div class="map-wrap" id="buildingMapWrap">
+          <img class="bg" src="./map.jpg" alt="단지 배치도">
+        </div>
+      </div>
+    </div>
+    <div class="section">
       <div class="section-head"><h2>동별 현황</h2><span class="meta">층별 작업 분포 확인</span></div>
       <div class="bchip-nav-row">
         <button type="button" class="bchip-nav-btn" onclick="shiftBuildingFilter(-1)">‹</button>
@@ -674,7 +687,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-13 23:49 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-14 00:36 UTC</p>
       </div>
     </div>
   </div>
@@ -1157,6 +1170,21 @@ function renderBuildingFilters(){
     <button class="bchip ${state.buildingFilter===b?'on':''}" onclick="setBuildingFilter('${b}')">🏢 ${b}</button>`).join('');
   document.getElementById('floorFilterChips').innerHTML = FLOOR_FILTER_OPTIONS.map(f=>`
     <button class="ffchip ${state.floorFilter===f?'on':''}" onclick="setFloorFilter('${f}')">${f}</button>`).join('');
+  renderBuildingMapHotspots();
+}
+function renderBuildingMapHotspots(){
+  const wrap = document.getElementById('buildingMapWrap');
+  if(!wrap) return;
+  wrap.querySelectorAll('.building-hotspot').forEach(el=>el.remove());
+  BUILDINGS.forEach(b=>{
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'building-hotspot' + (state.buildingFilter===b.name ? ' active' : '');
+    el.style.left = b.x+'%'; el.style.top = b.y+'%';
+    el.title = b.name;
+    el.onclick = ()=> setBuildingFilter(b.name);
+    wrap.appendChild(el);
+  });
 }
 function setBuildingFilter(b){
   state.buildingFilter=b;
