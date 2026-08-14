@@ -73,6 +73,7 @@
   .map-action-btn:active{background:var(--bg);}
   .map-wrap{position:relative;width:100%;aspect-ratio:1000/572;background:#0F1930;overflow:hidden;touch-action:none;}
   .map-wrap img.bg{width:100%;height:100%;object-fit:cover;display:block;user-select:none;-webkit-user-drag:none;}
+  .map-wrap img.bg-fixed{width:100%;height:100%;object-fit:cover;display:block;user-select:none;-webkit-user-drag:none;}
   .pin{position:absolute;transform:translate(-50%,-100%);cursor:pointer;z-index:3;}
   .pin .dot{min-width:27px;height:27px;padding:0 6px;border-radius:50% 50% 50% 4px;
     transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;
@@ -230,11 +231,14 @@
   .filter-chip.on{background:var(--blue-600);color:#fff;border-color:var(--blue-600);}
 
   /* ===== Building view ===== */
-  .building-hotspot{position:absolute;width:32px;height:32px;transform:translate(-50%,-50%);
-    border-radius:50%;border:2px solid transparent;background:rgba(47,95,219,0);cursor:pointer;padding:0;z-index:3;}
-  .building-hotspot:active{background:rgba(47,95,219,0.28);}
-  .building-hotspot.active{border-color:var(--blue-600);background:rgba(47,95,219,0.22);
-    box-shadow:0 0 0 3px rgba(47,95,219,0.28);}
+  .building-hotspot{position:absolute;width:13%;height:8.5%;transform:translate(-50%,-50%);
+    border-radius:6px;border:none;background:rgba(0,0,0,0.02);cursor:pointer;padding:0;z-index:3;
+    box-shadow:0 3px 0 rgba(0,0,0,0.28), inset 0 0 0 1.5px rgba(255,255,255,0.35);
+    transition:transform .08s ease, box-shadow .08s ease, background .15s ease;}
+  .building-hotspot:active{transform:translate(-50%,-46%);box-shadow:0 0 0 rgba(0,0,0,0);
+    background:rgba(47,95,219,0.35);}
+  .building-hotspot.active{background:rgba(47,95,219,0.28);
+    box-shadow:0 3px 0 var(--blue-700), inset 0 0 0 2px var(--blue-600);}
   .bchip-nav-row{display:flex;align-items:center;gap:6px;}
   .bchip-nav-btn{flex-shrink:0;width:34px;height:34px;border-radius:10px;border:1.5px solid var(--line);
     background:#fff;font-size:16px;font-weight:800;color:var(--ink-600);font-family:inherit;box-shadow:var(--shadow);}
@@ -608,6 +612,7 @@
     <div class="section">
       <div class="section-head"><h2>작업현황</h2><span class="meta" id="statusCountMeta"></span></div>
       <div class="filter-scroll" id="statusFilters"></div>
+      <div class="filter-scroll" id="riskFilters" style="margin-top:8px;"></div>
     </div>
     <div class="section"><div id="statusTaskList"></div></div>
   </div>
@@ -618,7 +623,7 @@
       <div class="section-head"><h2>단지 배치도</h2><span class="meta">동을 탭하면 해당 동으로 이동</span></div>
       <div class="map-card">
         <div class="map-wrap" id="buildingMapWrap">
-          <img class="bg" src="./map.jpg" alt="단지 배치도">
+          <img class="bg-fixed" src="./map.jpg" alt="단지 배치도 (동별보기 전용 고정 도면)">
         </div>
       </div>
     </div>
@@ -687,7 +692,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-14 00:36 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-14 03:52 UTC</p>
       </div>
     </div>
   </div>
@@ -845,6 +850,7 @@ let state = {
   view:'dashboard',
   registerTab:'task',
   statusFilter:'전체',
+  riskFilter:'전체',
   buildingFilter: BUILDING_NAMES[0],
   floorFilter:'전체층',
   formBuildingSel: [],
@@ -1087,9 +1093,9 @@ function renderDashboard(){
   document.getElementById('summaryGrid').innerHTML = `
     <div class="stat-card" onclick="openAttendanceSheet()" style="cursor:pointer;"><div class="num">${totalAttendance}</div><div class="lbl">총 출역인원</div></div>
     <div class="stat-card"><div class="num">${highRiskWorkers}</div><div class="lbl">고위험작업인원</div></div>
-    <div class="stat-card"><div class="num">${totalTasks}</div><div class="lbl">작업건수</div></div>
-    <div class="stat-card risk"><div class="num">${highRiskCount}</div><div class="lbl">고위험</div></div>
-    <div class="stat-card grade"><div class="num">${gradeCount}</div><div class="lbl">상등급</div></div>
+    <div class="stat-card" onclick="goToStatusView('전체','전체')" style="cursor:pointer;"><div class="num">${totalTasks}</div><div class="lbl">작업건수</div></div>
+    <div class="stat-card risk" onclick="goToStatusView('전체','고위험')" style="cursor:pointer;"><div class="num">${highRiskCount}</div><div class="lbl">고위험</div></div>
+    <div class="stat-card grade" onclick="goToStatusView('전체','상등급')" style="cursor:pointer;"><div class="num">${gradeCount}</div><div class="lbl">상등급</div></div>
   `;
 
   document.getElementById('taskCountMeta').textContent = `전체 (${totalTasks}건)`;
@@ -1136,7 +1142,7 @@ function taskRowHTML(t){
         <span>👥 ${t.workers||0}명</span>
         <span>🕒 ${t.timeStart||'-'}~${t.timeEnd||'-'}</span>
       </div>
-      ${t.guardDeployed && t.guardName ? `<div class="task-guard">🛡 감시단/안전전담자: ${t.guardName}</div>` : ''}
+      ${t.guardDeployed && t.guardName ? `<div class="task-guard">🦺 감시단/안전전담자: ${t.guardName}</div>` : ''}
     </div>`;
 }
 function bindTaskRowClicks(){
@@ -1152,14 +1158,27 @@ function renderStatusFilters(){
   const filters = ['전체','예정','진행중','완료'];
   document.getElementById('statusFilters').innerHTML = filters.map(f=>`
     <button class="filter-chip ${state.statusFilter===f?'on':''}" onclick="setStatusFilter('${f}')">${f}</button>`).join('');
+  const riskFilters = ['전체','고위험','상등급'];
+  document.getElementById('riskFilters').innerHTML = riskFilters.map(f=>`
+    <button class="filter-chip ${state.riskFilter===f?'on':''}" onclick="setRiskFilter('${f}')">${f==='전체'?'위험등급 전체':f}</button>`).join('');
 }
 function setStatusFilter(f){ state.statusFilter=f; renderStatusFilters(); renderStatusList(); }
+function setRiskFilter(f){ state.riskFilter=f; renderStatusFilters(); renderStatusList(); }
 function renderStatusList(){
   let list = tasksForDate(state.date);
   if(state.statusFilter!=='전체') list = list.filter(t=>t.status===state.statusFilter);
+  if(state.riskFilter==='고위험') list = list.filter(isHighRisk);
+  else if(state.riskFilter==='상등급') list = list.filter(t=>t.riskGradeHigh);
   document.getElementById('statusCountMeta').textContent = `${list.length}건`;
   document.getElementById('statusTaskList').innerHTML = renderCompanyGroups(list);
   bindTaskRowClicks();
+}
+function goToStatusView(statusFilter, riskFilter){
+  state.statusFilter = statusFilter || '전체';
+  state.riskFilter = riskFilter || '전체';
+  switchView('status');
+  renderStatusFilters();
+  renderStatusList();
 }
 
 /* =========================================================
@@ -1726,7 +1745,7 @@ function openDetail(id){
     ${t.supervisorCo ? `<div class="detail-info"><div class="k">관리감독자 (협력사)</div><div class="v">${t.supervisorCo}</div></div>` : ''}
     ${t.supervisorHDC ? `<div class="detail-info"><div class="k">관리감독자 (HDC)</div><div class="v">${t.supervisorHDC}</div></div>` : ''}
     ${t.safetyManagerHDC ? `<div class="detail-info"><div class="k">안전관리자 (HDC)</div><div class="v">${t.safetyManagerHDC}</div></div>` : ''}
-    ${t.guardDeployed && t.guardName ? `<div class="detail-guard"><div class="k">감시단 / 안전전담자</div><div class="v">${t.guardName}</div></div>` : ''}
+    ${t.guardDeployed && t.guardName ? `<div class="detail-guard"><div class="k">🦺 감시단 / 안전전담자</div><div class="v">${t.guardName}</div></div>` : ''}
     ${t.workPlanRequired ? `<div class="detail-info"><div class="k">작업계획서/사전작업허가서(P.T.W)</div><div class="v">해당</div></div>` : ''}
     ${t.hazardType ? `<div class="detail-info"><div class="k">재해유형</div><div class="v">${t.hazardType}</div></div>` : ''}
     ${t.earlyStart ? `<div class="detail-info"><div class="k">조출여부</div><div class="v">조출 (${t.earlyStartTime||''})</div></div>` : ''}
