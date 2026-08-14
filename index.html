@@ -692,7 +692,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-14 03:52 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-14 06:25 UTC</p>
       </div>
     </div>
   </div>
@@ -804,7 +804,7 @@ function buildingPos(name){ return BUILDINGS.find(b=>b.name===name) || {x:50,y:5
 const FLOORS = ['지하3층','지하2층','지하1층',...Array.from({length:30},(_,i)=>(i+1)+'층'),'지붕층'];
 const FLOOR_FILTER_OPTIONS = ['전체층', ...FLOORS];
 
-const RISK_ITEMS = ['타워크레인 설치/인상/해체','호이스트 설치/인상/해체','RCS 설치/인상/해체',
+const RISK_ITEMS = ['타워크레인 설치/인상/해체','호이스트 설치/인상/해체','갱폼 설치/인상/해체',
   '시스템비계 및 동바리 설치/해체','옥탑 구조물 작업','로프,곤돌라 작업','제연덕트 설치 작업',
   '밀폐공간 작업','기타(직접입력)','해당 없음'];
 
@@ -902,7 +902,7 @@ function seedTasks(){
     {id:cuid('t'), date:t, company:'한빛엔지니어링', taskName:'109동 12층 RCS 인양 작업',
      workType:'골조', status:'진행중', buildings:['109동'], floors:['12층'], location:'북측 코어',
      workers:12, timeStart:'08:30', timeEnd:'18:00', detail:'RCS 시스템 인양 및 고정',
-     equipmentUsed:true, equipmentType:'타워크레인', highRisk:['RCS 설치/인상/해체'], platform:0, cutTool:0,
+     equipmentUsed:true, equipmentType:'타워크레인', highRisk:['갱폼 설치/인상/해체'], platform:0, cutTool:0,
      riskGradeHigh:true, hazmat:false, director:'이재현', supervisorCo:'정우성', supervisorHDC:'김승원(건축, 109동)', safetyManagerHDC:'최교훈(안전)',
      guardDeployed:true, guardName:'장서준', remarks:'',
      hazardType:'낙하물', earlyStart:false, earlyStartTime:'', exclusionZone:'', mobileCCTV:false,
