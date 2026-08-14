@@ -437,6 +437,11 @@
 
       <!-- ---- 일일작업 등록 ---- -->
       <div id="registerTask">
+        <div id="editModeBanner" style="display:none;align-items:center;justify-content:space-between;gap:10px;
+          background:var(--amber-bg);border:1.5px solid var(--amber);border-radius:12px;padding:12px 14px;margin-bottom:14px;">
+          <span style="font-size:13px;font-weight:800;color:#8A5A16;">✎ <span id="editModeTaskName"></span> 수정 중</span>
+          <button type="button" onclick="cancelEditTask()" style="flex-shrink:0;padding:7px 12px;border-radius:8px;border:none;background:#fff;color:var(--red);font-weight:800;font-size:12px;font-family:inherit;">취소</button>
+        </div>
         <button type="button" class="map-action-btn" id="pasteTaskBtn" style="width:100%;margin-bottom:14px;padding:11px;" onclick="pasteTaskFromClipboard()">📋 복사한 작업 붙여넣기</button>
         <form id="taskForm" onsubmit="handleSubmitTask(event)">
           <div class="form-card">
@@ -692,7 +697,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-14 06:25 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-14 07:22 UTC</p>
       </div>
     </div>
   </div>
@@ -1001,7 +1006,7 @@ function switchView(name){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-'+name).classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.view===name));
-  if(name==='register'){ document.getElementById('f_date').value = state.date; }
+  if(name==='register'){ document.getElementById('f_date').value = state.date; updateEditModeBanner(); }
   if(name==='admin'){ adminUnlocked ? showAdminPanel() : showAdminLocked(); }
   document.getElementById('app').classList.toggle('wide-view', ['register','status','building'].includes(name));
   window.scrollTo({top:0, behavior:'smooth'});
@@ -1532,6 +1537,22 @@ function resetTaskForm(){
   document.getElementById('f_date').value = state.date;
   state.editingTaskId = null;
   document.getElementById('submitBtn').textContent = '✓ 작업 등록하기';
+  updateEditModeBanner();
+}
+function updateEditModeBanner(){
+  const banner = document.getElementById('editModeBanner');
+  if(!banner) return;
+  if(state.editingTaskId){
+    const t = state.tasks.find(x=>x.id===state.editingTaskId);
+    document.getElementById('editModeTaskName').textContent = t ? `"${t.taskName}"` : '작업';
+    banner.style.display = 'flex';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+function cancelEditTask(){
+  resetTaskForm();
+  showToast('수정을 취소하고 새 작업 등록 상태로 돌아왔습니다');
 }
 
 function handleSubmitTask(e){
@@ -1803,7 +1824,8 @@ function editTask(id){
   state.editingTaskId = t.id;
   fillFormFromTask(t);
   document.getElementById('submitBtn').textContent = '✎ 수정 완료';
-  showToast('내용을 수정한 뒤 "수정 완료"를 눌러주세요');
+  updateEditModeBanner();
+  showToast('내용을 수정한 뒤 "수정 완료"를 눌러주세요. 실수라면 상단 "취소"를 눌러주세요');
 }
 function copyTaskToClipboard(id){
   const t = state.tasks.find(x=>x.id===id);
@@ -1820,6 +1842,7 @@ function pasteTaskFromClipboard(){
   fillFormFromTask(t);
   document.getElementById('f_date').value = state.date;
   document.getElementById('submitBtn').textContent = '✓ 작업 등록하기';
+  updateEditModeBanner();
   showToast('✓ 붙여넣었습니다. 필요한 부분을 수정한 뒤 등록해주세요');
 }
 function fillFormFromTask(t){
