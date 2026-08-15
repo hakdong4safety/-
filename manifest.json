@@ -1,0 +1,16 @@
+{
+  "name": "광주 학동4구역 일일안전보건현황 관리시스템",
+  "short_name": "학동4구역 안전관리",
+  "description": "IPARK 현대산업개발 - 광주 학동4구역 일일 안전보건 현장관리 시스템",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#F4F5F7",
+  "theme_color": "#2F5FDB",
+  "lang": "ko",
+  "icons": [
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

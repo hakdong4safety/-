@@ -4,6 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0">
 <title>일일 안전보건 현장관리 | 광주 학동4구역</title>
+
+<!-- PWA -->
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#2F5FDB">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="학동4구역 안전관리">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png">
+
 <style>
   :root{
     --blue-700:#2350C7;
@@ -697,7 +709,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-14 07:22 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-15 12:15 UTC</p>
       </div>
     </div>
   </div>
@@ -968,7 +980,18 @@ document.addEventListener('DOMContentLoaded', () => {
   updateSyncStatus();
   renderAll();
   initFirebase();
+  registerServiceWorker();
 });
+
+function registerServiceWorker(){
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', ()=>{
+      navigator.serviceWorker.register('./sw.js').catch(err=>{
+        console.error('서비스워커 등록 실패', err);
+      });
+    });
+  }
+}
 
 function renderAll(){
   renderDateLabel();
