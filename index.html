@@ -711,7 +711,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-17 07:25 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-17 07:55 UTC</p>
       </div>
     </div>
   </div>
@@ -2474,8 +2474,9 @@ function toggleLightboxZoom(){
    EXPORT: 일일 고위험 작업 현황 (구글시트로 내보내기)
 ========================================================= */
 function riskLevel(t){
-  if(t.riskGradeHigh) return 'grade';       // 상등급 (적색)
+  // 고위험이 상등급보다 상위 개념 — 둘 다 해당되면 고위험으로 표시
   if(isHighRisk(t)) return 'risk';          // 고위험 (노랑)
+  if(t.riskGradeHigh) return 'grade';       // 고위험 항목 없이 상등급만 해당 (적색)
   return 'normal';                          // 일상작업 (흰색)
 }
 /* 업체별로 등장 순서에 따라 고유 번호를 하나씩 배정 (같은 업체는 항상 같은 번호 공유) */
@@ -2634,7 +2635,7 @@ async function exportToExcel(){
     };
 
     // 열 너비
-    const widths = [5,12,8,8,26,18,12,10,32,14,16,16,16,12,10];
+    const widths = [5,12,8,8,26,18,12,10,66,14,16,16,16,12,10]; // I열(중점포인트) ≈ 460px
     ws.columns = widths.map(w=>({ width:w }));
 
     // 제목 (K열부터는 결재란이 들어가므로 J열까지만 병합)
@@ -2704,8 +2705,8 @@ async function exportToExcel(){
       values.forEach((v,idx)=>{ row.getCell(idx+1).value = v; });
 
       let argb = 'FFFFFFFF';
-      if(r.riskGradeHigh) argb = 'FFF4CCCC';
-      else if(r.hasHighRisk) argb = 'FFFFF2CC';
+      if(r.hasHighRisk) argb = 'FFFFF2CC';       // 고위험이 상등급보다 상위 개념 — 둘 다면 노란색(고위험)
+      else if(r.riskGradeHigh) argb = 'FFF4CCCC'; // 고위험 항목 없이 상등급만 해당하면 빨간색
       row.eachCell({includeEmpty:true}, c=>{
         c.fill = { type:'pattern', pattern:'solid', fgColor:{argb} };
         c.alignment = { vertical:'top', wrapText:true };

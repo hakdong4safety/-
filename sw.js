@@ -1,5 +1,5 @@
 // 빌드마다 캐시 이름이 바뀌므로, 재배포 시 예전 캐시가 자동으로 폐기됩니다.
-const CACHE_NAME = 'hakdong4-safety-202608170725';
+const CACHE_NAME = 'hakdong4-safety-202608170755';
 const APP_SHELL = [
   './',
   './index.html',
