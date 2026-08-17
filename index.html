@@ -484,7 +484,9 @@
               </select></div>
             <div class="field"><label>동 (복수 선택 가능) <span class="req">*</span></label>
               <div class="building-grid" id="buildingChips"></div>
-              <div class="sel-line" id="buildingSelLine">선택: 없음</div></div>
+              <div class="sel-line" id="buildingSelLine">선택: 없음</div>
+              <button type="button" class="chip" id="buildingOtherChip" style="margin-top:8px;" onclick="toggleBuildingOther(this)">기타</button>
+              <input type="text" id="f_building_custom" placeholder="동/구역명을 직접 입력하세요 (예: 관리동, 커뮤니티센터)" style="display:none; margin-top:8px;"></div>
             <div class="field"><label>층 (복수 선택 가능) <span class="req">*</span></label>
               <div class="floor-grid" id="floorGrid"></div>
               <div class="sel-line" id="floorSelLine">선택: 없음</div></div>
@@ -709,7 +711,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-15 12:15 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-17 00:15 UTC</p>
       </div>
     </div>
   </div>
@@ -1301,6 +1303,21 @@ function toggleFormChip(el, arrKey, lineId){
   if(idx>-1) arr.splice(idx,1); else arr.push(val);
   document.getElementById(lineId).textContent = '선택: ' + (arr.length ? arr.join(', ') : '없음');
 }
+function toggleBuildingOther(el){
+  el.classList.toggle('on');
+  const isOn = el.classList.contains('on');
+  const input = document.getElementById('f_building_custom');
+  input.style.display = isOn ? '' : 'none';
+  const marker = '기타(직접입력)';
+  const idx = state.formBuildingSel.indexOf(marker);
+  if(isOn){
+    if(idx===-1) state.formBuildingSel.push(marker);
+  } else {
+    if(idx>-1) state.formBuildingSel.splice(idx,1);
+    input.value = '';
+  }
+  document.getElementById('buildingSelLine').textContent = '선택: ' + (state.formBuildingSel.length ? state.formBuildingSel.join(', ') : '없음');
+}
 function toggleRiskChip(el){
   const val = el.dataset.r;
   if(val==='해당 없음'){
@@ -1496,6 +1513,16 @@ function setupPumpMap(){
 /* =========================================================
    SUBMIT: TASK
 ========================================================= */
+function resolveBuildingSelection(){
+  const arr = [...state.formBuildingSel];
+  const marker = '기타(직접입력)';
+  const idx = arr.indexOf(marker);
+  if(idx>-1){
+    const custom = document.getElementById('f_building_custom').value.trim();
+    if(custom) arr[idx] = custom; else arr.splice(idx,1);
+  }
+  return arr;
+}
 function collectFormTaskFields(){
   const worktype = document.getElementById('f_worktype').value;
   const worktypeFinal = worktype==='직접입력' ? (document.getElementById('f_worktype_custom').value.trim()||'기타') : worktype;
@@ -1510,7 +1537,7 @@ function collectFormTaskFields(){
     taskName: document.getElementById('f_taskname').value.trim(),
     workType: worktypeFinal,
     status: document.getElementById('f_status').value,
-    buildings: [...state.formBuildingSel],
+    buildings: resolveBuildingSelection(),
     floors: [...state.formFloorSel],
     location: document.getElementById('f_location').value.trim(),
     workers: Number(document.getElementById('f_workers').value)||0,
@@ -1557,6 +1584,9 @@ function resetTaskForm(){
   document.getElementById('f_worktype_custom').style.display='none';
   document.getElementById('f_risk_custom').style.display='none';
   document.getElementById('f_equipment_type').style.display='none';
+  document.getElementById('buildingOtherChip').classList.remove('on');
+  document.getElementById('f_building_custom').style.display='none';
+  document.getElementById('f_building_custom').value='';
   document.getElementById('f_date').value = state.date;
   state.editingTaskId = null;
   document.getElementById('submitBtn').textContent = '✓ 작업 등록하기';
@@ -1890,6 +1920,20 @@ function fillFormFromTask(t){
   document.querySelectorAll('#buildingChips .chip').forEach(el=>{
     el.classList.toggle('on', state.formBuildingSel.includes(el.dataset.b));
   });
+  const customBuilding = state.formBuildingSel.find(b=>!BUILDING_NAMES.includes(b));
+  const otherChip = document.getElementById('buildingOtherChip');
+  const otherInput = document.getElementById('f_building_custom');
+  if(customBuilding){
+    otherChip.classList.add('on');
+    otherInput.style.display = '';
+    otherInput.value = customBuilding;
+    const ci = state.formBuildingSel.indexOf(customBuilding);
+    state.formBuildingSel[ci] = '기타(직접입력)';
+  } else {
+    otherChip.classList.remove('on');
+    otherInput.style.display = 'none';
+    otherInput.value = '';
+  }
   document.getElementById('buildingSelLine').textContent = '선택: ' + (state.formBuildingSel.length ? state.formBuildingSel.join(', ') : '없음');
 
   state.formFloorSel = [...(t.floors||[])];
