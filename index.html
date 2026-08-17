@@ -711,7 +711,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-17 07:55 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-17 08:16 UTC</p>
       </div>
     </div>
   </div>
@@ -2489,7 +2489,7 @@ function computeCompanyNumbers(list){
   return map;
 }
 /* 정렬: 고위험(맨 위) → 상등급 → 일반, 각 구간 안에서는 업체 번호 순 (같은 업체 작업은 붙어서 나옴) */
-const EXPORT_CATEGORY_RANK = { grade:0, risk:1, normal:2 };
+const EXPORT_CATEGORY_RANK = { risk:0, grade:1, normal:2 };
 function sortForExport(list, companyNum){
   return [...list].sort((a,b)=>{
     const ra = EXPORT_CATEGORY_RANK[riskLevel(a)], rb = EXPORT_CATEGORY_RANK[riskLevel(b)];
