@@ -351,12 +351,12 @@
     #app{max-width:1100px;}
     .bottom-nav{max-width:1100px;}
 
-    /* 대시보드: 좌측 배치도 고정, 우측 작업목록만 독립 스크롤 */
-    #view-dashboard{
+    /* 대시보드: 좌측 배치도 고정, 우측 작업목록만 독립 스크롤 (활성 상태일 때만 적용 — .view{display:none}보다 항상 우선하지 않도록 .active와 함께 걸어줌) */
+    #view-dashboard.active{
       display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr);
       align-items:start; column-gap:20px;
     }
-    #view-dashboard .section:nth-child(2){
+    #view-dashboard.active .section:nth-child(2){
       position:sticky; top:16px;
       max-height:calc(100vh - 32px);
       overflow-y:auto;
@@ -711,7 +711,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-17 06:14 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-17 06:29 UTC</p>
       </div>
     </div>
   </div>
