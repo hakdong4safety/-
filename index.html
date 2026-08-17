@@ -711,7 +711,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-17 00:15 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-17 06:14 UTC</p>
       </div>
     </div>
   </div>
@@ -754,6 +754,22 @@
     </div>
   </div>
 
+  <!-- Action password gate (작성/삭제 시 비밀번호 확인) -->
+  <div class="sheet" id="actionPwSheet">
+    <div class="sheet-inner" style="text-align:center;">
+      <div style="font-size:32px;margin-bottom:8px;">🔒</div>
+      <h4 style="margin:0 0 6px;font-size:16px;" id="actionPwMessage">비밀번호를 입력하세요</h4>
+      <p class="hint" style="margin:0 0 14px;">작성/삭제는 비밀번호 확인이 필요합니다.</p>
+      <input type="password" id="actionPwInput" placeholder="비밀번호" inputmode="numeric"
+        style="text-align:center;font-size:18px;letter-spacing:6px;padding:12px;border-radius:10px;border:1.5px solid var(--line);width:100%;box-sizing:border-box;"
+        onkeydown="if(event.key==='Enter') runActionPassword()">
+      <div class="sheet-actions">
+        <button class="btn-secondary" onclick="closeActionPassword()">취소</button>
+        <button class="btn-primary" onclick="runActionPassword()">확인</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Site image effective-date prompt -->
   <div class="sheet" id="siteImageDateSheet">
     <div class="sheet-inner">
@@ -778,6 +794,7 @@
         <span style="width:20px;text-align:center;">No.</span>
         <span style="flex:2;">업체명</span>
         <span style="flex:1;">인원</span>
+        <span style="flex:1;">신규</span>
         <span style="width:28px;"></span>
       </div>
       <div id="attendanceRows"></div>
@@ -1633,17 +1650,19 @@ function handleSubmitTask(e){
   }
 
   const task = { id: cuid('t'), ...fields, createdAt: new Date().toISOString() };
-  state.tasks.push(task);
-  saveTasks();
-  fbSaveTask(task);
+  requireActionPassword('작업을 등록하려면 비밀번호를 입력하세요', ()=>{
+    state.tasks.push(task);
+    saveTasks();
+    fbSaveTask(task);
 
-  const savedDate = task.date;
-  resetTaskForm();
-  showToast('✓ 작업이 등록되었습니다');
-  state.date = savedDate;
-  document.getElementById('dateInput').value = state.date;
-  renderAll();
-  switchView('dashboard');
+    const savedDate = task.date;
+    resetTaskForm();
+    showToast('✓ 작업이 등록되었습니다');
+    state.date = savedDate;
+    document.getElementById('dateInput').value = state.date;
+    renderAll();
+    switchView('dashboard');
+  });
 }
 
 /* =========================================================
@@ -1680,13 +1699,15 @@ function handleSubmitPump(){
 
   const nextNo = state.pumps.length ? Math.max(...state.pumps.map(p=>p.no))+1 : 1;
   const pump = { id: cuid('p'), no: nextNo, ...fields };
-  state.pumps.push(pump);
-  savePumps();
-  fbSavePump(pump);
+  requireActionPassword('양수기를 등록하려면 비밀번호를 입력하세요', ()=>{
+    state.pumps.push(pump);
+    savePumps();
+    fbSavePump(pump);
 
-  resetPumpForm();
-  showToast('✓ 양수기가 등록되었습니다');
-  renderAll();
+    resetPumpForm();
+    showToast('✓ 양수기가 등록되었습니다');
+    renderAll();
+  });
 }
 function resetPumpForm(){
   document.getElementById('p_company').value='';
@@ -1731,7 +1752,9 @@ function editPump(id){
   showToast('내용을 수정한 뒤 "수정 완료"를 눌러주세요');
 }
 function deletePump(id){
-  showConfirm('이 양수기를 삭제하시겠습니까?', ()=> deletePumpConfirmed(id));
+  requireActionPassword('양수기를 삭제하려면 비밀번호를 입력하세요', ()=>{
+    showConfirm('이 양수기를 삭제하시겠습니까?', ()=> deletePumpConfirmed(id));
+  });
 }
 function deletePumpConfirmed(id){
   state.pumps = state.pumps.filter(p=>p.id!==id);
@@ -1858,7 +1881,9 @@ function changeTaskStatus(id, status){
   showToast(`✓ 상태가 "${status}"(으)로 변경되었습니다`);
 }
 function deleteTask(id){
-  showConfirm('이 작업을 삭제하시겠습니까?', ()=> deleteTaskConfirmed(id));
+  requireActionPassword('작업을 삭제하려면 비밀번호를 입력하세요', ()=>{
+    showConfirm('이 작업을 삭제하시겠습니까?', ()=> deleteTaskConfirmed(id));
+  });
 }
 function deleteTaskConfirmed(id){
   state.tasks = state.tasks.filter(t=>t.id!==id);
@@ -2020,6 +2045,38 @@ function runConfirm(){
   const cb = _confirmCallback;
   closeConfirm();
   if(cb) cb();
+}
+
+/* =========================================================
+   ACTION PASSWORD GATE (작성/삭제 시 비밀번호 확인)
+========================================================= */
+const ACTION_PASSWORD = '5072';
+let _actionPwCallback = null;
+function requireActionPassword(message, onSuccess){
+  document.getElementById('actionPwMessage').textContent = message;
+  document.getElementById('actionPwInput').value = '';
+  _actionPwCallback = onSuccess;
+  document.getElementById('actionPwSheet').classList.add('show');
+  setTimeout(()=>{
+    const input = document.getElementById('actionPwInput');
+    if(input) input.focus();
+  }, 150);
+}
+function closeActionPassword(){
+  document.getElementById('actionPwSheet').classList.remove('show');
+  _actionPwCallback = null;
+}
+function runActionPassword(){
+  const input = document.getElementById('actionPwInput');
+  if(input.value === ACTION_PASSWORD){
+    const cb = _actionPwCallback;
+    closeActionPassword();
+    if(cb) cb();
+  } else {
+    showToast('비밀번호가 올바르지 않습니다');
+    input.value = '';
+    input.focus();
+  }
 }
 
 /* =========================================================
@@ -2345,7 +2402,7 @@ function openAttendanceSheet(){
   const existing = state.attendanceByDate[state.date] || [];
   state.attendanceDraft = existing.length
     ? existing.map(r=>({...r}))
-    : [{company:'', workers:''},{company:'', workers:''}];
+    : [{company:'', workers:'', newWorkers:''},{company:'', workers:'', newWorkers:''}];
   document.getElementById('attendanceDateLabel').textContent = `${state.date} 기준 업체별 출역인원을 입력하세요.`;
   renderAttendanceRows();
   document.getElementById('attendanceSheet').classList.add('show');
@@ -2364,6 +2421,9 @@ function renderAttendanceRows(){
       <input type="number" placeholder="인원" min="0" value="${r.workers===''?'':r.workers}"
         oninput="updateAttendanceDraft(${i},'workers',this.value)"
         style="flex:1;min-width:0;padding:9px 10px;border-radius:8px;border:1.5px solid var(--line);font-size:13.5px;font-family:inherit;">
+      <input type="number" placeholder="신규" min="0" value="${r.newWorkers===''||r.newWorkers===undefined?'':r.newWorkers}"
+        oninput="updateAttendanceDraft(${i},'newWorkers',this.value)"
+        style="flex:1;min-width:0;padding:9px 10px;border-radius:8px;border:1.5px solid var(--line);font-size:13.5px;font-family:inherit;">
       <button type="button" onclick="removeAttendanceRow(${i})"
         style="flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--red-bg);color:var(--red);border:none;font-weight:800;font-size:14px;">×</button>
     </div>
@@ -2371,10 +2431,10 @@ function renderAttendanceRows(){
 }
 function updateAttendanceDraft(i, key, val){
   if(!state.attendanceDraft[i]) return;
-  state.attendanceDraft[i][key] = key==='workers' ? (val===''? '' : Number(val)||0) : val;
+  state.attendanceDraft[i][key] = (key==='workers'||key==='newWorkers') ? (val===''? '' : Number(val)||0) : val;
 }
 function addAttendanceRow(){
-  state.attendanceDraft.push({company:'', workers:''});
+  state.attendanceDraft.push({company:'', workers:'', newWorkers:''});
   renderAttendanceRows();
 }
 function removeAttendanceRow(i){
@@ -2384,7 +2444,7 @@ function removeAttendanceRow(i){
 function saveAttendance(){
   const rows = state.attendanceDraft
     .filter(r=>r.company && r.company.trim())
-    .map(r=>({company:r.company.trim(), workers:Number(r.workers)||0}));
+    .map(r=>({company:r.company.trim(), workers:Number(r.workers)||0, newWorkers:Number(r.newWorkers)||0}));
   state.attendanceByDate[state.date] = rows;
   try{ localStorage.setItem(ATTENDANCE_KEY, JSON.stringify(state.attendanceByDate)); }catch(e){}
   fbSaveAttendance(state.date, rows);
