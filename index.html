@@ -114,7 +114,7 @@
   .legend-swatch{width:9px;height:9px;border-radius:3px;flex-shrink:0;}
 
   /* ===== Summary ===== */
-  .summary-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:12px;}
+  .summary-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(68px, 1fr));gap:6px;margin-top:12px;}
   .stat-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);
     padding:10px 2px;text-align:center;box-shadow:var(--shadow);}
   .stat-card .num{font-size:16.5px;font-weight:800;letter-spacing:-0.02em;}
@@ -731,7 +731,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-18 23:11 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-18 23:40 UTC</p>
       </div>
     </div>
   </div>
@@ -1183,9 +1183,19 @@ function renderDashboard(){
   const totalTasks = list.length;
   const highRiskCount = list.filter(isHighRisk).length;
   const gradeCount = list.filter(t=>t.riskGradeHigh).length;
-  const totalAttendance = (state.attendanceByDate[state.date]||[]).reduce((s,r)=>s+(Number(r.workers)||0),0);
+  const attendanceRows = state.attendanceByDate[state.date]||[];
+  const totalAttendance = attendanceRows.reduce((s,r)=>s+(Number(r.workers)||0),0);
+  const totalOutdoor = attendanceRows.reduce((s,r)=>s+(Number(r.outdoor)||0),0);
+  const totalVulnerable = attendanceRows.reduce((s,r)=>s+(Number(r.vulnerable)||0),0);
+
+  const extraCards = [
+    state.attendanceFields.outdoor ? `<div class="stat-card" onclick="openAttendanceSheet()" style="cursor:pointer;"><div class="num">${totalOutdoor}</div><div class="lbl">옥외작업인원</div></div>` : '',
+    state.attendanceFields.vulnerable ? `<div class="stat-card" onclick="openAttendanceSheet()" style="cursor:pointer;"><div class="num">${totalVulnerable}</div><div class="lbl">취약근로자</div></div>` : '',
+  ].join('');
+
   document.getElementById('summaryGrid').innerHTML = `
     <div class="stat-card" onclick="openAttendanceSheet()" style="cursor:pointer;"><div class="num">${totalAttendance}</div><div class="lbl">총 출역인원</div></div>
+    ${extraCards}
     <div class="stat-card"><div class="num">${highRiskWorkers}</div><div class="lbl">고위험작업인원</div></div>
     <div class="stat-card" onclick="goToStatusView('전체','전체')" style="cursor:pointer;"><div class="num">${totalTasks}</div><div class="lbl">작업건수</div></div>
     <div class="stat-card risk" onclick="goToStatusView('전체','고위험')" style="cursor:pointer;"><div class="num">${highRiskCount}</div><div class="lbl">고위험</div></div>
