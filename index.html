@@ -204,6 +204,9 @@
     font-size:14px;font-weight:800;color:var(--ink-600);font-family:inherit;}
   .toggle-btn.on-o{background:var(--red-bg);border-color:var(--red);color:var(--red);}
   .toggle-btn.on-x{background:var(--blue-100);border-color:var(--blue-600);color:var(--blue-600);}
+  .mini-toggle{padding:8px 16px;border-radius:20px;border:1.5px solid var(--line);background:#fff;
+    font-size:12.5px;font-weight:800;color:var(--ink-400);font-family:inherit;}
+  .mini-toggle.on{background:var(--blue-600);border-color:var(--blue-600);color:#fff;}
   .check-row{display:flex;align-items:center;gap:9px;padding:11px 12px;border:1.5px solid var(--line);
     border-radius:10px;background:#FBFCFE;}
   .check-row input{width:18px;height:18px;accent-color:var(--blue-600);}
@@ -698,6 +701,21 @@
         </div>
 
         <div class="form-card">
+          <h3>👥 출역인원 입력 항목 설정</h3>
+          <p class="hint" style="margin-top:0;">"총 출역인원" 입력 표에 추가 항목을 켜고 끌 수 있습니다. (모든 기기에 공통 적용)</p>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg);border-radius:10px;">
+              <span style="font-weight:700;font-size:13.5px;">옥외작업인원</span>
+              <button type="button" id="fieldToggleOutdoor" class="mini-toggle" onclick="toggleAttendanceField('outdoor')">사용안함</button>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg);border-radius:10px;">
+              <span style="font-weight:700;font-size:13.5px;">취약근로자</span>
+              <button type="button" id="fieldToggleVulnerable" class="mini-toggle" onclick="toggleAttendanceField('vulnerable')">사용안함</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-card">
           <h3>📷 전경사진 관리</h3>
           <p class="hint" style="margin-top:0;">사진을 바꾸면 적용 시작일을 지정합니다. 대시보드에서 날짜를 이동하면 그 날짜에 맞는 사진이 자동으로 표시됩니다. (모든 기기에 실시간 공유됩니다)</p>
           <div class="map-actions" style="border:none;padding:0;">
@@ -713,7 +731,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-18 06:31 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-18 23:11 UTC</p>
       </div>
     </div>
   </div>
@@ -792,13 +810,7 @@
     <div class="sheet-inner">
       <h4>총 출역인원 입력</h4>
       <p class="desc" id="attendanceDateLabel">업체별 출역인원을 입력하세요.</p>
-      <div class="attendance-header" style="display:flex;gap:6px;padding:0 0 6px;font-size:11.5px;font-weight:800;color:var(--ink-400);">
-        <span style="width:20px;text-align:center;">No.</span>
-        <span style="flex:2;">업체명</span>
-        <span style="flex:1;">인원</span>
-        <span style="flex:1;">신규</span>
-        <span style="width:28px;"></span>
-      </div>
+      <div class="attendance-header" id="attendanceHeaderRow" style="display:flex;gap:6px;padding:0 0 6px;font-size:11.5px;font-weight:800;color:var(--ink-400);"></div>
       <div id="attendanceRows"></div>
       <button type="button" class="map-action-btn" style="width:100%;margin-top:6px;padding:11px;" onclick="addAttendanceRow()">＋ 직접추가</button>
       <div class="sheet-actions">
@@ -871,6 +883,7 @@ const STORAGE_TASKS = 'siteSafetyTasks_v2';
 const STORAGE_PUMPS = 'siteSafetyPumps_v2';
 const SITE_IMG_VERSIONS_KEY = 'siteSafetySiteImgVersions_v1';
 const ATTENDANCE_KEY = 'siteSafetyAttendance_v1';
+const ATTENDANCE_FIELDS_KEY = 'siteSafetyAttendanceFields_v1';
 
 /* Firebase 프로젝트 설정 (Realtime Database + 익명 인증으로 실시간 동기화) */
 const firebaseConfig = {
@@ -905,7 +918,8 @@ let state = {
   clipboardTask: null,
   siteImageVersions: {},   // { 'YYYY-MM-DD': dataUrl, ... } 날짜별 전경사진 버전
   pendingSiteImage: null,  // 방금 선택했지만 아직 적용 날짜를 확정 안 한 사진
-  attendanceByDate: {},    // { 'YYYY-MM-DD': [{company, workers}, ...] } 날짜별 총 출역인원 입력값
+  attendanceByDate: {},    // { 'YYYY-MM-DD': [{company, workers, newWorkers, outdoor, vulnerable}, ...] } 날짜별 총 출역인원 입력값
+  attendanceFields: { outdoor:false, vulnerable:false }, // 옥외작업인원/취약근로자 칸 사용 여부 (관리 탭에서 on/off, 전체 공유)
   attendanceDraft: [],     // 팝업에서 편집 중인 임시 목록
   regions: [],        // [{x,y,w,h}, ...] in percent, 확정된 다중 작업구간
   drawing: null,      // in-progress rect while drawing
@@ -914,7 +928,21 @@ let state = {
   pumps: []
 };
 
-function todayStr(){ return ymdLocal(new Date()); }
+function todayStr(){
+  // 기기 시간대와 무관하게 항상 한국 표준시(KST, UTC+9) 기준 오늘 날짜를 반환
+  try{
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(new Date());
+    const y = parts.find(p=>p.type==='year').value;
+    const m = parts.find(p=>p.type==='month').value;
+    const d = parts.find(p=>p.type==='day').value;
+    return `${y}-${m}-${d}`;
+  }catch(e){
+    // 아주 오래된 브라우저 등 Intl.DateTimeFormat timeZone 미지원 시 폴백(기기 로컬 시간)
+    return ymdLocal(new Date());
+  }
+}
 function ymdLocal(d){
   const y = d.getFullYear();
   const m = String(d.getMonth()+1).padStart(2,'0');
@@ -1011,6 +1039,7 @@ document.addEventListener('DOMContentLoaded', () => {
   autoAdvanceScheduledTasks();
   loadSiteImageVersions();
   loadAttendance();
+  loadAttendanceFields();
   buildRegisterChips();
   setupDrawMap();
   setupPumpMap();
@@ -2146,6 +2175,7 @@ function showAdminPanel(){
   document.getElementById('adminBulkDate').value = state.date || todayStr();
   renderAdminBulkList();
   renderSiteImageVersionList();
+  renderAttendanceFieldToggles();
 }
 function showAdminLocked(){
   document.getElementById('adminLocked').style.display = '';
@@ -2276,6 +2306,19 @@ function attachFirebaseListeners(){
   }, err=>{
     console.error('출역인원 동기화 오류', err);
     showToast('⚠ 실시간 동기화 오류: ' + err.message);
+  });
+
+  fbDb.ref('settings/attendanceFields').on('value', snap=>{
+    const val = snap.val();
+    if(val){
+      state.attendanceFields = val;
+      try{ localStorage.setItem(ATTENDANCE_FIELDS_KEY, JSON.stringify(state.attendanceFields)); }catch(e){}
+      renderAttendanceFieldToggles();
+      renderAttendanceHeaderRow();
+      if(document.getElementById('attendanceSheet').classList.contains('show')){ renderAttendanceRows(); }
+    }
+  }, err=>{
+    console.error('출역인원 항목 설정 동기화 오류', err);
   });
 }
 
@@ -2442,16 +2485,32 @@ function openAttendanceSheet(){
   const existing = state.attendanceByDate[state.date] || [];
   state.attendanceDraft = existing.length
     ? existing.map(r=>({...r}))
-    : [{company:'', workers:'', newWorkers:''},{company:'', workers:'', newWorkers:''}];
+    : [{company:'', workers:'', newWorkers:'', outdoor:'', vulnerable:''},{company:'', workers:'', newWorkers:'', outdoor:'', vulnerable:''}];
   document.getElementById('attendanceDateLabel').textContent = `${state.date} 기준 업체별 출역인원을 입력하세요.`;
+  renderAttendanceHeaderRow();
   renderAttendanceRows();
   document.getElementById('attendanceSheet').classList.add('show');
 }
 function closeAttendanceSheet(){
   document.getElementById('attendanceSheet').classList.remove('show');
 }
+function renderAttendanceHeaderRow(){
+  const el = document.getElementById('attendanceHeaderRow');
+  if(!el) return;
+  el.innerHTML = `
+    <span style="width:20px;text-align:center;">No.</span>
+    <span style="flex:2;">업체명</span>
+    <span style="flex:1;">인원</span>
+    <span style="flex:1;">신규</span>
+    ${state.attendanceFields.outdoor ? '<span style="flex:1;">옥외작업</span>' : ''}
+    ${state.attendanceFields.vulnerable ? '<span style="flex:1;">취약근로자</span>' : ''}
+    <span style="width:28px;"></span>
+  `;
+}
 function renderAttendanceRows(){
   const el = document.getElementById('attendanceRows');
+  const showOutdoor = state.attendanceFields.outdoor;
+  const showVuln = state.attendanceFields.vulnerable;
   el.innerHTML = state.attendanceDraft.map((r,i)=>`
     <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
       <span style="width:20px;text-align:center;font-weight:800;color:var(--ink-400);font-size:12.5px;flex-shrink:0;">${i+1}</span>
@@ -2464,6 +2523,12 @@ function renderAttendanceRows(){
       <input type="number" placeholder="신규" min="0" value="${r.newWorkers===''||r.newWorkers===undefined?'':r.newWorkers}"
         oninput="updateAttendanceDraft(${i},'newWorkers',this.value)"
         style="flex:1;min-width:0;padding:9px 10px;border-radius:8px;border:1.5px solid var(--line);font-size:13.5px;font-family:inherit;">
+      ${showOutdoor ? `<input type="number" placeholder="옥외작업" min="0" value="${r.outdoor===''||r.outdoor===undefined?'':r.outdoor}"
+        oninput="updateAttendanceDraft(${i},'outdoor',this.value)"
+        style="flex:1;min-width:0;padding:9px 10px;border-radius:8px;border:1.5px solid var(--line);font-size:13.5px;font-family:inherit;">` : ''}
+      ${showVuln ? `<input type="number" placeholder="취약근로자" min="0" value="${r.vulnerable===''||r.vulnerable===undefined?'':r.vulnerable}"
+        oninput="updateAttendanceDraft(${i},'vulnerable',this.value)"
+        style="flex:1;min-width:0;padding:9px 10px;border-radius:8px;border:1.5px solid var(--line);font-size:13.5px;font-family:inherit;">` : ''}
       <button type="button" onclick="removeAttendanceRow(${i})"
         style="flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--red-bg);color:var(--red);border:none;font-weight:800;font-size:14px;">×</button>
     </div>
@@ -2471,10 +2536,11 @@ function renderAttendanceRows(){
 }
 function updateAttendanceDraft(i, key, val){
   if(!state.attendanceDraft[i]) return;
-  state.attendanceDraft[i][key] = (key==='workers'||key==='newWorkers') ? (val===''? '' : Number(val)||0) : val;
+  const numeric = ['workers','newWorkers','outdoor','vulnerable'];
+  state.attendanceDraft[i][key] = numeric.includes(key) ? (val===''? '' : Number(val)||0) : val;
 }
 function addAttendanceRow(){
-  state.attendanceDraft.push({company:'', workers:'', newWorkers:''});
+  state.attendanceDraft.push({company:'', workers:'', newWorkers:'', outdoor:'', vulnerable:''});
   renderAttendanceRows();
 }
 function removeAttendanceRow(i){
@@ -2488,13 +2554,50 @@ function removeAttendanceRow(i){
 function saveAttendance(){
   const rows = state.attendanceDraft
     .filter(r=>r.company && r.company.trim())
-    .map(r=>({company:r.company.trim(), workers:Number(r.workers)||0, newWorkers:Number(r.newWorkers)||0}));
+    .map(r=>({
+      company:r.company.trim(),
+      workers:Number(r.workers)||0,
+      newWorkers:Number(r.newWorkers)||0,
+      outdoor:Number(r.outdoor)||0,
+      vulnerable:Number(r.vulnerable)||0
+    }));
   state.attendanceByDate[state.date] = rows;
   try{ localStorage.setItem(ATTENDANCE_KEY, JSON.stringify(state.attendanceByDate)); }catch(e){}
   fbSaveAttendance(state.date, rows);
   closeAttendanceSheet();
   renderDashboard();
   showToast('✓ 출역인원이 저장되었습니다');
+}
+
+/* ---- 출역인원 입력 항목(옥외작업인원/취약근로자) on/off 설정 — 관리 탭, 전체 공유 ---- */
+function loadAttendanceFields(){
+  try{
+    const raw = localStorage.getItem(ATTENDANCE_FIELDS_KEY);
+    if(raw) state.attendanceFields = JSON.parse(raw);
+  }catch(e){}
+  renderAttendanceFieldToggles();
+}
+function renderAttendanceFieldToggles(){
+  const elO = document.getElementById('fieldToggleOutdoor');
+  const elV = document.getElementById('fieldToggleVulnerable');
+  if(elO){ elO.textContent = state.attendanceFields.outdoor ? '사용중' : '사용안함'; elO.classList.toggle('on', state.attendanceFields.outdoor); }
+  if(elV){ elV.textContent = state.attendanceFields.vulnerable ? '사용중' : '사용안함'; elV.classList.toggle('on', state.attendanceFields.vulnerable); }
+}
+function toggleAttendanceField(key){
+  state.attendanceFields[key] = !state.attendanceFields[key];
+  try{ localStorage.setItem(ATTENDANCE_FIELDS_KEY, JSON.stringify(state.attendanceFields)); }catch(e){}
+  fbSaveAttendanceFields();
+  renderAttendanceFieldToggles();
+  renderAttendanceHeaderRow();
+  renderAttendanceRows();
+  showToast(`✓ ${key==='outdoor'?'옥외작업인원':'취약근로자'} 항목을 ${state.attendanceFields[key]?'켰습니다':'껐습니다'}`);
+}
+function fbSaveAttendanceFields(){
+  if(!fbDb) return;
+  fbDb.ref('settings/attendanceFields').set(state.attendanceFields).catch(err=>{
+    console.error('출역인원 항목 설정 저장 실패', err);
+    showToast('⚠ 실시간 저장 실패: ' + err.message);
+  });
 }
 
 function openImageLightbox(){
