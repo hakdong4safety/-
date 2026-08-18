@@ -459,7 +459,7 @@
           <div class="form-card">
             <h3>기본 정보</h3>
             <div class="field"><label>작업 일자 <span class="req">*</span></label>
-              <input type="date" id="f_date" required></div>
+              <input type="date" id="f_date" required onchange="onFormDateChange()"></div>
             <div class="field"><label>협력업체명 <span class="req">*</span></label>
               <input type="text" id="f_company" placeholder="예: (주)한국건설" required></div>
             <div class="field"><label>작업명 <span class="req">*</span></label>
@@ -481,7 +481,9 @@
                 <option value="예정">예정</option>
                 <option value="진행중" selected>진행중</option>
                 <option value="완료">완료</option>
-              </select></div>
+              </select>
+              <span class="hint2" id="f_status_lockhint" style="display:none;">미래 날짜 작업은 자동으로 "예정" 상태로 등록됩니다.</span>
+            </div>
             <div class="field"><label>동 (복수 선택 가능) <span class="req">*</span></label>
               <div class="building-grid" id="buildingChips"></div>
               <div class="sel-line" id="buildingSelLine">선택: 없음</div>
@@ -711,7 +713,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-18 02:07 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-18 06:31 UTC</p>
       </div>
     </div>
   </div>
@@ -983,6 +985,21 @@ function loadData(){
 function saveTasks(){ localStorage.setItem(STORAGE_TASKS, JSON.stringify(state.tasks)); }
 function savePumps(){ localStorage.setItem(STORAGE_PUMPS, JSON.stringify(state.pumps)); }
 
+/* 시작일이 된(오늘 날짜에 도달한) "예정" 작업을 자동으로 "진행중"으로 전환 */
+function autoAdvanceScheduledTasks(){
+  const today = todayStr();
+  let changed = false;
+  state.tasks.forEach(t=>{
+    if(t.status === '예정' && t.date === today){
+      t.status = '진행중';
+      changed = true;
+      fbSaveTask(t);
+    }
+  });
+  if(changed) saveTasks();
+  return changed;
+}
+
 /* =========================================================
    INIT
 ========================================================= */
@@ -991,6 +1008,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('dateInput').value = state.date;
   document.getElementById('p_date').value = todayStr();
   loadData();
+  autoAdvanceScheduledTasks();
   loadSiteImageVersions();
   loadAttendance();
   buildRegisterChips();
@@ -1360,6 +1378,19 @@ function onWorktypeChange(){
   const v = document.getElementById('f_worktype').value;
   document.getElementById('f_worktype_custom').style.display = v==='직접입력' ? '' : 'none';
 }
+function onFormDateChange(){
+  const dateVal = document.getElementById('f_date').value;
+  const statusSel = document.getElementById('f_status');
+  const hint = document.getElementById('f_status_lockhint');
+  if(dateVal && dateVal > todayStr()){
+    statusSel.value = '예정';
+    statusSel.disabled = true;
+    hint.style.display = '';
+  } else {
+    statusSel.disabled = false;
+    hint.style.display = 'none';
+  }
+}
 function onEquipmentToggle(){
   const checked = document.getElementById('f_equipment').checked;
   const input = document.getElementById('f_equipment_type');
@@ -1548,12 +1579,15 @@ function collectFormTaskFields(){
     const custom = document.getElementById('f_risk_custom').value.trim();
     if(custom){ riskSel[riskSel.indexOf('기타(직접입력)')] = custom; }
   }
+  const dateVal = document.getElementById('f_date').value || state.date;
+  // 안전장치: 미래 날짜 작업은 화면에서 무엇을 선택했든 무조건 "예정"으로 등록
+  const statusVal = (dateVal > todayStr()) ? '예정' : document.getElementById('f_status').value;
   return {
-    date: document.getElementById('f_date').value || state.date,
+    date: dateVal,
     company: document.getElementById('f_company').value.trim(),
     taskName: document.getElementById('f_taskname').value.trim(),
     workType: worktypeFinal,
-    status: document.getElementById('f_status').value,
+    status: statusVal,
     buildings: resolveBuildingSelection(),
     floors: [...state.formFloorSel],
     location: document.getElementById('f_location').value.trim(),
@@ -1605,6 +1639,7 @@ function resetTaskForm(){
   document.getElementById('f_building_custom').style.display='none';
   document.getElementById('f_building_custom').value='';
   document.getElementById('f_date').value = state.date;
+  onFormDateChange();
   state.editingTaskId = null;
   document.getElementById('submitBtn').textContent = '✓ 작업 등록하기';
   updateEditModeBanner();
@@ -1943,6 +1978,7 @@ function fillFormFromTask(t){
   }
 
   document.getElementById('f_status').value = t.status;
+  onFormDateChange();
 
   state.formBuildingSel = [...(t.buildings||[])];
   document.querySelectorAll('#buildingChips .chip').forEach(el=>{
@@ -2203,6 +2239,7 @@ function attachFirebaseListeners(){
     state.tasks = Object.keys(val).map(k=>val[k]);
     saveTasks();
     if(!fbTasksLoaded){ fbTasksLoaded = true; }
+    autoAdvanceScheduledTasks();
     renderAll();
   }, err=>{
     console.error('tasks 동기화 오류', err);
