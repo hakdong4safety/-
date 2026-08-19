@@ -52,7 +52,7 @@
   .topbar{background:#fff; border-bottom:1px solid var(--line); padding:calc(14px + env(safe-area-inset-top)) 18px 14px;
     display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:15;}
   .topbar .icon{width:56px;height:auto;flex-shrink:0;object-fit:contain;}
-  .topbar h1{margin:0;font-size:17px;font-weight:800;letter-spacing:-0.01em;}
+  .topbar h1{margin:0;font-size:15.5px;font-weight:800;letter-spacing:-0.01em;line-height:1.3;}
   .topbar .sub{margin:1px 0 0;font-size:12px;color:var(--blue-600);font-weight:700;}
 
   .date-row{display:flex;align-items:center;justify-content:space-between;
@@ -397,8 +397,8 @@
   <div class="topbar" onclick="switchView('dashboard')" style="cursor:pointer;">
     <img class="icon" src="./logo.png" alt="로고">
     <div>
-      <h1 id="siteTitle">광주 학동4구역 재개발정비사업</h1>
-      <div class="sub">일일안전보건현황 관리시스템</div>
+      <h1 id="siteTitle">광주 학동4구역 <span style="color:var(--blue-600);font-weight:800;">S</span><span style="color:var(--ink-900);">.</span><span style="color:var(--red);font-weight:800;">O</span><span style="color:var(--ink-900);">.</span><span style="color:var(--green);font-weight:800;">S</span> 시스템 <span style="color:var(--ink-400);font-weight:600;font-size:0.87em;">(<span style="color:var(--blue-600);font-weight:700;">S</span>afety&nbsp;&nbsp;&nbsp;<span style="color:var(--red);font-weight:700;">O</span>n&nbsp;&nbsp;&nbsp;<span style="color:var(--green);font-weight:700;">S</span>ystem)</span></h1>
+      <div class="sub">작업前, 안전을 켜다. <span style="color:var(--ink-400);font-weight:500;">· 일일 고위험 현장관리 시스템</span></div>
     </div>
   </div>
 
@@ -731,7 +731,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-18 23:40 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-19 01:03 UTC</p>
       </div>
     </div>
   </div>
