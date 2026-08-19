@@ -731,7 +731,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-19 01:03 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-19 03:41 UTC</p>
       </div>
     </div>
   </div>
@@ -1708,18 +1708,19 @@ function handleSubmitTask(e){
 
   if(state.editingTaskId){
     const idx = state.tasks.findIndex(x=>x.id===state.editingTaskId);
-    if(idx>-1){
+    if(idx===-1){ resetTaskForm(); return; }
+    requireActionPassword('수정을 완료하려면 비밀번호를 입력하세요', ()=>{
       const merged = { ...state.tasks[idx], ...fields };
       state.tasks[idx] = merged;
       saveTasks();
       fbSaveTask(merged);
       state.date = merged.date;
       showToast('✓ 작업이 수정되었습니다');
-    }
-    resetTaskForm();
-    document.getElementById('dateInput').value = state.date;
-    renderAll();
-    switchView('dashboard');
+      resetTaskForm();
+      document.getElementById('dateInput').value = state.date;
+      renderAll();
+      switchView('dashboard');
+    });
     return;
   }
 
@@ -1759,15 +1760,16 @@ function handleSubmitPump(){
 
   if(state.editingPumpId){
     const idx = state.pumps.findIndex(x=>x.id===state.editingPumpId);
-    if(idx>-1){
+    if(idx===-1){ resetPumpForm(); return; }
+    requireActionPassword('수정을 완료하려면 비밀번호를 입력하세요', ()=>{
       const merged = { ...state.pumps[idx], ...fields };
       state.pumps[idx] = merged;
       savePumps();
       fbSavePump(merged);
       showToast('✓ 양수기가 수정되었습니다');
-    }
-    resetPumpForm();
-    renderAll();
+      resetPumpForm();
+      renderAll();
+    });
     return;
   }
 
@@ -1996,9 +1998,19 @@ function pasteTaskFromClipboard(){
   state.editingTaskId = null;
   fillFormFromTask(t);
   document.getElementById('f_date').value = state.date;
+  resetRiskSelectionToNone(); // 복사한 작업은 고위험 작업여부를 다시 선정해야 하므로 "해당없음"으로 초기화
   document.getElementById('submitBtn').textContent = '✓ 작업 등록하기';
   updateEditModeBanner();
-  showToast('✓ 붙여넣었습니다. 필요한 부분을 수정한 뒤 등록해주세요');
+  showToast('✓ 붙여넣었습니다. 필요한 부분을 수정한 뒤 등록해주세요 (고위험 작업여부는 다시 선택해주세요)');
+}
+function resetRiskSelectionToNone(){
+  state.formRiskSel = ['해당 없음'];
+  document.querySelectorAll('#riskChips .chip').forEach(el=>{
+    const on = el.dataset.r === '해당 없음';
+    el.classList.toggle('on', on);
+    el.classList.toggle('risk-on', false);
+  });
+  document.getElementById('f_risk_custom').style.display = 'none';
 }
 function fillFormFromTask(t){
   document.getElementById('f_date').value = t.date;
