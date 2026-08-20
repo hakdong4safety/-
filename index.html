@@ -684,6 +684,18 @@
 
       <div id="adminPanel" style="display:none;">
         <div class="form-card">
+          <h3>📢 공지사항 관리</h3>
+          <p class="hint" style="margin-top:0;">앱을 열 때 모든 사용자에게 팝업으로 표시됩니다. 항상 1개만 유지되며, 새로 게시하면 이전 공지는 사라집니다.</p>
+          <textarea id="noticeInput" placeholder="공지 내용을 입력하세요" style="width:100%;min-height:100px;padding:12px;
+            border-radius:10px;border:1.5px solid var(--line);font-family:inherit;font-size:14px;box-sizing:border-box;resize:vertical;"></textarea>
+          <div class="sheet-actions" style="margin-top:10px;">
+            <button type="button" class="btn-secondary" onclick="clearNotice()">공지 삭제</button>
+            <button type="button" class="btn-primary" onclick="publishNotice()">게시하기</button>
+          </div>
+          <p class="hint" id="noticeCurrentStatus" style="margin-top:10px;margin-bottom:0;"></p>
+        </div>
+
+        <div class="form-card">
           <h3>🗂 일괄 작업 상태 변경</h3>
           <p class="hint" style="margin-top:0;">날짜를 선택하면 그날 등록된 작업 전체를 한 번에 예정/진행중/완료로 바꿀 수 있습니다.</p>
           <div class="field"><label>대상 날짜</label>
@@ -731,7 +743,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-19 03:41 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-20 23:08 UTC</p>
       </div>
     </div>
   </div>
@@ -759,6 +771,20 @@
     <div class="sheet-inner" style="position:relative;">
       <button class="detail-close" onclick="closePumpDetail()">✕</button>
       <div id="pumpDetailBody"></div>
+    </div>
+  </div>
+
+  <!-- 공지사항 팝업 (앱 열 때 자동 표시, 확인해야 닫힘) -->
+  <div class="sheet" id="noticeSheet" style="z-index:90;">
+    <div class="sheet-inner" style="text-align:center;">
+      <div style="font-size:32px;margin-bottom:8px;">📢</div>
+      <h4 style="margin:0 0 4px;font-size:16px;">공지사항</h4>
+      <p class="hint" id="noticeUpdatedAt" style="margin:0 0 14px;"></p>
+      <div id="noticeText" style="text-align:left;white-space:pre-wrap;word-break:break-word;font-size:14px;line-height:1.55;
+        color:var(--ink-900);background:var(--bg);border-radius:12px;padding:14px;margin-bottom:16px;
+        max-height:42vh;overflow-y:auto;"></div>
+      <button type="button" onclick="closeNoticeSheet()" style="width:100%;padding:13px;border-radius:10px;border:none;
+        background:var(--blue-600);color:#fff;font-weight:800;font-size:14px;font-family:inherit;">확인했습니다</button>
     </div>
   </div>
 
@@ -884,6 +910,7 @@ const STORAGE_PUMPS = 'siteSafetyPumps_v2';
 const SITE_IMG_VERSIONS_KEY = 'siteSafetySiteImgVersions_v1';
 const ATTENDANCE_KEY = 'siteSafetyAttendance_v1';
 const ATTENDANCE_FIELDS_KEY = 'siteSafetyAttendanceFields_v1';
+const NOTICE_KEY = 'siteSafetyNotice_v1';
 
 /* Firebase 프로젝트 설정 (Realtime Database + 익명 인증으로 실시간 동기화) */
 const firebaseConfig = {
@@ -920,6 +947,7 @@ let state = {
   pendingSiteImage: null,  // 방금 선택했지만 아직 적용 날짜를 확정 안 한 사진
   attendanceByDate: {},    // { 'YYYY-MM-DD': [{company, workers, newWorkers, outdoor, vulnerable}, ...] } 날짜별 총 출역인원 입력값
   attendanceFields: { outdoor:false, vulnerable:false }, // 옥외작업인원/취약근로자 칸 사용 여부 (관리 탭에서 on/off, 전체 공유)
+  notice: { text:'', updatedAt:'' }, // 공지사항 (항상 1개, 관리 탭에서 게시/삭제, 전체 공유)
   attendanceDraft: [],     // 팝업에서 편집 중인 임시 목록
   regions: [],        // [{x,y,w,h}, ...] in percent, 확정된 다중 작업구간
   drawing: null,      // in-progress rect while drawing
@@ -941,6 +969,22 @@ function todayStr(){
   }catch(e){
     // 아주 오래된 브라우저 등 Intl.DateTimeFormat timeZone 미지원 시 폴백(기기 로컬 시간)
     return ymdLocal(new Date());
+  }
+}
+function nowKSTDateTimeStr(){
+  // 기기 시간대와 무관하게 항상 한국 표준시(KST) 기준 "YYYY-MM-DDTHH:MM" 반환 (문자열 비교로 시각 선후 판단용)
+  try{
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Seoul', year:'numeric', month:'2-digit', day:'2-digit',
+      hour:'2-digit', minute:'2-digit', hourCycle:'h23'
+    }).formatToParts(new Date());
+    const get = (type)=> parts.find(p=>p.type===type).value;
+    return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`;
+  }catch(e){
+    const d = new Date();
+    const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+    const h=String(d.getHours()).padStart(2,'0'), mi=String(d.getMinutes()).padStart(2,'0');
+    return `${y}-${m}-${day}T${h}:${mi}`;
   }
 }
 function ymdLocal(d){
@@ -1013,15 +1057,19 @@ function loadData(){
 function saveTasks(){ localStorage.setItem(STORAGE_TASKS, JSON.stringify(state.tasks)); }
 function savePumps(){ localStorage.setItem(STORAGE_PUMPS, JSON.stringify(state.pumps)); }
 
-/* 시작일이 된(오늘 날짜에 도달한) "예정" 작업을 자동으로 "진행중"으로 전환 */
+/* 등록된 "작업 시작 시각(날짜+시간)"이 실제로 도래한 "예정" 작업만 자동으로 "진행중"으로 전환
+   (날짜만 같고 아직 시작 시각 전이면 계속 "예정" 상태 유지) */
 function autoAdvanceScheduledTasks(){
-  const today = todayStr();
+  const nowStr = nowKSTDateTimeStr();
   let changed = false;
   state.tasks.forEach(t=>{
-    if(t.status === '예정' && t.date === today){
-      t.status = '진행중';
-      changed = true;
-      fbSaveTask(t);
+    if(t.status === '예정'){
+      const startStr = `${t.date}T${t.timeStart || '00:00'}`;
+      if(startStr <= nowStr){
+        t.status = '진행중';
+        changed = true;
+        fbSaveTask(t);
+      }
     }
   });
   if(changed) saveTasks();
@@ -1040,6 +1088,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadSiteImageVersions();
   loadAttendance();
   loadAttendanceFields();
+  loadNotice();
   buildRegisterChips();
   setupDrawMap();
   setupPumpMap();
@@ -2198,6 +2247,7 @@ function showAdminPanel(){
   renderAdminBulkList();
   renderSiteImageVersionList();
   renderAttendanceFieldToggles();
+  renderAdminNoticeForm();
 }
 function showAdminLocked(){
   document.getElementById('adminLocked').style.display = '';
@@ -2341,6 +2391,18 @@ function attachFirebaseListeners(){
     }
   }, err=>{
     console.error('출역인원 항목 설정 동기화 오류', err);
+  });
+
+  fbDb.ref('settings/notice').on('value', snap=>{
+    const val = snap.val();
+    if(val){
+      state.notice = val;
+      try{ localStorage.setItem(NOTICE_KEY, JSON.stringify(val)); }catch(e){}
+      renderAdminNoticeForm();
+      maybeShowNoticePopup();
+    }
+  }, err=>{
+    console.error('공지사항 동기화 오류', err);
   });
 }
 
@@ -2618,6 +2680,64 @@ function fbSaveAttendanceFields(){
   if(!fbDb) return;
   fbDb.ref('settings/attendanceFields').set(state.attendanceFields).catch(err=>{
     console.error('출역인원 항목 설정 저장 실패', err);
+    showToast('⚠ 실시간 저장 실패: ' + err.message);
+  });
+}
+
+/* =========================================================
+   공지사항 (앱 열 때 자동 팝업, 항상 1개, 관리 탭에서만 게시)
+========================================================= */
+function loadNotice(){
+  try{
+    const raw = localStorage.getItem(NOTICE_KEY);
+    if(raw) state.notice = JSON.parse(raw);
+  }catch(e){}
+  renderAdminNoticeForm();
+  maybeShowNoticePopup();
+}
+function maybeShowNoticePopup(){
+  if(state.notice && state.notice.text && state.notice.text.trim()){
+    document.getElementById('noticeText').textContent = state.notice.text;
+    document.getElementById('noticeUpdatedAt').textContent = state.notice.updatedAt ? `${state.notice.updatedAt} 게시` : '';
+    document.getElementById('noticeSheet').classList.add('show');
+  }
+}
+function closeNoticeSheet(){
+  document.getElementById('noticeSheet').classList.remove('show');
+}
+function renderAdminNoticeForm(){
+  const input = document.getElementById('noticeInput');
+  const status = document.getElementById('noticeCurrentStatus');
+  if(!input || !status) return;
+  input.value = (state.notice && state.notice.text) ? state.notice.text : '';
+  status.textContent = (state.notice && state.notice.text)
+    ? `현재 게시 중 (${state.notice.updatedAt || ''})`
+    : '게시된 공지사항이 없습니다';
+}
+function publishNotice(){
+  const text = document.getElementById('noticeInput').value.trim();
+  if(!text){ showToast('공지 내용을 입력해주세요'); return; }
+  const notice = { text, updatedAt: todayStr() };
+  state.notice = notice;
+  try{ localStorage.setItem(NOTICE_KEY, JSON.stringify(notice)); }catch(e){}
+  fbSaveNotice(notice);
+  renderAdminNoticeForm();
+  showToast('✓ 공지사항이 게시되었습니다');
+}
+function clearNotice(){
+  if(!state.notice || !state.notice.text){ showToast('삭제할 공지사항이 없습니다'); return; }
+  showConfirm('공지사항을 삭제하시겠습니까?', ()=>{
+    state.notice = { text:'', updatedAt:'' };
+    try{ localStorage.setItem(NOTICE_KEY, JSON.stringify(state.notice)); }catch(e){}
+    fbSaveNotice(state.notice);
+    renderAdminNoticeForm();
+    showToast('공지사항이 삭제되었습니다');
+  });
+}
+function fbSaveNotice(notice){
+  if(!fbDb) return;
+  fbDb.ref('settings/notice').set(notice).catch(err=>{
+    console.error('공지사항 저장 실패', err);
     showToast('⚠ 실시간 저장 실패: ' + err.message);
   });
 }
