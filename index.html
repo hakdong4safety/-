@@ -743,7 +743,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-20 23:08 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-20 23:55 UTC</p>
       </div>
     </div>
   </div>
@@ -1100,6 +1100,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function registerServiceWorker(){
   if('serviceWorker' in navigator){
+    let refreshed = false;
+    // 새 버전의 서비스워커가 활성화되면(=재배포 감지) 화면을 자동으로 한 번 새로고침해서
+    // 예전 버전이 계속 열려있던 탭/PWA에서도 최신 코드가 확실히 반영되도록 함
+    navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+      if(refreshed) return;
+      refreshed = true;
+      window.location.reload();
+    });
     window.addEventListener('load', ()=>{
       navigator.serviceWorker.register('./sw.js').catch(err=>{
         console.error('서비스워커 등록 실패', err);
