@@ -743,7 +743,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-21 00:02 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-21 00:10 UTC</p>
       </div>
     </div>
   </div>
@@ -1076,6 +1076,16 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('p_date').value = todayStr();
   loadData();
   autoAdvanceScheduledTasks();
+  setInterval(()=>{
+    // 화면이 꺼져있거나 다른 탭을 보고 있을 땐 점검을 건너뛰어 불필요한 확인/쓰기를 최소화
+    if(document.hidden) return;
+    // 사용자의 수동 변경과 부딪히지 않도록, 실시간 동기화와 완전히 분리해서 5분마다 한 번씩만 점검
+    if(autoAdvanceScheduledTasks()) renderAll();
+  }, 5*60000);
+  document.addEventListener('visibilitychange', ()=>{
+    // 화면을 다시 보게 됐을 때(예: 잠금 해제, 탭 복귀) 놓친 전환이 없는지 즉시 한 번 점검
+    if(!document.hidden){ if(autoAdvanceScheduledTasks()) renderAll(); }
+  });
   loadSiteImageVersions();
   loadAttendance();
   loadAttendanceFields();
@@ -2340,7 +2350,6 @@ function attachFirebaseListeners(){
     state.tasks = Object.keys(val).map(k=>val[k]);
     saveTasks();
     if(!fbTasksLoaded){ fbTasksLoaded = true; }
-    autoAdvanceScheduledTasks();
     renderAll();
   }, err=>{
     console.error('tasks 동기화 오류', err);
