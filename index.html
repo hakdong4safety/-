@@ -743,7 +743,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-20 23:55 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-21 00:02 UTC</p>
       </div>
     </div>
   </div>
@@ -956,36 +956,27 @@ let state = {
   pumps: []
 };
 
+function nowKST(){
+  // 기기 시간대·브라우저 설정과 완전히 무관하게, 순수 시간 계산으로 한국시간(KST, UTC+9)을 구함
+  // (Intl.DateTimeFormat의 hourCycle 옵션은 일부 구형 브라우저에서 오작동할 수 있어 사용하지 않음)
+  return new Date(Date.now() + 9*60*60*1000);
+}
 function todayStr(){
-  // 기기 시간대와 무관하게 항상 한국 표준시(KST, UTC+9) 기준 오늘 날짜를 반환
-  try{
-    const parts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit'
-    }).formatToParts(new Date());
-    const y = parts.find(p=>p.type==='year').value;
-    const m = parts.find(p=>p.type==='month').value;
-    const d = parts.find(p=>p.type==='day').value;
-    return `${y}-${m}-${d}`;
-  }catch(e){
-    // 아주 오래된 브라우저 등 Intl.DateTimeFormat timeZone 미지원 시 폴백(기기 로컬 시간)
-    return ymdLocal(new Date());
-  }
+  const k = nowKST();
+  const y = k.getUTCFullYear();
+  const m = String(k.getUTCMonth()+1).padStart(2,'0');
+  const d = String(k.getUTCDate()).padStart(2,'0');
+  return `${y}-${m}-${d}`;
 }
 function nowKSTDateTimeStr(){
-  // 기기 시간대와 무관하게 항상 한국 표준시(KST) 기준 "YYYY-MM-DDTHH:MM" 반환 (문자열 비교로 시각 선후 판단용)
-  try{
-    const parts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Asia/Seoul', year:'numeric', month:'2-digit', day:'2-digit',
-      hour:'2-digit', minute:'2-digit', hourCycle:'h23'
-    }).formatToParts(new Date());
-    const get = (type)=> parts.find(p=>p.type===type).value;
-    return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`;
-  }catch(e){
-    const d = new Date();
-    const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
-    const h=String(d.getHours()).padStart(2,'0'), mi=String(d.getMinutes()).padStart(2,'0');
-    return `${y}-${m}-${day}T${h}:${mi}`;
-  }
+  // 한국시간(KST) 기준 "YYYY-MM-DDTHH:MM" 반환 (문자열 비교로 시각 선후 판단용)
+  const k = nowKST();
+  const y = k.getUTCFullYear();
+  const m = String(k.getUTCMonth()+1).padStart(2,'0');
+  const d = String(k.getUTCDate()).padStart(2,'0');
+  const h = String(k.getUTCHours()).padStart(2,'0');
+  const mi = String(k.getUTCMinutes()).padStart(2,'0');
+  return `${y}-${m}-${d}T${h}:${mi}`;
 }
 function ymdLocal(d){
   const y = d.getFullYear();
