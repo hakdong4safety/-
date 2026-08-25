@@ -127,6 +127,20 @@
   .export-btn[disabled]{opacity:0.5;}
   .export-btn.excel{border-color:var(--green);background:var(--green-bg);color:var(--green);margin-top:8px;}
 
+  .weather-card{margin-top:12px;background:linear-gradient(135deg,#2F5FDB,#5B8CF5);border-radius:16px;
+    padding:16px 18px;color:#fff;box-shadow:0 8px 20px rgba(47,95,219,0.25);}
+  .weather-top{display:flex;align-items:center;justify-content:space-between;}
+  .weather-loc{font-size:12px;font-weight:800;opacity:0.9;}
+  .weather-time{font-size:11px;opacity:0.7;margin-top:2px;}
+  .weather-icon{font-size:32px;line-height:1;}
+  .weather-main{display:flex;align-items:flex-end;gap:14px;margin-top:12px;}
+  .weather-temp{font-size:34px;font-weight:800;line-height:1;letter-spacing:-0.02em;}
+  .weather-desc{padding-bottom:3px;}
+  .weather-desc .cond{font-size:13px;font-weight:800;}
+  .weather-desc .feel{font-size:11.5px;opacity:0.85;margin-top:3px;}
+  .weather-alert{margin-top:10px;background:rgba(255,255,255,0.18);border-radius:10px;padding:8px 12px;
+    font-size:11.5px;font-weight:700;}
+
   /* ===== Company group ===== */
   .company-group{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);
     margin-bottom:10px;box-shadow:var(--shadow);overflow:hidden;}
@@ -434,6 +448,24 @@
       </div>
       <div class="summary-grid" id="summaryGrid"></div>
       <button class="export-btn" id="exportExcelBtn" onclick="exportToExcel()">📤 일일 고위험 작업 현황 내보내기</button>
+
+      <div class="weather-card" id="weatherCard">
+        <div class="weather-top">
+          <div>
+            <div class="weather-loc">📍 광주 동구 학동4구역</div>
+            <div class="weather-time" id="weatherTime">불러오는 중...</div>
+          </div>
+          <div class="weather-icon" id="weatherIcon">⏳</div>
+        </div>
+        <div class="weather-main">
+          <div class="weather-temp" id="weatherTemp">-°</div>
+          <div class="weather-desc">
+            <div class="cond" id="weatherCond">-</div>
+            <div class="feel" id="weatherFeel">체감 -°</div>
+          </div>
+        </div>
+        <div class="weather-alert" id="weatherAlert" style="display:none;"></div>
+      </div>
     </div>
 
     <div class="section">
@@ -743,7 +775,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-21 00:32 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-24 20:34 UTC</p>
       </div>
     </div>
   </div>
@@ -1052,6 +1084,126 @@ function loadData(){
 function saveTasks(){ localStorage.setItem(STORAGE_TASKS, JSON.stringify(state.tasks)); }
 function savePumps(){ localStorage.setItem(STORAGE_PUMPS, JSON.stringify(state.pumps)); }
 
+/* =========================================================
+   날씨 (기상청 공공데이터포털 단기예보 조회서비스)
+   - 학동4구역 격자좌표: nx=60, ny=74 (위경도 35.1378607, 126.9246441 기준 변환)
+   - 주의: 정적 사이트라 API 키가 클라이언트 코드에 그대로 포함됩니다.
+     data.go.kr 무료 키는 일일 호출 한도가 있는 rate-limit 성격의 키라
+     Firebase 키처럼 "설계상 공개" 되는 값은 아니지만, 노출되어도
+     결제/개인정보 유출로 이어지진 않습니다 (최악의 경우 호출 한도 소진).
+========================================================= */
+const KMA_SERVICE_KEY = 'Y1KecwqsUoaxPMqzKTzeminfI9ErtZFrp3Z5UZkohe8jzoKRWePrYnuaTSwaOiBedOE946T6J/lfaF38KcHYmQ==';
+const KMA_NX = 60, KMA_NY = 74;
+
+function kmaBaseDateTime(){
+  // 단기예보 발표시각: 02,05,08,11,14,17,20,23시 (매 발표 후 약 10분 뒤부터 조회 가능)
+  const k = nowKST();
+  let h = k.getUTCHours();
+  let y = k.getUTCFullYear(), mo = k.getUTCMonth(), d = k.getUTCDate();
+  const minute = k.getUTCMinutes();
+  const slots = [2,5,8,11,14,17,20,23];
+  let base = null;
+  for(let i=slots.length-1;i>=0;i--){
+    const s = slots[i];
+    if(h > s || (h === s && minute >= 11)){ base = s; break; }
+  }
+  const baseDate = new Date(Date.UTC(y, mo, d));
+  if(base === null){
+    // 자정~02:10 사이: 전날 23시 발표자료 사용
+    baseDate.setUTCDate(baseDate.getUTCDate()-1);
+    base = 23;
+  }
+  const by = baseDate.getUTCFullYear();
+  const bm = String(baseDate.getUTCMonth()+1).padStart(2,'0');
+  const bd = String(baseDate.getUTCDate()).padStart(2,'0');
+  return { base_date: `${by}${bm}${bd}`, base_time: String(base).padStart(2,'0')+'00' };
+}
+
+function kmaWetBulb(Ta, RH){
+  // Stull(2011) 근사식
+  return Ta*Math.atan(0.151977*Math.sqrt(RH+8.313659)) + Math.atan(Ta+RH) - Math.atan(RH-1.676331)
+    + 0.00391838*Math.pow(RH,1.5)*Math.atan(0.023101*RH) - 4.686035;
+}
+function kmaFeelsLike(Ta, RH){
+  const Tw = kmaWetBulb(Ta, RH);
+  return -0.2442 + 0.55399*Tw + 0.45535*Ta - 0.0022*Tw*Tw + 0.00278*Ta*Tw + 3.0;
+}
+const SKY_MAP = { '1':{t:'맑음',icon:'☀️'}, '3':{t:'구름많음',icon:'⛅'}, '4':{t:'흐림',icon:'☁️'} };
+const PTY_MAP = { '0':null, '1':{t:'비',icon:'🌧️'}, '2':{t:'비/눈',icon:'🌨️'}, '3':{t:'눈',icon:'❄️'},
+  '4':{t:'소나기',icon:'🌦️'}, '5':{t:'빗방울',icon:'🌦️'}, '6':{t:'빗방울눈날림',icon:'🌨️'}, '7':{t:'눈날림',icon:'🌨️'} };
+
+async function fetchWeather(){
+  const cardEl = document.getElementById('weatherCard');
+  if(!cardEl) return;
+  try{
+    const { base_date, base_time } = kmaBaseDateTime();
+    const url = `https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst`
+      + `?serviceKey=${encodeURIComponent(KMA_SERVICE_KEY)}`
+      + `&pageNo=1&numOfRows=1000&dataType=JSON`
+      + `&base_date=${base_date}&base_time=${base_time}&nx=${KMA_NX}&ny=${KMA_NY}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const header = data && data.response && data.response.header;
+    if(!header || header.resultCode !== '00'){
+      throw new Error((header && header.resultMsg) || '기상청 API 응답 오류');
+    }
+    const items = data.response.body.items.item;
+
+    // 현재(또는 가장 가까운 미래) 시각의 예보값 찾기
+    const nowStr = nowKSTDateTimeStr(); // YYYY-MM-DDTHH:MM
+    const nowFcstDate = nowStr.slice(0,10).replace(/-/g,'');
+    const nowFcstHour = nowStr.slice(11,13);
+    const times = [...new Set(items.filter(i=>i.fcstDate===nowFcstDate).map(i=>i.fcstTime))].sort();
+    let targetTime = times.find(t => t.slice(0,2) >= nowFcstHour) || times[0];
+    const targetDate = times.find(t=>t===targetTime) ? nowFcstDate : items[0].fcstDate;
+
+    const pick = (category)=>{
+      const found = items.find(i=>i.category===category && i.fcstDate===targetDate && i.fcstTime===targetTime);
+      return found ? found.fcstValue : null;
+    };
+    const tmp = pick('TMP');
+    const sky = pick('SKY');
+    const pty = pick('PTY');
+    const reh = pick('REH');
+
+    if(tmp===null){ throw new Error('예보 데이터를 찾을 수 없습니다'); }
+
+    const Ta = Number(tmp), RH = Number(reh || 60);
+    const feels = kmaFeelsLike(Ta, RH);
+
+    const ptyInfo = pty && PTY_MAP[pty];
+    const skyInfo = SKY_MAP[sky] || {t:'-', icon:'🌡️'};
+    const condText = ptyInfo ? ptyInfo.t : skyInfo.t;
+    const iconText = ptyInfo ? ptyInfo.icon : skyInfo.icon;
+
+    document.getElementById('weatherIcon').textContent = iconText;
+    document.getElementById('weatherTemp').textContent = Math.round(Ta) + '°';
+    document.getElementById('weatherCond').textContent = condText;
+    document.getElementById('weatherFeel').textContent = `체감 ${Math.round(feels)}°`;
+    document.getElementById('weatherTime').textContent =
+      `${targetDate.slice(4,6)}/${targetDate.slice(6,8)} ${targetTime.slice(0,2)}시 예보 · 기상청 제공`;
+
+    const alertEl = document.getElementById('weatherAlert');
+    if(feels >= 35){
+      alertEl.textContent = '🔴 폭염경보 체감온도 기준 도달 — 옥외작업 중지 검토';
+      alertEl.style.display = '';
+    } else if(feels >= 33){
+      alertEl.textContent = '🟠 폭염주의보 체감온도 기준 도달 — 휴식시간 확대 필요';
+      alertEl.style.display = '';
+    } else {
+      alertEl.style.display = 'none';
+    }
+  }catch(err){
+    console.error('날씨 정보 조회 실패', err);
+    document.getElementById('weatherIcon').textContent = '⚠️';
+    document.getElementById('weatherTemp').textContent = '-°';
+    document.getElementById('weatherCond').textContent = '날씨 정보를 불러올 수 없습니다';
+    document.getElementById('weatherFeel').textContent = '';
+    document.getElementById('weatherTime').textContent = err.message || '조회 실패';
+    document.getElementById('weatherAlert').style.display = 'none';
+  }
+}
+
 /* 등록된 "작업 시작 시각(날짜+시간)"이 실제로 도래한 "예정" 작업만 자동으로 "진행중"으로 전환
    (날짜만 같고 아직 시작 시각 전이면 계속 "예정" 상태 유지) */
 function autoAdvanceScheduledTasks(){
@@ -1090,6 +1242,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // 화면을 다시 보게 됐을 때(예: 잠금 해제, 탭 복귀) 놓친 전환이 없는지 즉시 한 번 점검
     if(!document.hidden){ if(autoAdvanceScheduledTasks()) renderAll(); }
   });
+  fetchWeather();
+  setInterval(()=>{ if(!document.hidden) fetchWeather(); }, 30*60000); // 30분마다 갱신
   loadSiteImageVersions();
   loadAttendance();
   loadAttendanceFields();
@@ -2596,7 +2750,7 @@ function renderAttendanceHeaderRow(){
   el.innerHTML = `
     <span style="width:20px;text-align:center;">No.</span>
     <span style="flex:2;">업체명</span>
-    <span style="flex:1;">인원</span>
+    <span style="flex:1;">총 인원</span>
     <span style="flex:1;">신규</span>
     ${state.attendanceFields.outdoor ? '<span style="flex:1;">옥외작업</span>' : ''}
     ${state.attendanceFields.vulnerable ? '<span style="flex:1;">취약근로자</span>' : ''}
@@ -2613,7 +2767,7 @@ function renderAttendanceRows(){
       <input type="text" placeholder="업체명" value="${(r.company||'').replace(/"/g,'&quot;')}"
         oninput="updateAttendanceDraft(${i},'company',this.value)"
         style="flex:2;min-width:0;padding:9px 10px;border-radius:8px;border:1.5px solid var(--line);font-size:13.5px;font-family:inherit;">
-      <input type="number" placeholder="인원" min="0" value="${r.workers===''?'':r.workers}"
+      <input type="number" placeholder="총 인원" min="0" value="${r.workers===''?'':r.workers}"
         oninput="updateAttendanceDraft(${i},'workers',this.value)"
         style="flex:1;min-width:0;padding:9px 10px;border-radius:8px;border:1.5px solid var(--line);font-size:13.5px;font-family:inherit;">
       <input type="number" placeholder="신규" min="0" value="${r.newWorkers===''||r.newWorkers===undefined?'':r.newWorkers}"
