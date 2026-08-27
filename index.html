@@ -449,7 +449,7 @@
       <div class="summary-grid" id="summaryGrid"></div>
       <button class="export-btn" id="exportExcelBtn" onclick="exportToExcel()">📤 일일 고위험 작업 현황 내보내기</button>
 
-      <div class="weather-card" id="weatherCard">
+      <div class="weather-card" id="weatherCard" onclick="fetchWeather()" style="cursor:pointer;" title="눌러서 새로고침">
         <div class="weather-top">
           <div>
             <div class="weather-loc">📍 광주 동구 학동4구역</div>
@@ -775,7 +775,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-24 20:34 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-27 01:39 UTC</p>
       </div>
     </div>
   </div>
@@ -1135,14 +1135,22 @@ const PTY_MAP = { '0':null, '1':{t:'비',icon:'🌧️'}, '2':{t:'비/눈',icon:
 async function fetchWeather(){
   const cardEl = document.getElementById('weatherCard');
   if(!cardEl) return;
+  document.getElementById('weatherTime').textContent = '불러오는 중...';
+  const controller = new AbortController();
+  const timeoutId = setTimeout(()=>controller.abort(), 12000); // 12초 내 응답 없으면 중단
   try{
     const { base_date, base_time } = kmaBaseDateTime();
     const url = `https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst`
       + `?serviceKey=${encodeURIComponent(KMA_SERVICE_KEY)}`
       + `&pageNo=1&numOfRows=1000&dataType=JSON`
       + `&base_date=${base_date}&base_time=${base_time}&nx=${KMA_NX}&ny=${KMA_NY}`;
-    const res = await fetch(url);
-    const data = await res.json();
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    if(!res.ok){ throw new Error(`서버 응답 오류 (HTTP ${res.status})`); }
+    const text = await res.text();
+    let data;
+    try{ data = JSON.parse(text); }
+    catch(e){ throw new Error('응답 형식 오류 (키 또는 요청 파라미터 확인 필요)'); }
     const header = data && data.response && data.response.header;
     if(!header || header.resultCode !== '00'){
       throw new Error((header && header.resultMsg) || '기상청 API 응답 오류');
@@ -1194,12 +1202,13 @@ async function fetchWeather(){
       alertEl.style.display = 'none';
     }
   }catch(err){
+    clearTimeout(timeoutId);
     console.error('날씨 정보 조회 실패', err);
     document.getElementById('weatherIcon').textContent = '⚠️';
     document.getElementById('weatherTemp').textContent = '-°';
     document.getElementById('weatherCond').textContent = '날씨 정보를 불러올 수 없습니다';
     document.getElementById('weatherFeel').textContent = '';
-    document.getElementById('weatherTime').textContent = err.message || '조회 실패';
+    document.getElementById('weatherTime').textContent = (err.name === 'AbortError' ? '응답 시간 초과 (다음 갱신 시 재시도)' : (err.message || '조회 실패'));
     document.getElementById('weatherAlert').style.display = 'none';
   }
 }
