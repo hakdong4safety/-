@@ -158,15 +158,18 @@
   .badge.status-예정{background:var(--blue-100);color:var(--blue-600);}
   .badge.status-진행중{background:var(--blue-600);color:#fff;}
   .badge.status-완료{background:#EEF0F4;color:var(--ink-400);}
+  .badge.status-작업취소{background:var(--red-bg);color:var(--red);text-decoration:line-through;}
   .badge.hi-risk{background:var(--red-bg);color:var(--red);}
   .badge.hi-grade{background:var(--amber-bg);color:var(--amber);}
   .badges-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px;}
   .status-edit-row{display:flex;gap:7px;margin:6px 0 14px;}
-  .status-edit-btn{flex:1;padding:10px 4px;border-radius:10px;border:1.5px solid var(--line);background:#fff;
-    font-size:13px;font-weight:800;color:var(--ink-600);font-family:inherit;}
+  .status-edit-btn{flex:1;padding:10px 2px;border-radius:10px;border:1.5px solid var(--line);background:#fff;
+    font-size:12px;font-weight:800;color:var(--ink-600);font-family:inherit;}
   .status-edit-btn.status-예정.on{background:var(--blue-100);border-color:var(--blue-600);color:var(--blue-600);}
   .status-edit-btn.status-진행중.on{background:var(--blue-600);border-color:var(--blue-600);color:#fff;}
   .status-edit-btn.status-완료.on{background:var(--ink-900);border-color:var(--ink-900);color:#fff;}
+  .status-edit-btn.status-작업취소{color:var(--red);}
+  .status-edit-btn.status-작업취소.on{background:var(--red);border-color:var(--red);color:#fff;}
   .task-meta{display:flex;flex-wrap:wrap;gap:9px;font-size:12px;color:var(--ink-600);font-weight:600;}
   .task-guard{margin-top:7px;display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;
     color:var(--green);width:fit-content;}
@@ -516,6 +519,7 @@
                 <option value="예정">예정</option>
                 <option value="진행중" selected>진행중</option>
                 <option value="완료">완료</option>
+                <option value="작업취소">작업취소</option>
               </select>
               <span class="hint2" id="f_status_lockhint" style="display:none;">미래 날짜 작업은 자동으로 "예정" 상태로 등록됩니다.</span>
             </div>
@@ -737,10 +741,11 @@
             <span class="meta" id="adminBulkCountMeta" style="font-size:12px;color:var(--ink-400);font-weight:700;"></span>
           </div>
           <div id="adminBulkList" style="margin-bottom:12px;"></div>
-          <div class="toggle-row" style="gap:8px;">
+          <div class="toggle-row" style="gap:8px;flex-wrap:wrap;">
             <button type="button" class="toggle-btn" style="background:var(--blue-100);border-color:var(--blue-600);color:var(--blue-600);" onclick="bulkSetStatus('예정')">전체 예정</button>
             <button type="button" class="toggle-btn" style="background:var(--blue-600);border-color:var(--blue-600);color:#fff;" onclick="bulkSetStatus('진행중')">전체 진행중</button>
             <button type="button" class="toggle-btn" style="background:var(--ink-900);border-color:var(--ink-900);color:#fff;" onclick="bulkSetStatus('완료')">전체 완료</button>
+            <button type="button" class="toggle-btn" style="background:var(--red-bg);border-color:var(--red);color:var(--red);" onclick="bulkSetStatus('작업취소')">전체 작업취소</button>
           </div>
         </div>
 
@@ -775,7 +780,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-27 01:39 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-27 23:26 UTC</p>
       </div>
     </div>
   </div>
@@ -1484,7 +1489,7 @@ function bindTaskRowClicks(){
    STATUS VIEW
 ========================================================= */
 function renderStatusFilters(){
-  const filters = ['전체','예정','진행중','완료'];
+  const filters = ['전체','예정','진행중','완료','작업취소'];
   document.getElementById('statusFilters').innerHTML = filters.map(f=>`
     <button class="filter-chip ${state.statusFilter===f?'on':''}" onclick="setStatusFilter('${f}')">${f}</button>`).join('');
   const riskFilters = ['전체','고위험','상등급'];
@@ -2122,7 +2127,7 @@ function openDetail(id){
     <div class="detail-company">${t.company}</div>
     <h3 class="detail-title">${t.taskName}</h3>
     <div class="status-edit-row" id="statusEditRow">
-      ${['예정','진행중','완료'].map(s=>`
+      ${['예정','진행중','완료','작업취소'].map(s=>`
         <button type="button" class="status-edit-btn status-${s} ${t.status===s?'on':''}" onclick="changeTaskStatus('${t.id}','${s}')">${s}</button>
       `).join('')}
     </div>
