@@ -780,7 +780,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-27 23:26 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-28 06:00 UTC</p>
       </div>
     </div>
   </div>
@@ -914,12 +914,12 @@ const BUILDINGS = [
 const BUILDING_NAMES = BUILDINGS.map(b=>b.name);
 function buildingPos(name){ return BUILDINGS.find(b=>b.name===name) || {x:50,y:50}; }
 
-const FLOORS = ['지하3층','지하2층','지하1층',...Array.from({length:30},(_,i)=>(i+1)+'층'),'지붕층'];
-// 동별보기 탭 전용 층 필터 목록 (전체층-지하3층 사이에 기초층, 지하1층-1층 사이에 주차장지붕층 추가)
-const FLOOR_FILTER_OPTIONS = (()=>{
-  const idx1 = FLOORS.indexOf('지하1층');
-  return ['전체층', '기초층', ...FLOORS.slice(0, idx1+1), '주차장지붕층', ...FLOORS.slice(idx1+1)];
-})();
+// 기초층(최하단)과 주차장지붕층(지하1층과 1층 사이)도 등록 폼에서 선택할 수 있어야
+// 동별보기 층 필터가 실제로 결과를 찾을 수 있습니다.
+const FLOORS = ['기초층','지하3층','지하2층','지하1층','주차장지붕층',
+  ...Array.from({length:30},(_,i)=>(i+1)+'층'),'지붕층'];
+// 동별보기 탭 전용 층 필터 목록 (등록 폼과 동일한 층 목록 + 맨 앞에 전체층)
+const FLOOR_FILTER_OPTIONS = ['전체층', ...FLOORS];
 
 const RISK_ITEMS = ['타워크레인 설치/인상/해체','호이스트 설치/인상/해체','갱폼 설치/인상/해체',
   '시스템비계 및 동바리 설치/해체','옥탑 구조물 작업','로프,곤돌라 작업','제연덕트 설치 작업',
@@ -1163,12 +1163,15 @@ async function fetchWeather(){
     const items = data.response.body.items.item;
 
     // 현재(또는 가장 가까운 미래) 시각의 예보값 찾기
+    // 날짜+시각을 "YYYYMMDDHHmm" 한 덩어리로 묶어 비교해야 23시 발표분처럼
+    // 예보가 다음날부터 시작하는 경우에도 정상적으로 넘어갑니다.
     const nowStr = nowKSTDateTimeStr(); // YYYY-MM-DDTHH:MM
-    const nowFcstDate = nowStr.slice(0,10).replace(/-/g,'');
-    const nowFcstHour = nowStr.slice(11,13);
-    const times = [...new Set(items.filter(i=>i.fcstDate===nowFcstDate).map(i=>i.fcstTime))].sort();
-    let targetTime = times.find(t => t.slice(0,2) >= nowFcstHour) || times[0];
-    const targetDate = times.find(t=>t===targetTime) ? nowFcstDate : items[0].fcstDate;
+    const nowKey = nowStr.slice(0,10).replace(/-/g,'') + nowStr.slice(11,13) + '00';
+    const slotKeys = [...new Set(items.map(i => i.fcstDate + i.fcstTime))].sort();
+    const targetKey = slotKeys.find(k => k >= nowKey) || slotKeys[0];
+    if(!targetKey){ throw new Error('예보 데이터를 찾을 수 없습니다'); }
+    const targetDate = targetKey.slice(0,8);
+    const targetTime = targetKey.slice(8);
 
     const pick = (category)=>{
       const found = items.find(i=>i.category===category && i.fcstDate===targetDate && i.fcstTime===targetTime);
@@ -1271,22 +1274,48 @@ document.addEventListener('DOMContentLoaded', () => {
   registerServiceWorker();
 });
 
+/* 작업/양수기 등록 중이거나 출역인원을 입력 중이면 true.
+   재배포 감지로 화면을 새로고침할 때 입력하던 내용이 날아가지 않도록 확인하는 용도 */
+function hasUnsavedInput(){
+  if(state.editingTaskId || state.editingPumpId) return true;
+
+  const attSheet = document.getElementById('attendanceSheet');
+  if(attSheet && attSheet.classList.contains('show')) return true;
+
+  const watchIds = ['f_company','f_taskname','f_location','f_detail','f_workers',
+    'f_director','f_supervisorco','f_guardname','f_remarks','f_hazardtype','f_exclusionzone',
+    'p_company','p_location'];
+  return watchIds.some(id=>{
+    const el = document.getElementById(id);
+    return el && String(el.value || '').trim() !== '';
+  });
+}
+
 function registerServiceWorker(){
-  if('serviceWorker' in navigator){
-    let refreshed = false;
-    // 새 버전의 서비스워커가 활성화되면(=재배포 감지) 화면을 자동으로 한 번 새로고침해서
-    // 예전 버전이 계속 열려있던 탭/PWA에서도 최신 코드가 확실히 반영되도록 함
-    navigator.serviceWorker.addEventListener('controllerchange', ()=>{
-      if(refreshed) return;
-      refreshed = true;
-      window.location.reload();
+  if(!('serviceWorker' in navigator)) return;
+
+  // 최초 방문에는 제어하는 서비스워커가 없다가 새로 생기면서 controllerchange가 한 번 발생합니다.
+  // 이때까지 새로고침하면 첫 방문자만 괜히 화면이 깜빡이므로, 이미 제어 중이던 경우에만 갱신합니다.
+  const hadController = !!navigator.serviceWorker.controller;
+  let refreshed = false;
+
+  // 새 버전의 서비스워커가 활성화되면(=재배포 감지) 화면을 자동으로 한 번 새로고침해서
+  // 예전 버전이 계속 열려있던 탭/PWA에서도 최신 코드가 확실히 반영되도록 함
+  navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+    if(!hadController || refreshed) return;
+    if(hasUnsavedInput()){
+      showToast('새 버전이 준비되었습니다. 지금 입력한 내용을 저장한 뒤 앱을 다시 열어주세요');
+      return;
+    }
+    refreshed = true;
+    window.location.reload();
+  });
+
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('./sw.js').catch(err=>{
+      console.error('서비스워커 등록 실패', err);
     });
-    window.addEventListener('load', ()=>{
-      navigator.serviceWorker.register('./sw.js').catch(err=>{
-        console.error('서비스워커 등록 실패', err);
-      });
-    });
-  }
+  });
 }
 
 function renderAll(){
@@ -2145,8 +2174,11 @@ function openDetail(id){
     ${t.riskGradeHigh ? `<div class="detail-banner" style="background:var(--amber-bg);"><div class="t" style="color:var(--amber);">⊙ 위험성평가 상등급</div>
       <div class="s" style="color:var(--amber);opacity:0.85;">작업 전 관리감독자 현장 점검 필수</div></div>` : ''}
 
+    ${t.location ? `<div class="detail-info"><div class="k">📍 상세 위치</div><div class="v">${t.location}</div></div>` : ''}
     ${t.detail ? `<div class="detail-info"><div class="k">안전중점포인트(작업내용상세)</div><div class="v">${t.detail}</div></div>` : ''}
     ${t.equipmentUsed ? `<div class="detail-info"><div class="k">🔧 사용 장비</div><div class="v">${t.equipmentType||'미기재'}</div></div>` : ''}
+    ${((Number(t.platform)||0) || (Number(t.cutTool)||0)) ? `<div class="detail-info"><div class="k">안전 점검 항목</div><div class="v">작업대 ${Number(t.platform)||0}개 · 절단공구 ${Number(t.cutTool)||0}개</div></div>` : ''}
+    ${t.hazmat ? `<div class="detail-info"><div class="k">유해위험물질 반입</div><div class="v">반입 (취급수칙 준수 · MSDS 비치)</div></div>` : ''}
     ${t.director ? `<div class="detail-info"><div class="k">작업지휘자</div><div class="v">${t.director}</div></div>` : ''}
     ${t.supervisorCo ? `<div class="detail-info"><div class="k">관리감독자 (협력사)</div><div class="v">${t.supervisorCo}</div></div>` : ''}
     ${t.supervisorHDC ? `<div class="detail-info"><div class="k">관리감독자 (HDC)</div><div class="v">${t.supervisorHDC}</div></div>` : ''}
@@ -2988,8 +3020,29 @@ function buildRiskNote(t){
 function buildExportMapImage(list, companyNum){
   return new Promise((resolve)=>{
     const srcImg = document.querySelector('#mapWrap img.bg');
+    if(!srcImg || !srcImg.src){ resolve(null); return; }
+
+    // 이미지 로드가 실패하거나 응답이 없으면 Promise가 영영 안 풀려서
+    // "엑셀 생성 중..." 상태에 갇히므로, 실패/시간초과 시 위치도 없이 진행합니다.
+    let settled = false;
+    const finish = (value)=>{
+      if(settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
+      resolve(value);
+    };
+    const timeoutId = setTimeout(()=>{
+      console.warn('배치도 이미지 로드 시간 초과 — 위치도 없이 내보냅니다');
+      finish(null);
+    }, 15000);
+
     const img = new Image();
+    img.onerror = ()=>{
+      console.warn('배치도 이미지 로드 실패 — 위치도 없이 내보냅니다');
+      finish(null);
+    };
     img.onload = ()=>{
+     try{
       const canvas = document.createElement('canvas');
       canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
       const ctx = canvas.getContext('2d');
@@ -3027,7 +3080,11 @@ function buildExportMapImage(list, companyNum){
         ctx.fillText('P', px, py+pr*0.06);
       });
 
-      resolve(canvas.toDataURL('image/png').split(',')[1]);
+      finish(canvas.toDataURL('image/png').split(',')[1]);
+     }catch(err){
+      console.error('배치도 이미지 생성 실패 — 위치도 없이 내보냅니다', err);
+      finish(null);
+     }
     };
     img.crossOrigin = 'anonymous';
     img.src = srcImg.src;
@@ -3039,13 +3096,23 @@ const EXPORT_HEADERS = ['No','협력사명','동','층','작업내용','장비/�
   '작업인원(명)','중점포인트','관리감독자(협력사)','관리감독자(안전관리자)','감시단 OR 안전전담자',
   '작업계획서 OR 사전작업허가서(P.T.W)','조출·야간(시간)','이동식CCTV'];
 
+/* '장비/작업발판' 열: 사용 장비 + 작업대 수량 + 절단공구 수량을 한 칸에 모아 표기 */
+function buildEquipmentCell(t){
+  const parts = [];
+  if(t.equipmentUsed) parts.push(t.equipmentType || '장비 사용');
+  const platform = Number(t.platform)||0;
+  const cutTool = Number(t.cutTool)||0;
+  if(platform) parts.push(`작업대 ${platform}개`);
+  if(cutTool) parts.push(`절단공구 ${cutTool}개`);
+  return parts.length ? parts.join(' / ') : '-';
+}
 function buildExportRows(ordered, companyNum){
   return ordered.map((t)=>({
     no: companyNum[t.company] || '',
     company: t.company,
     buildings: fmtBuildings(t),
-    floors: fmtFloors(t) || t.location || '-',
-    equipment: t.equipmentUsed ? (t.equipmentType || '사용') : '-',
+    floors: [fmtFloors(t), t.location].filter(Boolean).join(' / ') || '-',
+    equipment: buildEquipmentCell(t),
     hazardType: t.hazardType || '-',
     workers: t.workers || 0,
     riskNote: buildRiskNote(t) || '-',
@@ -3073,6 +3140,7 @@ async function exportToExcel(){
   if(!list.length){ showToast('내보낼 작업이 없습니다'); return; }
 
   const btn = document.getElementById('exportExcelBtn');
+  const btnLabel = btn ? btn.textContent : '';
   if(btn){ btn.disabled = true; btn.textContent = '⏳ 엑셀 생성 중...'; }
 
   try{
@@ -3101,7 +3169,8 @@ async function exportToExcel(){
     };
 
     // 열 너비
-    const widths = [5,12,8,8,26,18,12,10,66,14,16,16,16,12,10]; // I열(중점포인트) ≈ 460px
+    // D열(층)에 상세 위치가 함께 들어가므로 8 → 14로 넓힘
+    const widths = [5,12,8,14,26,20,12,10,66,14,16,16,16,12,10]; // I열(중점포인트) ≈ 460px
     ws.columns = widths.map(w=>({ width:w }));
 
     // 제목 (K열부터는 결재란이 들어가므로 J열까지만 병합)
@@ -3207,7 +3276,7 @@ async function exportToExcel(){
     console.error(err);
     showToast('⚠ 엑셀 생성 실패: ' + (err && err.message ? err.message : '알 수 없는 오류'));
   }finally{
-    if(btn){ btn.disabled = false; btn.textContent = '📥 엑셀 파일로 다운로드'; }
+    if(btn){ btn.disabled = false; btn.textContent = btnLabel; }
   }
 }
 </script>
