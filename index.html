@@ -139,7 +139,7 @@
   .weather-desc .cond{font-size:13px;font-weight:800;}
   .weather-desc .feel{font-size:11.5px;opacity:0.85;margin-top:3px;}
   .weather-alert{margin-top:10px;background:rgba(255,255,255,0.18);border-radius:10px;padding:8px 12px;
-    font-size:11.5px;font-weight:700;}
+    font-size:11.5px;font-weight:700;display:flex;flex-direction:column;gap:5px;}
 
   /* ===== Company group ===== */
   .company-group{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);
@@ -186,6 +186,8 @@
     font-size:13.5px;font-weight:800;color:var(--ink-600);display:flex;align-items:center;justify-content:center;gap:6px;}
   .subtab-row button.on{background:var(--blue-600);color:#fff;}
 
+  /* 작업등록 폼의 좌/우 단 래퍼 — 모바일에서는 래퍼가 없는 것처럼 그대로 흐릅니다 */
+  .form-col{display:contents;}
   .form-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);
     box-shadow:var(--shadow);padding:16px;margin-bottom:14px;}
   .form-card h3{font-size:13px;font-weight:800;margin:0 0 12px;color:var(--blue-700);display:flex;align-items:center;gap:6px;}
@@ -366,6 +368,46 @@
   .lightbox-hint{position:absolute;bottom:calc(20px + env(safe-area-inset-bottom));left:0;right:0;text-align:center;
     color:rgba(255,255,255,0.75);font-size:12px;font-weight:600;pointer-events:none;}
 
+  /* ===== 작업현황 표 (PC 전용) ===== */
+  .task-table{width:100%;table-layout:fixed;border-collapse:separate;border-spacing:0;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);
+    box-shadow:var(--shadow);font-size:13px;}
+  .task-table th{position:sticky;top:var(--topbar-h,84px);z-index:4;
+    background:var(--bg);color:var(--ink-400);font-size:11.5px;font-weight:800;text-align:left;
+    padding:11px 12px;white-space:nowrap;box-shadow:inset 0 -1px 0 var(--line);}
+  .task-table thead th:first-child{border-top-left-radius:var(--radius-md);}
+  .task-table thead th:last-child{border-top-right-radius:var(--radius-md);}
+  .task-table td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top;
+    color:var(--ink-600);font-weight:600;word-break:break-word;background:var(--card);}
+  .task-table tbody tr{cursor:pointer;}
+  .task-table tbody tr:last-child td{border-bottom:none;}
+  /* 업체가 바뀌는 첫 줄에만 굵은 선 — 같은 업체 작업이 한 덩어리로 보입니다 */
+  .task-table tbody tr.co-start td{border-top:2px solid #DDE1E8;}
+  .task-table tbody tr:first-child td{border-top:none;}
+  /* 위험등급은 왼쪽 색 띠 + 아주 옅은 배경 (앱 나머지 화면과 같은 규칙: 고위험=빨강, 상등급=주황) */
+  .task-table tbody tr.lvl-risk td{background:#FEF6F6;}
+  .task-table tbody tr.lvl-risk td:first-child{box-shadow:inset 4px 0 0 var(--red);}
+  .task-table tbody tr.lvl-grade td{background:#FFFBF3;}
+  .task-table tbody tr.lvl-grade td:first-child{box-shadow:inset 4px 0 0 var(--amber);}
+  .task-table tbody tr:hover td{background:#F2F5FA;}
+  .task-table tbody tr.lvl-risk:hover td{background:#FCECEC;}
+  .task-table tbody tr.lvl-grade:hover td{background:#FDF4E4;}
+  .tt-name{color:var(--ink-900);font-weight:800;font-size:13.5px;line-height:1.4;}
+  .tt-company{color:var(--ink-900);font-weight:800;}
+  .tt-swatch{display:inline-block;width:8px;height:8px;border-radius:3px;margin-right:6px;
+    vertical-align:middle;flex-shrink:0;}
+  .tt-sub{display:block;font-size:11px;color:var(--ink-400);font-weight:700;margin-top:3px;}
+  .tt-dash{color:var(--ink-400);font-weight:600;}
+  .task-table .c-risk{width:10%;}
+  .task-table .c-company{width:13%;}
+  .task-table .c-name{width:28%;}
+  .task-table .c-loc{width:13%;}
+  .task-table .c-num{width:5%;text-align:right;color:var(--ink-900);font-weight:800;
+    font-variant-numeric:tabular-nums;}
+  .task-table .c-time{width:11%;}
+  .task-table .c-guard{width:12%;}
+  .task-table .c-status{width:8%;}
+
   /* ===== Desktop layout (모바일 화면은 그대로 유지, PC에서만 레이아웃 확장) ===== */
   @media (min-width: 900px){
     /* 탭을 옮길 때 화면 폭이 갑자기 넓어지지 않도록 모든 탭이 같은 너비를 씁니다 */
@@ -384,30 +426,34 @@
       -webkit-overflow-scrolling:touch;
     }
 
-    /* ---- 카드 목록 2단 배치 ----
-       예전에는 column-count(CSS 다단)를 썼는데, 내용 길이에 따라 단이 나뉘는 위치가
-       계속 달라져서 입력하는 도중 카드가 좌우로 튀는 문제가 있었습니다.
-       grid는 카드가 좌→우 순서대로 정해진 자리에 놓여 배치가 흔들리지 않습니다. */
-    #app.wide-view #taskForm,
-    #app.wide-view #statusTaskList,
+    /* ---- 작업등록: 좌측 = 작업 내용, 우측 = 안전 관리 ----
+       예전에는 column-count(CSS 다단)로 나눴는데, 내용 길이에 따라 단이 갈리는 위치가
+       계속 달라져서 입력하는 도중 카드가 좌우로 튀었습니다.
+       이제 어느 카드가 어느 단에 들어갈지 고정되어 배치가 흔들리지 않습니다. */
+    #app.wide-view #taskForm{
+      display:grid; grid-template-columns:repeat(2, minmax(0,1fr));
+      gap:16px; align-items:start;
+    }
+    #app.wide-view #taskForm > .form-col{
+      display:flex; flex-direction:column; gap:16px; min-width:0;
+    }
+    /* 비고·배치도·등록 버튼은 두 단 아래 전체 폭 */
+    #app.wide-view #taskForm > .form-card,
+    #app.wide-view #taskForm > .submit-btn{grid-column:1 / -1;}
+    /* 간격은 gap이 담당하므로 카드 자체 아래여백은 제거 */
+    #app.wide-view #taskForm .form-card{margin-bottom:0;}
+
     #app.wide-view #pumpList{
       display:grid; grid-template-columns:repeat(2, minmax(0,1fr));
       gap:16px; align-items:start;
     }
-    /* 간격은 grid gap이 담당하므로 카드 자체 아래여백은 제거 */
-    #app.wide-view #taskForm > .form-card,
-    #app.wide-view #statusTaskList > .company-group,
     #app.wide-view #pumpList > .pump-card{margin-bottom:0;}
     #app.wide-view .empty-state{grid-column:1 / -1;}
 
-    /* ---- 작업등록 ---- */
     #view-register.active > .section{max-width:1152px; margin-left:auto; margin-right:auto;}
     #view-register.active .subtab-row,
     #view-register.active #editModeBanner,
     #view-register.active #pasteTaskBtn{max-width:536px;}
-    /* 배치도가 들어간 카드와 등록 버튼은 한 줄 전체 사용 */
-    #app.wide-view #taskForm > .map-form-card,
-    #app.wide-view #taskForm > .submit-btn{grid-column:1 / -1;}
     #app.wide-view #drawMapWrap{max-width:900px; margin-left:auto; margin-right:auto;}
     #app.wide-view #registerPump > .form-card{max-width:900px;}
     /* 넓어진 폭만큼 동·층 칩을 한눈에 보여주고 카드 안 세로 스크롤을 없앰 */
@@ -447,8 +493,6 @@
   @media (min-width: 1400px){
     #app, #app.wide-view{max-width:1320px;}
     .bottom-nav, #app.wide-view .bottom-nav{max-width:1320px;}
-    /* 화면이 더 넓을 때만 작업현황 목록을 3단으로 */
-    #app.wide-view #statusTaskList{grid-template-columns:repeat(3, minmax(0,1fr));}
   }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
@@ -542,6 +586,8 @@
         </div>
         <button type="button" class="map-action-btn" id="pasteTaskBtn" style="width:100%;margin-bottom:14px;padding:11px;" onclick="pasteTaskFromClipboard()">📋 복사한 작업 붙여넣기</button>
         <form id="taskForm" onsubmit="handleSubmitTask(event)">
+          <!-- PC 좌측 단: 무엇을 · 어디서 · 누가 · 언제 (모바일에서는 display:contents로 지금과 똑같이 한 줄로 흐릅니다) -->
+          <div class="form-col">
           <div class="form-card">
             <h3>기본 정보</h3>
             <div class="field"><label>작업 일자 <span class="req">*</span></label>
@@ -599,7 +645,10 @@
             <div class="check-row"><input type="checkbox" id="f_equipment" onchange="onEquipmentToggle()"><label for="f_equipment">🔧 장비 사용 여부</label></div>
             <input type="text" id="f_equipment_type" placeholder="사용 장비를 입력하세요 (예: 타워크레인, 굴착기, 지게차)" style="display:none; margin-top:10px;">
           </div>
+          </div><!-- /form-col 좌측 -->
 
+          <!-- PC 우측 단: 안전 관리 항목 -->
+          <div class="form-col">
           <div class="form-card">
             <h3>고위험 작업여부 <span style="font-weight:600;color:var(--ink-400);font-size:11.5px;">(회의시간 끝나고 선정됩니다.)</span></h3>
             <div class="chip-group" id="riskChips"></div>
@@ -663,6 +712,7 @@
                 <button type="button" class="toggle-btn on-x" id="btn_cctv_x" onclick="setCctvToggle(false)">미설치(X)</button>
               </div></div>
           </div>
+          </div><!-- /form-col 우측 -->
 
           <div class="form-card">
             <h3>비고</h3>
@@ -828,7 +878,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-28 06:00 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-28 07:30 UTC</p>
       </div>
     </div>
   </div>
@@ -1138,52 +1188,69 @@ function saveTasks(){ localStorage.setItem(STORAGE_TASKS, JSON.stringify(state.t
 function savePumps(){ localStorage.setItem(STORAGE_PUMPS, JSON.stringify(state.pumps)); }
 
 /* =========================================================
-   날씨 (기상청 공공데이터포털 단기예보 조회서비스)
-   - 학동4구역 격자좌표: nx=60, ny=74 (위경도 35.1378607, 126.9246441 기준 변환)
-   - 주의: 정적 사이트라 API 키가 클라이언트 코드에 그대로 포함됩니다.
-     data.go.kr 무료 키는 일일 호출 한도가 있는 rate-limit 성격의 키라
-     Firebase 키처럼 "설계상 공개" 되는 값은 아니지만, 노출되어도
-     결제/개인정보 유출로 이어지진 않습니다 (최악의 경우 호출 한도 소진).
-========================================================= */
-const KMA_SERVICE_KEY = 'Y1KecwqsUoaxPMqzKTzeminfI9ErtZFrp3Z5UZkohe8jzoKRWePrYnuaTSwaOiBedOE946T6J/lfaF38KcHYmQ==';
-const KMA_NX = 60, KMA_NY = 74;
+   날씨 (Open-Meteo — 브라우저에서 바로 호출 가능한 무료 기상 API)
+   - 학동4구역 좌표: 35.1378607, 126.9246441
 
-function kmaBaseDateTime(){
-  // 단기예보 발표시각: 02,05,08,11,14,17,20,23시 (매 발표 후 약 10분 뒤부터 조회 가능)
-  const k = nowKST();
-  let h = k.getUTCHours();
-  let y = k.getUTCFullYear(), mo = k.getUTCMonth(), d = k.getUTCDate();
-  const minute = k.getUTCMinutes();
-  const slots = [2,5,8,11,14,17,20,23];
-  let base = null;
-  for(let i=slots.length-1;i>=0;i--){
-    const s = slots[i];
-    if(h > s || (h === s && minute >= 11)){ base = s; break; }
-  }
-  const baseDate = new Date(Date.UTC(y, mo, d));
-  if(base === null){
-    // 자정~02:10 사이: 전날 23시 발표자료 사용
-    baseDate.setUTCDate(baseDate.getUTCDate()-1);
-    base = 23;
-  }
-  const by = baseDate.getUTCFullYear();
-  const bm = String(baseDate.getUTCMonth()+1).padStart(2,'0');
-  const bd = String(baseDate.getUTCDate()).padStart(2,'0');
-  return { base_date: `${by}${bm}${bd}`, base_time: String(base).padStart(2,'0')+'00' };
-}
+   왜 기상청 API를 안 쓰나:
+   기상청 공공데이터포털(apis.data.go.kr)은 응답에 CORS 헤더를 주지 않습니다.
+   그래서 GitHub Pages 같은 정적 사이트에서 브라우저가 직접 호출하면
+   키가 맞든 틀리든 무조건 브라우저 단계에서 차단됩니다("Failed to fetch").
+   서버(프록시) 없이 해결이 불가능해서, CORS를 지원하는 Open-Meteo로 바꿨습니다.
+   기상청 원본을 꼭 써야 하면 중계 서버(Cloudflare Workers 등)를 하나 두면 됩니다.
+
+   체감온도는 기상청 산식을 그대로 유지합니다.
+   - 여름(기온 > 10도): 습구온도 기반 여름철 체감온도 → 폭염주의보/경보 판단
+   - 겨울(기온 ≤ 10도 & 풍속 ≥ 4.8km/h): 기상청 체감온도(바람) 산식
+========================================================= */
+const WEATHER_LAT = 35.1378607, WEATHER_LON = 126.9246441;
 
 function kmaWetBulb(Ta, RH){
   // Stull(2011) 근사식
   return Ta*Math.atan(0.151977*Math.sqrt(RH+8.313659)) + Math.atan(Ta+RH) - Math.atan(RH-1.676331)
     + 0.00391838*Math.pow(RH,1.5)*Math.atan(0.023101*RH) - 4.686035;
 }
-function kmaFeelsLike(Ta, RH){
+function kmaFeelsLikeSummer(Ta, RH){
   const Tw = kmaWetBulb(Ta, RH);
   return -0.2442 + 0.55399*Tw + 0.45535*Ta - 0.0022*Tw*Tw + 0.00278*Ta*Tw + 3.0;
 }
-const SKY_MAP = { '1':{t:'맑음',icon:'☀️'}, '3':{t:'구름많음',icon:'⛅'}, '4':{t:'흐림',icon:'☁️'} };
-const PTY_MAP = { '0':null, '1':{t:'비',icon:'🌧️'}, '2':{t:'비/눈',icon:'🌨️'}, '3':{t:'눈',icon:'❄️'},
-  '4':{t:'소나기',icon:'🌦️'}, '5':{t:'빗방울',icon:'🌦️'}, '6':{t:'빗방울눈날림',icon:'🌨️'}, '7':{t:'눈날림',icon:'🌨️'} };
+function kmaFeelsLikeWinter(Ta, windKmh){
+  return 13.12 + 0.6215*Ta - 11.37*Math.pow(windKmh,0.16) + 0.3965*Math.pow(windKmh,0.16)*Ta;
+}
+function feelsLike(Ta, RH, windMs){
+  const windKmh = (Number(windMs)||0) * 3.6;
+  // 기상청 기준: 기온 10도 이하 + 풍속 4.8km/h 이상이면 바람 기준(체감온도), 그 외에는 습도 기준
+  if(Ta <= 10 && windKmh >= 4.8) return kmaFeelsLikeWinter(Ta, windKmh);
+  return kmaFeelsLikeSummer(Ta, RH);
+}
+
+/* WMO 기상코드 → 한글 (Open-Meteo weather_code) */
+const WMO_MAP = {
+  0:{t:'맑음',icon:'☀️'}, 1:{t:'대체로 맑음',icon:'🌤️'}, 2:{t:'구름조금',icon:'⛅'}, 3:{t:'흐림',icon:'☁️'},
+  45:{t:'안개',icon:'🌫️'}, 48:{t:'짙은 안개',icon:'🌫️'},
+  51:{t:'약한 이슬비',icon:'🌦️'}, 53:{t:'이슬비',icon:'🌦️'}, 55:{t:'강한 이슬비',icon:'🌧️'},
+  56:{t:'어는 이슬비',icon:'🌧️'}, 57:{t:'강한 어는 이슬비',icon:'🌧️'},
+  61:{t:'약한 비',icon:'🌦️'}, 63:{t:'비',icon:'🌧️'}, 65:{t:'강한 비',icon:'🌧️'},
+  66:{t:'어는 비',icon:'🌧️'}, 67:{t:'강한 어는 비',icon:'🌧️'},
+  71:{t:'약한 눈',icon:'🌨️'}, 73:{t:'눈',icon:'❄️'}, 75:{t:'많은 눈',icon:'❄️'}, 77:{t:'싸락눈',icon:'🌨️'},
+  80:{t:'약한 소나기',icon:'🌦️'}, 81:{t:'소나기',icon:'🌧️'}, 82:{t:'강한 소나기',icon:'⛈️'},
+  85:{t:'약한 소낙눈',icon:'🌨️'}, 86:{t:'소낙눈',icon:'🌨️'},
+  95:{t:'뇌우',icon:'⛈️'}, 96:{t:'뇌우·우박',icon:'⛈️'}, 99:{t:'강한 뇌우·우박',icon:'⛈️'}
+};
+
+/* 기상 조건에 따른 작업중지 안내
+   근거: 산업안전보건기준에 관한 규칙 제37조(악천후 및 강풍 시 작업 중지),
+        제383조(철골작업의 제한) / 폭염은 체감온도 기준 */
+function weatherWorkAlerts(feels, gustMs, rainMm, snowCm){
+  const alerts = [];
+  if(gustMs > 15) alerts.push('🔴 순간풍속 15m/s 초과 — 타워크레인 운전작업 중지 (규칙 제37조)');
+  else if(gustMs > 10) alerts.push('🟠 순간풍속 10m/s 초과 — 타워크레인 설치·수리·점검·해체 작업 중지 (규칙 제37조)');
+  if(gustMs >= 10) alerts.push('🟠 풍속 10m/s 이상 — 철골작업 중지 (규칙 제383조)');
+  if(rainMm >= 1) alerts.push('🟠 시간당 강우 1mm 이상 — 철골작업 중지 (규칙 제383조)');
+  if(snowCm >= 1) alerts.push('🟠 시간당 강설 1cm 이상 — 철골작업 중지 (규칙 제383조)');
+  if(feels >= 35) alerts.push('🔴 폭염경보 체감온도 기준 도달 — 옥외작업 중지 검토');
+  else if(feels >= 33) alerts.push('🟠 폭염주의보 체감온도 기준 도달 — 휴식시간 확대 필요');
+  return alerts;
+}
 
 async function fetchWeather(){
   const cardEl = document.getElementById('weatherCard');
@@ -1192,69 +1259,46 @@ async function fetchWeather(){
   const controller = new AbortController();
   const timeoutId = setTimeout(()=>controller.abort(), 12000); // 12초 내 응답 없으면 중단
   try{
-    const { base_date, base_time } = kmaBaseDateTime();
-    const url = `https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst`
-      + `?serviceKey=${encodeURIComponent(KMA_SERVICE_KEY)}`
-      + `&pageNo=1&numOfRows=1000&dataType=JSON`
-      + `&base_date=${base_date}&base_time=${base_time}&nx=${KMA_NX}&ny=${KMA_NY}`;
+    const url = 'https://api.open-meteo.com/v1/forecast'
+      + `?latitude=${WEATHER_LAT}&longitude=${WEATHER_LON}`
+      + '&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,wind_gusts_10m,rain,snowfall'
+      + '&wind_speed_unit=ms&timezone=Asia%2FSeoul';
     const res = await fetch(url, { signal: controller.signal });
     clearTimeout(timeoutId);
     if(!res.ok){ throw new Error(`서버 응답 오류 (HTTP ${res.status})`); }
-    const text = await res.text();
-    let data;
-    try{ data = JSON.parse(text); }
-    catch(e){ throw new Error('응답 형식 오류 (키 또는 요청 파라미터 확인 필요)'); }
-    const header = data && data.response && data.response.header;
-    if(!header || header.resultCode !== '00'){
-      throw new Error((header && header.resultMsg) || '기상청 API 응답 오류');
+    const data = await res.json();
+    const cur = data && data.current;
+    if(!cur || cur.temperature_2m === undefined || cur.temperature_2m === null){
+      throw new Error('기상 데이터를 찾을 수 없습니다');
     }
-    const items = data.response.body.items.item;
 
-    // 현재(또는 가장 가까운 미래) 시각의 예보값 찾기
-    // 날짜+시각을 "YYYYMMDDHHmm" 한 덩어리로 묶어 비교해야 23시 발표분처럼
-    // 예보가 다음날부터 시작하는 경우에도 정상적으로 넘어갑니다.
-    const nowStr = nowKSTDateTimeStr(); // YYYY-MM-DDTHH:MM
-    const nowKey = nowStr.slice(0,10).replace(/-/g,'') + nowStr.slice(11,13) + '00';
-    const slotKeys = [...new Set(items.map(i => i.fcstDate + i.fcstTime))].sort();
-    const targetKey = slotKeys.find(k => k >= nowKey) || slotKeys[0];
-    if(!targetKey){ throw new Error('예보 데이터를 찾을 수 없습니다'); }
-    const targetDate = targetKey.slice(0,8);
-    const targetTime = targetKey.slice(8);
+    const Ta = Number(cur.temperature_2m);
+    const RH = Number(cur.relative_humidity_2m != null ? cur.relative_humidity_2m : 60);
+    const windMs = Number(cur.wind_speed_10m) || 0;
+    const gustMs = Number(cur.wind_gusts_10m) || windMs;
+    const rainMm = Number(cur.rain) || 0;        // 비만 (눈은 아래 snowfall로 따로 판정)
+    const snowCm = Number(cur.snowfall) || 0;    // Open-Meteo의 snowfall 단위는 cm
+    const feels = feelsLike(Ta, RH, windMs);
+    // 화면에 "체감 33°"라고 떠 있는데 경보가 안 뜨면 혼란스러우므로, 표시값 기준으로 판정합니다
+    const feelsShown = Math.round(feels);
+    const info = WMO_MAP[cur.weather_code] || { t:'-', icon:'🌡️' };
 
-    const pick = (category)=>{
-      const found = items.find(i=>i.category===category && i.fcstDate===targetDate && i.fcstTime===targetTime);
-      return found ? found.fcstValue : null;
-    };
-    const tmp = pick('TMP');
-    const sky = pick('SKY');
-    const pty = pick('PTY');
-    const reh = pick('REH');
-
-    if(tmp===null){ throw new Error('예보 데이터를 찾을 수 없습니다'); }
-
-    const Ta = Number(tmp), RH = Number(reh || 60);
-    const feels = kmaFeelsLike(Ta, RH);
-
-    const ptyInfo = pty && PTY_MAP[pty];
-    const skyInfo = SKY_MAP[sky] || {t:'-', icon:'🌡️'};
-    const condText = ptyInfo ? ptyInfo.t : skyInfo.t;
-    const iconText = ptyInfo ? ptyInfo.icon : skyInfo.icon;
-
-    document.getElementById('weatherIcon').textContent = iconText;
+    document.getElementById('weatherIcon').textContent = info.icon;
     document.getElementById('weatherTemp').textContent = Math.round(Ta) + '°';
-    document.getElementById('weatherCond').textContent = condText;
-    document.getElementById('weatherFeel').textContent = `체감 ${Math.round(feels)}°`;
+    document.getElementById('weatherCond').textContent = info.t;
+    document.getElementById('weatherFeel').textContent =
+      `체감 ${feelsShown}° · 습도 ${Math.round(RH)}% · 순간풍속 ${gustMs.toFixed(1)}m/s`;
+    const hhmm = String(cur.time || '').slice(11,16);
     document.getElementById('weatherTime').textContent =
-      `${targetDate.slice(4,6)}/${targetDate.slice(6,8)} ${targetTime.slice(0,2)}시 예보 · 기상청 제공`;
+      (hhmm ? `${hhmm} 기준` : '방금 갱신') + ' · Open-Meteo 제공';
 
     const alertEl = document.getElementById('weatherAlert');
-    if(feels >= 35){
-      alertEl.textContent = '🔴 폭염경보 체감온도 기준 도달 — 옥외작업 중지 검토';
-      alertEl.style.display = '';
-    } else if(feels >= 33){
-      alertEl.textContent = '🟠 폭염주의보 체감온도 기준 도달 — 휴식시간 확대 필요';
+    const alerts = weatherWorkAlerts(feelsShown, gustMs, rainMm, snowCm);
+    if(alerts.length){
+      alertEl.innerHTML = alerts.map(a=>`<div>${a}</div>`).join('');
       alertEl.style.display = '';
     } else {
+      alertEl.innerHTML = '';
       alertEl.style.display = 'none';
     }
   }catch(err){
@@ -1264,10 +1308,15 @@ async function fetchWeather(){
     document.getElementById('weatherTemp').textContent = '-°';
     document.getElementById('weatherCond').textContent = '날씨 정보를 불러올 수 없습니다';
     document.getElementById('weatherFeel').textContent = '';
-    document.getElementById('weatherTime').textContent = (err.name === 'AbortError' ? '응답 시간 초과 (다음 갱신 시 재시도)' : (err.message || '조회 실패'));
+    // fetch가 던지는 TypeError는 대부분 인터넷 연결 문제라 사용자에게 그대로 보여줄 필요가 없습니다
+    const msg = err.name === 'AbortError' ? '응답 시간 초과 (다음 갱신 시 재시도)'
+      : (err instanceof TypeError ? '인터넷 연결을 확인한 뒤 카드를 눌러 다시 시도하세요'
+      : (err.message || '조회 실패'));
+    document.getElementById('weatherTime').textContent = msg;
     document.getElementById('weatherAlert').style.display = 'none';
   }
 }
+
 
 /* 등록된 "작업 시작 시각(날짜+시간)"이 실제로 도래한 "예정" 작업만 자동으로 "진행중"으로 전환
    (날짜만 같고 아직 시작 시각 전이면 계속 "예정" 상태 유지) */
@@ -1317,6 +1366,11 @@ document.addEventListener('DOMContentLoaded', () => {
   setupDrawMap();
   setupPumpMap();
   updateSyncStatus();
+  syncTopbarHeight();
+  window.addEventListener('load', syncTopbarHeight);
+  window.addEventListener('resize', syncTopbarHeight);
+  // 창 크기가 PC/모바일 경계를 넘으면 작업현황을 표↔카드로 다시 그립니다
+  DESKTOP_MQ.addEventListener('change', ()=>{ syncTopbarHeight(); renderAll(); });
   renderAll();
   initFirebase();
   registerServiceWorker();
@@ -1557,7 +1611,7 @@ function taskRowHTML(t){
     </div>`;
 }
 function bindTaskRowClicks(){
-  document.querySelectorAll('.task-row').forEach(row=>{
+  document.querySelectorAll('.task-row[data-id], .task-table tbody tr[data-id]').forEach(row=>{
     row.onclick = ()=> openDetail(row.dataset.id);
   });
 }
@@ -1575,13 +1629,72 @@ function renderStatusFilters(){
 }
 function setStatusFilter(f){ state.statusFilter=f; renderStatusFilters(); renderStatusList(); }
 function setRiskFilter(f){ state.riskFilter=f; renderStatusFilters(); renderStatusList(); }
+/* PC에서는 업체별 카드 대신 표 한 장으로 — 위험도·업체·상태를 한 화면에서 훑을 수 있게 */
+const DESKTOP_MQ = window.matchMedia('(min-width: 900px)');
+function isDesktopLayout(){ return DESKTOP_MQ.matches; }
+
+/* 표 머리글을 topbar 바로 아래에 고정시키려면 topbar의 실제 높이를 알아야 합니다 */
+function syncTopbarHeight(){
+  const tb = document.querySelector('.topbar');
+  if(tb) document.documentElement.style.setProperty('--topbar-h', tb.offsetHeight + 'px');
+}
+
+function renderTaskTable(list){
+  if(!list.length){
+    return `<div class="empty-state"><div class="ic">📭</div><div class="t">등록된 작업이 없습니다</div><div class="s">작업등록 탭에서 새 작업을 추가해 보세요</div></div>`;
+  }
+  // 고위험 → 상등급 → 일상 순, 같은 업체 작업은 서로 붙여서 정렬 (엑셀 내보내기와 같은 기준)
+  const companyNum = computeCompanyNumbers(list);
+  const ordered = sortForExport(list, companyNum);
+
+  let prevCompany = null;
+  const rows = ordered.map(t=>{
+    const lvl = riskLevel(t);
+    const newCompany = t.company !== prevCompany;
+    prevCompany = t.company;
+    const col = companyColor(t.company);
+    const riskCell = lvl==='risk' ? '<span class="badge hi-risk">⚠ 고위험</span>'
+      : (lvl==='grade' ? '<span class="badge hi-grade">⊙ 상등급</span>' : '<span class="tt-dash">일상</span>');
+    const floors = fmtFloors(t);
+    return `
+      <tr class="lvl-${lvl}${newCompany?' co-start':''}" data-id="${t.id}">
+        <td class="c-risk">${riskCell}${(lvl==='risk' && t.riskGradeHigh) ? '<span class="tt-sub">⊙ 상등급 포함</span>' : ''}</td>
+        <td class="c-company">${newCompany
+          ? `<span class="tt-swatch" style="background:${col}"></span><span class="tt-company">${t.company}</span>`
+          : `<span class="tt-swatch" style="background:${col};opacity:0.4"></span>`}</td>
+        <td class="c-name"><span class="tt-name">${t.taskName}</span>${t.workType?`<span class="tt-sub">${t.workType}</span>`:''}</td>
+        <td class="c-loc">${fmtBuildings(t)}${floors?`<span class="tt-sub">${floors}</span>`:''}</td>
+        <td class="c-num">${t.workers||0}</td>
+        <td class="c-time">${t.timeStart||'-'}~${t.timeEnd||'-'}${t.earlyStart?`<span class="tt-sub">조출 ${t.earlyStartTime||''}</span>`:''}</td>
+        <td class="c-guard">${t.guardDeployed ? (t.guardName || '배치') : '<span class="tt-dash">미배치</span>'}</td>
+        <td class="c-status"><span class="badge status-${t.status}">${t.status}</span></td>
+      </tr>`;
+  }).join('');
+
+  return `
+    <table class="task-table">
+      <thead><tr>
+        <th class="c-risk">위험등급</th>
+        <th class="c-company">협력업체</th>
+        <th class="c-name">작업명</th>
+        <th class="c-loc">위치</th>
+        <th class="c-num">인원</th>
+        <th class="c-time">작업시간</th>
+        <th class="c-guard">감시단·전담자</th>
+        <th class="c-status">상태</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
 function renderStatusList(){
   let list = tasksForDate(state.date);
   if(state.statusFilter!=='전체') list = list.filter(t=>t.status===state.statusFilter);
   if(state.riskFilter==='고위험') list = list.filter(isHighRisk);
   else if(state.riskFilter==='상등급') list = list.filter(t=>t.riskGradeHigh);
   document.getElementById('statusCountMeta').textContent = `${list.length}건`;
-  document.getElementById('statusTaskList').innerHTML = renderCompanyGroups(list);
+  document.getElementById('statusTaskList').innerHTML =
+    isDesktopLayout() ? renderTaskTable(list) : renderCompanyGroups(list);
   bindTaskRowClicks();
 }
 function goToStatusView(statusFilter, riskFilter){
