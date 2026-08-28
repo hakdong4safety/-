@@ -368,39 +368,87 @@
 
   /* ===== Desktop layout (모바일 화면은 그대로 유지, PC에서만 레이아웃 확장) ===== */
   @media (min-width: 900px){
-    #app{max-width:1100px;}
-    .bottom-nav{max-width:1100px;}
+    /* 탭을 옮길 때 화면 폭이 갑자기 넓어지지 않도록 모든 탭이 같은 너비를 씁니다 */
+    #app, #app.wide-view{max-width:1120px;}
+    .bottom-nav, #app.wide-view .bottom-nav{max-width:1120px;}
 
     /* 대시보드: 좌측 배치도 고정, 우측 작업목록만 독립 스크롤 (활성 상태일 때만 적용 — .view{display:none}보다 항상 우선하지 않도록 .active와 함께 걸어줌) */
     #view-dashboard.active{
       display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr);
       align-items:start; column-gap:20px;
     }
-    #view-dashboard.active .section:nth-child(2){
+    #view-dashboard.active > .section:nth-child(2){
       position:sticky; top:16px;
-      max-height:calc(100vh - 32px);
+      max-height:calc(100vh - 106px);  /* 하단 탭바에 가리지 않게 */
       overflow-y:auto;
       -webkit-overflow-scrolling:touch;
     }
 
-    /* 작업등록/작업현황/동별보기: 현재 PC 화면 크기에 맞춰 넓게 표시 */
-    #app.wide-view{max-width:1500px;}
-    #app.wide-view .bottom-nav{max-width:1500px;}
-    #app.wide-view #registerTask form,
-    #app.wide-view #pumpList,
+    /* ---- 카드 목록 2단 배치 ----
+       예전에는 column-count(CSS 다단)를 썼는데, 내용 길이에 따라 단이 나뉘는 위치가
+       계속 달라져서 입력하는 도중 카드가 좌우로 튀는 문제가 있었습니다.
+       grid는 카드가 좌→우 순서대로 정해진 자리에 놓여 배치가 흔들리지 않습니다. */
+    #app.wide-view #taskForm,
     #app.wide-view #statusTaskList,
-    #app.wide-view #buildingTaskList{
-      column-count:2; column-gap:20px;
+    #app.wide-view #pumpList{
+      display:grid; grid-template-columns:repeat(2, minmax(0,1fr));
+      gap:16px; align-items:start;
     }
-    #app.wide-view #registerTask form > .submit-btn,
-    #app.wide-view #registerTask > .submit-btn{
-      column-span:all;
+    /* 간격은 grid gap이 담당하므로 카드 자체 아래여백은 제거 */
+    #app.wide-view #taskForm > .form-card,
+    #app.wide-view #statusTaskList > .company-group,
+    #app.wide-view #pumpList > .pump-card{margin-bottom:0;}
+    #app.wide-view .empty-state{grid-column:1 / -1;}
+
+    /* ---- 작업등록 ---- */
+    #view-register.active > .section{max-width:1152px; margin-left:auto; margin-right:auto;}
+    #view-register.active .subtab-row,
+    #view-register.active #editModeBanner,
+    #view-register.active #pasteTaskBtn{max-width:536px;}
+    /* 배치도가 들어간 카드와 등록 버튼은 한 줄 전체 사용 */
+    #app.wide-view #taskForm > .map-form-card,
+    #app.wide-view #taskForm > .submit-btn{grid-column:1 / -1;}
+    #app.wide-view #drawMapWrap{max-width:900px; margin-left:auto; margin-right:auto;}
+    #app.wide-view #registerPump > .form-card{max-width:900px;}
+    /* 넓어진 폭만큼 동·층 칩을 한눈에 보여주고 카드 안 세로 스크롤을 없앰 */
+    #app.wide-view .building-grid{grid-template-columns:repeat(6,1fr);}
+    #app.wide-view .floor-grid{grid-template-columns:repeat(6,1fr); max-height:none;}
+
+    /* ---- 작업현황: 마우스로는 가로 스크롤이 불편하므로 필터를 줄바꿈해 전부 노출 ---- */
+    #view-status.active .filter-scroll{flex-wrap:wrap; overflow-x:visible;}
+
+    /* ---- 동별보기: 좌측 배치도 고정, 우측에 동/층 필터와 작업 목록 ---- */
+    #view-building.active{
+      display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);
+      column-gap:20px; align-items:start;
     }
-    #app.wide-view .form-card,
-    #app.wide-view .company-group,
-    #app.wide-view .pump-card{
-      break-inside:avoid; -webkit-column-break-inside:avoid;
+    #view-building.active > .section:nth-child(1){
+      grid-column:1; grid-row:1 / span 2;
+      align-self:start; position:sticky; top:16px;
     }
+    #view-building.active > .section:nth-child(2){grid-column:2; grid-row:1;}
+    #view-building.active > .section:nth-child(3){grid-column:2; grid-row:2;}
+    #view-building.active .bchip-nav-row{align-items:flex-start;}
+    /* 동 19개는 전부 펼쳐 한 번에 고르고, 층 37개는 3줄까지만 보이고 세로 스크롤
+       (마우스로는 가로 스크롤보다 세로 스크롤이 훨씬 다루기 쉽습니다) */
+    #view-building.active .bchip-scroll{
+      flex-wrap:wrap; overflow-x:visible;
+      max-height:184px; overflow-y:auto;
+    }
+    #view-building.active .floor-filter-scroll{
+      flex-wrap:wrap; overflow-x:visible;
+      max-height:124px; overflow-y:auto;
+    }
+
+    /* ---- 관리 탭도 지나치게 늘어나지 않게 ---- */
+    #view-admin.active > .section{max-width:800px; margin-left:auto; margin-right:auto;}
+  }
+
+  @media (min-width: 1400px){
+    #app, #app.wide-view{max-width:1320px;}
+    .bottom-nav, #app.wide-view .bottom-nav{max-width:1320px;}
+    /* 화면이 더 넓을 때만 작업현황 목록을 3단으로 */
+    #app.wide-view #statusTaskList{grid-template-columns:repeat(3, minmax(0,1fr));}
   }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
@@ -621,7 +669,7 @@
             <textarea id="f_remarks" placeholder="특이사항을 입력하세요"></textarea>
           </div>
 
-          <div class="form-card">
+          <div class="form-card map-form-card">
             <h3>작업 위치 표시</h3>
             <p class="hint" style="margin-top:0;">드래그로 작업구간을 지정하고 확정 버튼을 눌러주세요. 확정 후에도 계속 드래그하면 구간을 여러 개 추가할 수 있습니다. 각 구간 오른쪽 위 ×로 개별 삭제도 가능합니다.</p>
             <div class="draw-toolbar">
