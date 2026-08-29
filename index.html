@@ -153,9 +153,13 @@
   .rain-loc{font-size:12px;font-weight:800;opacity:0.95;}
   .rain-sub{font-size:11px;opacity:0.75;margin-top:2px;}
   .rain-icon{font-size:32px;line-height:1;}
-  .rain-open{margin-top:auto;padding-top:12px;font-size:17px;font-weight:800;letter-spacing:-0.01em;}
+  .rain-main{display:flex;align-items:flex-end;gap:14px;margin-top:12px;}
+  .rain-value{font-size:34px;font-weight:800;line-height:1;letter-spacing:-0.02em;}
+  .rain-value.link-only{font-size:17px;}  /* 값을 못 가져왔을 때는 링크 문구라 작게 */
+  .rain-desc{padding-bottom:3px;font-size:11.5px;font-weight:700;opacity:0.85;line-height:1.5;}
   .rain-note{margin-top:10px;background:rgba(255,255,255,0.18);border-radius:10px;padding:8px 12px;
     font-size:11.5px;font-weight:700;}
+  .rain-note.warn{background:rgba(255,255,255,0.34);}
 
   /* ===== Company group ===== */
   .company-group{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);
@@ -584,16 +588,19 @@
           <div class="weather-alert" id="weatherAlert" style="display:none;"></div>
         </div>
 
-        <a class="rain-card" href="http://www.envilink.co.kr/rain/List" target="_blank" rel="noopener noreferrer">
+        <a class="rain-card" id="rainCard" href="http://www.envilink.co.kr/rain/List" target="_blank" rel="noopener noreferrer">
           <div class="rain-top">
             <div>
               <div class="rain-loc">✔️ 현장내 강우량계</div>
-              <div class="rain-sub">envilink 실시간 강수량 확인</div>
+              <div class="rain-sub" id="rainTime">envilink 실시간 강수량 확인</div>
             </div>
-            <div class="rain-icon">🌧️</div>
+            <div class="rain-icon" id="rainIcon">🌧️</div>
           </div>
-          <div class="rain-open">사이트 바로가기 ↗</div>
-          <div class="rain-note">시간당 강우 1mm 이상이면 철골작업 중지 (규칙 제383조)</div>
+          <div class="rain-main">
+            <div class="rain-value link-only" id="rainValue">사이트 바로가기 ↗</div>
+            <div class="rain-desc" id="rainDesc"></div>
+          </div>
+          <div class="rain-note" id="rainNote">시간당 강우 1mm 이상이면 철골작업 중지 (규칙 제383조)</div>
         </a>
       </div>
     </div>
@@ -913,7 +920,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-29 05:40 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-29 06:20 UTC</p>
       </div>
     </div>
   </div>
@@ -1287,6 +1294,48 @@ function weatherWorkAlerts(feels, gustMs, rainMm, snowCm){
   return alerts;
 }
 
+/* =========================================================
+   현장 강우량계 (envilink) — 중계 서버(Cloudflare Worker)를 통해 값을 가져옵니다.
+   envilink은 로그인이 필요하고 CORS도 막혀 있어 브라우저가 직접 못 부릅니다.
+   서버가 아직 준비되지 않았으면 오류를 띄우지 않고 조용히 링크 카드로 남깁니다.
+========================================================= */
+const RELAY_BASE = 'https://wandering-dust-bf64.leesh7789.workers.dev';
+
+async function fetchRainGauge(){
+  if(!document.getElementById('rainCard')) return;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(()=>controller.abort(), 10000);
+  try{
+    const res = await fetch(RELAY_BASE + '/rain', { signal: controller.signal });
+    clearTimeout(timeoutId);
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const d = await res.json();
+    if(!d || d.ok !== true || d.rainHour == null) throw new Error('강우량 값이 비어 있습니다');
+
+    const hour = Number(d.rainHour) || 0;
+    const day  = (d.rainDay == null) ? null : Number(d.rainDay);
+
+    document.getElementById('rainTime').textContent =
+      (d.measuredAt ? d.measuredAt + ' 기준' : '방금 갱신') + ' · envilink';
+    const valEl = document.getElementById('rainValue');
+    valEl.textContent = hour.toFixed(1) + 'mm';
+    valEl.classList.remove('link-only');
+    document.getElementById('rainDesc').innerHTML =
+      '시간당 강수량' + (day != null ? `<br>오늘 누적 ${day.toFixed(1)}mm` : '');
+    document.getElementById('rainIcon').textContent = hour >= 1 ? '⛔' : (hour > 0 ? '🌧️' : '☂️');
+
+    const note = document.getElementById('rainNote');
+    note.textContent = hour >= 1
+      ? '⛔ 시간당 1mm 이상 — 철골작업 중지 (규칙 제383조)'
+      : '시간당 강우 1mm 이상이면 철골작업 중지 (규칙 제383조)';
+    note.classList.toggle('warn', hour >= 1);
+  }catch(err){
+    clearTimeout(timeoutId);
+    // 중계 서버가 없거나 응답이 없는 상태 — 카드는 원래의 "바로가기" 모습 그대로 둡니다
+    console.warn('강우량계 값을 가져오지 못했습니다 (링크로 대체)', err);
+  }
+}
+
 async function fetchWeather(){
   const cardEl = document.getElementById('weatherCard');
   if(!cardEl) return;
@@ -1392,7 +1441,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if(!document.hidden){ if(autoAdvanceScheduledTasks()) renderAll(); }
   });
   fetchWeather();
+  fetchRainGauge();
   setInterval(()=>{ if(!document.hidden) fetchWeather(); }, 30*60000); // 30분마다 갱신
+  // 강우량은 작업중지 판단에 쓰이므로 더 자주 봅니다 (중계 서버가 5분 캐시를 걸어둡니다)
+  setInterval(()=>{ if(!document.hidden) fetchRainGauge(); }, 5*60000);
   loadSiteImageVersions();
   loadAttendance();
   loadAttendanceFields();
