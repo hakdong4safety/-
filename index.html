@@ -916,7 +916,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-30 05:20 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-30 06:10 UTC</p>
       </div>
     </div>
   </div>
@@ -1095,13 +1095,16 @@ const DEFAULT_SITE_IMAGE = './map.jpg';
 const COMPANY_COLORS = ['#2F5FDB','#E5484D','#1E9E5A','#D9822B','#7C5CDB','#0EA5A5','#C2410C','#4B5563',
   '#0891B2','#BE185D','#65A30D','#9333EA'];
 let companyColorMap = {};
-let companyColorSeq = 0;
+/* 업체 색상은 이름에서 계산합니다.
+   예전에는 화면에 나타난 순서대로 색을 나눠줘서, 같은 업체가 기기마다·날짜마다
+   다른 색으로 보였습니다. 여러 사람이 각자 화면을 보며 이야기할 때 혼선이 생깁니다. */
 function companyColor(name){
-  if(!companyColorMap[name]){
-    companyColorMap[name] = COMPANY_COLORS[companyColorSeq % COMPANY_COLORS.length];
-    companyColorSeq++;
-  }
-  return companyColorMap[name];
+  const key = String(name||'');
+  if(companyColorMap[key]) return companyColorMap[key];
+  let h = 0;
+  for(let i=0;i<key.length;i++){ h = (h*31 + key.charCodeAt(i)) >>> 0; }
+  companyColorMap[key] = COMPANY_COLORS[h % COMPANY_COLORS.length];
+  return companyColorMap[key];
 }
 
 const STORAGE_TASKS = 'siteSafetyTasks_v2';
@@ -1186,46 +1189,14 @@ function ymdLocal(d){
 function cuid(pfx){ return (pfx||'id')+'_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
 /* =========================================================
-   SEED DATA
+   초기 데이터
+   실서비스이므로 예시 데이터를 넣지 않습니다.
+   예전에는 데모용 작업 3건과 양수기 2대가 들어 있었는데,
+   저장소가 빈 새 기기에서 앱을 처음 열면 Firebase가 붙기 전까지
+   존재하지 않는 업체와 담당자 이름이 화면에 뜨는 문제가 있었습니다.
 ========================================================= */
-function seedTasks(){
-  const t = state.date;
-  return [
-    {id:cuid('t'), date:t, company:'우설건설', taskName:'103동 주변 주차장 지하 1층 시스템 동바리 설치 작업',
-     workType:'비계', status:'진행중', buildings:['103동'], floors:['지하1층'], location:'주차장 지하 1층',
-     workers:7, timeStart:'08:00', timeEnd:'17:00', detail:'시스템 동바리 설치 및 고정 작업',
-     equipmentUsed:true, equipmentType:'시스템동바리, 크레인', highRisk:['시스템비계 및 동바리 설치/해체'], platform:2, cutTool:0,
-     riskGradeHigh:false, hazmat:false, director:'박민수', supervisorCo:'김낙진', supervisorHDC:'김승원(건축, 103/104동)', safetyManagerHDC:'서진수(안전총괄책임자)',
-     guardDeployed:true, guardName:'조영인', remarks:'',
-     hazardType:'협착', earlyStart:true, earlyStartTime:'06:00', exclusionZone:'5m 이격 통제', mobileCCTV:true,
-     region:{x:66,y:6,w:31,h:34}, createdAt:new Date().toISOString()},
-    {id:cuid('t'), date:t, company:'한빛엔지니어링', taskName:'109동 12층 RCS 인양 작업',
-     workType:'골조', status:'진행중', buildings:['109동'], floors:['12층'], location:'북측 코어',
-     workers:12, timeStart:'08:30', timeEnd:'18:00', detail:'RCS 시스템 인양 및 고정',
-     equipmentUsed:true, equipmentType:'타워크레인', highRisk:['갱폼 설치/인상/해체'], platform:0, cutTool:0,
-     riskGradeHigh:true, hazmat:false, director:'이재현', supervisorCo:'정우성', supervisorHDC:'김승원(건축, 109동)', safetyManagerHDC:'최교훈(안전)',
-     guardDeployed:true, guardName:'장서준', remarks:'',
-     hazardType:'낙하물', earlyStart:false, earlyStartTime:'', exclusionZone:'', mobileCCTV:false,
-     region:null, createdAt:new Date().toISOString()},
-    {id:cuid('t'), date:t, company:'대성이엔씨', taskName:'101동 지하 2층 배관 설비 작업',
-     workType:'설비', status:'예정', buildings:['101동'], floors:['지하2층'], location:'기계실 인근',
-     workers:5, timeStart:'09:00', timeEnd:'16:00', detail:'냉난방 배관 라인 설치',
-     equipmentUsed:false, equipmentType:'', highRisk:['해당 없음'], platform:0, cutTool:1,
-     riskGradeHigh:false, hazmat:false, director:'최정훈', supervisorCo:'박민수', supervisorHDC:'',
-     guardDeployed:false, guardName:'', remarks:'',
-     hazardType:'', earlyStart:false, earlyStartTime:'', exclusionZone:'', mobileCCTV:false,
-     region:null, createdAt:new Date().toISOString()}
-  ];
-}
-function seedPumps(){
-  const t = state.date;
-  return [
-    {id:cuid('p'), no:7, company:'우설건설', location:'101동 주변', diameter:2, count:1, status:'외부배수',
-     regDate:'2026-07-15', x:79,y:60},
-    {id:cuid('p'), no:10, company:'우설건설', location:'102동 주변', diameter:3, count:1, status:'가동중',
-     regDate:'2026-07-15', x:84,y:44}
-  ];
-}
+function seedTasks(){ return []; }
+function seedPumps(){ return []; }
 
 /* =========================================================
    PERSISTENCE
@@ -1629,8 +1600,10 @@ function checkCompanyTypo(){
   const match = known.find(c=>normalizeCompany(c)===norm);
   if(!match) return;                                      // 완전히 새 업체면 그대로 둠
 
-  hint.innerHTML = `이미 "<b>${match}</b>"로 등록된 업체 같습니다. ` +
-    `<button type="button" class="draw-btn" style="margin-left:4px;" onclick="applyCompanyName('${match.replace(/'/g,"\\'")}')">이 이름으로 맞추기</button>`;
+  const escAttr = (s)=>String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  hint.innerHTML = `이미 "<b>${escAttr(match)}</b>"로 등록된 업체 같습니다. ` +
+    `<button type="button" class="draw-btn" style="margin-left:4px;" data-name="${escAttr(match)}" ` +
+    `onclick="applyCompanyName(this.dataset.name)">이 이름으로 맞추기</button>`;
   hint.style.display = '';
 }
 function applyCompanyName(name){
@@ -1759,8 +1732,14 @@ function renderOversight(list){
   const guardless = list.filter(t=>isHighRisk(t) && !t.guardDeployed);
   const noPlan    = list.filter(t=>isHighRisk(t) && !t.workPlanRequired);
   const missing   = companiesWithoutToday(list);
+  // 지난 날짜인데 아직 예정/진행중으로 남은 작업 = 마감이 안 된 기록
+  const unclosed  = state.date < todayStr()
+    ? list.filter(t=>t.status==='예정' || t.status==='진행중') : [];
 
   const rows = [];
+  if(unclosed.length){
+    rows.push(`<button type="button" class="ov-item tap" onclick="openTaskListSheet('아직 마감되지 않은 작업','지난 날짜인데 예정 또는 진행중으로 남아 있습니다. 관리 탭의 일괄 상태 변경으로 정리할 수 있습니다.', window._ovUnclosed)"><span>🕗 지난 날짜 · 미마감</span><span class="n">${unclosed.length}건</span></button>`);
+  }
   if(missing.length){
     rows.push(`<div class="ov-item"><span>📭 오늘 작업 미등록 업체</span><span class="n">${missing.length}개사</span></div>
       <div class="ov-names">${missing.join(' · ')}</div>`);
@@ -1775,9 +1754,21 @@ function renderOversight(list){
     rows.push(`<button type="button" class="ov-item tap" onclick="openTaskListSheet('고위험인데 작업계획서 미해당','고위험 작업인데 작업계획서 또는 P.T.W가 미해당으로 등록되어 있습니다.', window._ovNoPlan)"><span>📄 고위험 · 작업계획서 미해당</span><span class="n">${noPlan.length}건</span></button>`);
   }
 
+  // 작업 등록 인원과 출역인원 입력이 크게 어긋나면 둘 중 하나가 빠진 것입니다
+  const attRows = state.attendanceByDate[state.date] || [];
+  if(attRows.length && list.length){
+    const taskSum = list.reduce((s,t)=>s+(Number(t.workers)||0),0);
+    const attSum  = attRows.reduce((s,r)=>s+(Number(r.workers)||0),0);
+    const gap = Math.abs(taskSum - attSum);
+    if(gap > 0){
+      rows.push(`<button type="button" class="ov-item tap" onclick="openAttendanceSheet()"><span>👥 작업 인원 ${taskSum}명 · 출역 입력 ${attSum}명</span><span class="n">${gap}명 차이</span></button>`);
+    }
+  }
+
   window._ovNoRegion = noRegion;
   window._ovGuardless = guardless;
   window._ovNoPlan = noPlan;
+  window._ovUnclosed = unclosed;
 
   el.innerHTML = rows.length
     ? `<div class="oversight"><h4>⚠️ 확인이 필요한 항목</h4>${rows.join('')}</div>`
@@ -3212,9 +3203,26 @@ function fbSaveAttendance(dateStr, rows){
 }
 function openAttendanceSheet(){
   const existing = state.attendanceByDate[state.date] || [];
-  state.attendanceDraft = existing.length
-    ? existing.map(r=>({...r}))
-    : [{company:'', workers:'', newWorkers:'', outdoor:'', vulnerable:''},{company:'', workers:'', newWorkers:'', outdoor:'', vulnerable:''}];
+  if(existing.length){
+    state.attendanceDraft = existing.map(r=>({...r}));
+  } else {
+    // 처음 여는 날이면 그날 작업을 등록한 업체를 미리 채워둡니다.
+    // 업체명을 열 줄씩 손으로 치는 일이 없어지고, 작업 인원 합계가 기본값으로 들어가
+    // 실제 출역과 대조하기도 쉬워집니다.
+    const byCompany = {};
+    tasksForDate(state.date).forEach(t=>{
+      if(!t.company) return;
+      byCompany[t.company] = (byCompany[t.company]||0) + (Number(t.workers)||0);
+    });
+    const rows = Object.keys(byCompany)
+      .sort((a,b)=>a.localeCompare(b,'ko'))
+      .map(c=>({company:c, workers:byCompany[c], newWorkers:'', outdoor:'', vulnerable:''}));
+    // 등록된 업체가 없으면 예전처럼 빈 줄 두 개로 시작
+    state.attendanceDraft = rows.length
+      ? rows.concat([{company:'', workers:'', newWorkers:'', outdoor:'', vulnerable:''}])
+      : [{company:'', workers:'', newWorkers:'', outdoor:'', vulnerable:''},
+         {company:'', workers:'', newWorkers:'', outdoor:'', vulnerable:''}];
+  }
   document.getElementById('attendanceDateLabel').textContent = `${state.date} 기준 업체별 출역인원을 입력하세요.`;
   renderAttendanceHeaderRow();
   renderAttendanceRows();
@@ -3244,6 +3252,7 @@ function renderAttendanceRows(){
     <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
       <span style="width:20px;text-align:center;font-weight:800;color:var(--ink-400);font-size:12.5px;flex-shrink:0;">${i+1}</span>
       <input type="text" placeholder="업체명" value="${(r.company||'').replace(/"/g,'&quot;')}"
+        list="dl_company" autocomplete="off"
         oninput="updateAttendanceDraft(${i},'company',this.value)"
         style="flex:2;min-width:0;padding:9px 10px;border-radius:8px;border:1.5px solid var(--line);font-size:13.5px;font-family:inherit;">
       <input type="number" placeholder="총 인원" min="0" value="${r.workers===''?'':r.workers}"
@@ -3340,15 +3349,25 @@ function loadNotice(){
   renderAdminNoticeForm();
   maybeShowNoticePopup();
 }
+/* 같은 공지가 앱을 열 때마다 계속 뜨면 나중엔 읽지 않고 닫게 됩니다.
+   확인한 공지는 기억해두고, 내용이 바뀌었을 때만 다시 띄웁니다. */
+const NOTICE_SEEN_KEY = 'siteSafetyNoticeSeen_v1';
+function noticeSignature(n){
+  return (n && n.text ? n.text.trim() : '') + '|' + (n && n.updatedAt ? n.updatedAt : '');
+}
 function maybeShowNoticePopup(){
-  if(state.notice && state.notice.text && state.notice.text.trim()){
-    document.getElementById('noticeText').textContent = state.notice.text;
-    document.getElementById('noticeUpdatedAt').textContent = state.notice.updatedAt ? `${state.notice.updatedAt} 게시` : '';
-    document.getElementById('noticeSheet').classList.add('show');
-  }
+  if(!(state.notice && state.notice.text && state.notice.text.trim())) return;
+  let seen = '';
+  try{ seen = localStorage.getItem(NOTICE_SEEN_KEY) || ''; }catch(e){}
+  if(seen === noticeSignature(state.notice)) return;
+  document.getElementById('noticeText').textContent = state.notice.text;
+  document.getElementById('noticeUpdatedAt').textContent = state.notice.updatedAt ? `${state.notice.updatedAt} 게시` : '';
+  document.getElementById('noticeSheet').classList.add('show');
 }
 function closeNoticeSheet(){
   document.getElementById('noticeSheet').classList.remove('show');
+  // "확인했습니다"를 누른 공지는 기억해두고 다시 띄우지 않습니다
+  try{ localStorage.setItem(NOTICE_SEEN_KEY, noticeSignature(state.notice)); }catch(e){}
 }
 function renderAdminNoticeForm(){
   const input = document.getElementById('noticeInput');
