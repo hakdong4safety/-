@@ -65,6 +65,12 @@
   .date-nav button{width:38px;height:38px;border-radius:11px;border:1.5px solid var(--line);background:#fff;
     font-size:16px;font-weight:800;color:var(--ink-600);box-shadow:var(--shadow);}
   .date-nav button:active{background:var(--blue-100);}
+  .date-nav button.today-btn{width:auto;padding:0 13px;font-size:12.5px;font-family:inherit;
+    color:var(--blue-600);border-color:var(--blue-600);background:var(--blue-100);}
+  .date-nav button.today-btn.dim{color:var(--ink-400);border-color:var(--line);background:#fff;}
+  #offlineBanner{margin:0 16px 4px;padding:9px 12px;border-radius:10px;
+    background:var(--amber-bg);border:1.5px solid var(--amber);
+    font-size:11.5px;font-weight:800;color:#8A5A16;line-height:1.5;}
   #dateInput{position:absolute;inset:0;width:100%;height:100%;opacity:0;border:none;margin:0;padding:0;
     cursor:pointer;-webkit-appearance:none;appearance:none;}
 
@@ -316,6 +322,19 @@
   .keep-row b{font-weight:700;color:var(--ink-400);}
 
   /* 대시보드: 원청 점검 카드 */
+  /* 필수 항목 누락 시 잠깐 강조 */
+  @keyframes fieldFlash{
+    0%,100%{box-shadow:0 0 0 0 rgba(229,72,77,0);}
+    30%,60%{box-shadow:0 0 0 3px rgba(229,72,77,0.45);}
+  }
+  .field-flash{animation:fieldFlash 1.4s ease;border-radius:10px;}
+
+  .toast.with-action{display:flex;align-items:center;gap:14px;padding-right:8px;}
+  .toast-undo{flex-shrink:0;background:rgba(255,255,255,0.22);color:#fff;border:none;
+    padding:7px 14px;border-radius:8px;font-size:13px;font-weight:800;font-family:inherit;
+    cursor:pointer;-webkit-tap-highlight-color:transparent;}
+  .toast-undo:hover{background:rgba(255,255,255,0.34);}
+
   .oversight{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--amber);
     border-radius:var(--radius-md);box-shadow:var(--shadow);padding:12px 14px;margin-top:12px;}
   .oversight h4{margin:0 0 9px;font-size:12.5px;font-weight:800;color:var(--ink-900);}
@@ -435,6 +454,12 @@
   .task-table .c-guard{width:12%;}
   .task-table .c-status{width:8%;}
 
+  .task-table tfoot .tt-total td{background:var(--ink-900);color:#fff;font-weight:800;font-size:13px;
+    padding:11px 12px;border:none;position:sticky;bottom:0;}
+  .task-table tfoot .tt-total td.c-num{text-align:right;font-variant-numeric:tabular-nums;}
+  .task-table tfoot .tt-total td:first-child{border-bottom-left-radius:var(--radius-md);}
+  .task-table tfoot .tt-total td:last-child{border-bottom-right-radius:var(--radius-md);}
+
   /* ===== Desktop layout (모바일 화면은 그대로 유지, PC에서만 레이아웃 확장) ===== */
   @media (min-width: 900px){
     /* 탭을 옮길 때 화면 폭이 갑자기 넓어지지 않도록 모든 탭이 같은 너비를 씁니다 */
@@ -546,9 +571,11 @@
     </div>
     <div class="date-nav">
       <button onclick="shiftDate(-1)">‹</button>
+      <button class="today-btn" id="todayBtn" onclick="goToday()">오늘</button>
       <button onclick="shiftDate(1)">›</button>
     </div>
   </div>
+  <div id="offlineBanner" style="display:none;">📡 실시간 연동이 끊겼습니다 — 입력은 이 기기에 저장되지만, 연결될 때까지 다른 기기와 공유되지 않습니다</div>
 
   <!-- ===================== DASHBOARD ===================== -->
   <div class="view active" id="view-dashboard">
@@ -916,7 +943,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-30 06:10 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-30 07:20 UTC</p>
       </div>
     </div>
   </div>
@@ -1453,6 +1480,7 @@ function registerServiceWorker(){
 
 function renderAll(){
   renderDateLabel();
+  updateTodayBtn();
   applySiteImage();
   renderDashboard();
   renderStatusFilters();
@@ -1477,6 +1505,19 @@ function shiftDate(delta){
   state.date = ymdLocal(d);
   document.getElementById('dateInput').value = state.date;
   renderAll();
+}
+/* 며칠 전 날짜를 보다가 오늘로 한 번에 돌아오는 버튼.
+   날짜를 옮겨둔 걸 깜빡하고 오늘 작업을 옛날 날짜에 등록하는 실수를 줄여줍니다. */
+function goToday(){
+  state.date = todayStr();
+  document.getElementById('dateInput').value = state.date;
+  renderAll();
+}
+function updateTodayBtn(){
+  const btn = document.getElementById('todayBtn');
+  if(!btn) return;
+  // 오늘을 보고 있을 때는 흐리게, 다른 날짜면 파랗게 눈에 띄도록
+  btn.classList.toggle('dim', state.date === todayStr());
 }
 
 /* =========================================================
@@ -1505,8 +1546,16 @@ function switchRegisterTab(tab){
 ========================================================= */
 function tasksForDate(d){ return state.tasks.filter(t=>t.date===d); }
 function isHighRisk(t){ return t.highRisk && t.highRisk.some(r=>r!=='해당 없음'); }
-function fmtBuildings(t){ return (t.buildings||[]).join(', ') || '-'; }
-function fmtFloors(t){ return (t.floors||[]).join(', '); }
+/* 화면에 값을 넣기 전 특수문자를 안전하게 바꿉니다.
+   협력사가 작업명이나 비고에 <, >, & 같은 문자를 넣으면 화면이 깨지거나
+   최악의 경우 다른 사용자 화면에서 스크립트가 실행될 수 있어(XSS) 반드시 거칩니다. */
+function esc(v){
+  return String(v==null?'':v)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function fmtBuildings(t){ return (t.buildings||[]).map(esc).join(', ') || '-'; }
+function fmtFloors(t){ return (t.floors||[]).map(esc).join(', '); }
 
 function taskRegions(t){
   if(Array.isArray(t.regions)) return t.regions;
@@ -1635,11 +1684,11 @@ function openRecentTaskSheet(){
     ? list.map(t=>`
       <div class="task-row" style="cursor:pointer;" onclick="loadRecentTask('${t.id}')">
         <div class="top">
-          <h4 class="name">${t.taskName}</h4>
+          <h4 class="name">${esc(t.taskName)}</h4>
           <span class="badge" style="background:var(--bg);color:var(--ink-400);">${t.date.slice(5)}</span>
         </div>
         <div class="task-meta">
-          <span>🏭 ${t.company}</span>
+          <span>🏭 ${esc(t.company)}</span>
           <span>🏢 ${fmtBuildings(t)}</span>
           <span>👥 ${t.workers||0}명</span>
         </div>
@@ -1688,7 +1737,7 @@ function renderDashboard(){
 
   const companies = [...new Set(list.map(t=>t.company))];
   document.getElementById('mapLegend').innerHTML = companies.length ? companies.map(c=>`
-    <div class="legend-item"><span class="legend-swatch" style="background:${companyColor(c)}"></span>${c}</div>
+    <div class="legend-item"><span class="legend-swatch" style="background:${companyColor(c)}"></span>${esc(c)}</div>
   `).join('') : `<div class="legend-item">등록된 작업이 없습니다</div>`;
 
   const totalWorkers = list.reduce((s,t)=>s+(Number(t.workers)||0),0);
@@ -1801,7 +1850,7 @@ function renderCompanyGroups(list){
     return `
     <div class="company-group ${hasRisk?'risky':''}">
       <div class="company-head">
-        <span class="name">${hasRisk?'<span class=\"warn\">⚠</span>':''} ${company}</span>
+        <span class="name">${hasRisk?'<span class=\"warn\">⚠</span>':''} ${esc(company)}</span>
         <span class="cnt">${items.length}건</span>
       </div>
       ${items.map(t=>taskRowHTML(t)).join('')}
@@ -1813,7 +1862,7 @@ function taskRowHTML(t){
   return `
     <div class="task-row" data-id="${t.id}">
       <div class="top">
-        <h4 class="name">${t.taskName}</h4>
+        <h4 class="name">${esc(t.taskName)}</h4>
         <span class="badge status-${t.status}">${t.status}</span>
       </div>
       <div class="badges-row">
@@ -1825,7 +1874,7 @@ function taskRowHTML(t){
         <span>👥 ${t.workers||0}명</span>
         <span>🕒 ${t.timeStart||'-'}~${t.timeEnd||'-'}</span>
       </div>
-      ${t.guardDeployed && t.guardName ? `<div class="task-guard">🦺 감시단/안전전담자: ${t.guardName}</div>` : ''}
+      ${t.guardDeployed && t.guardName ? `<div class="task-guard">🦺 감시단/안전전담자: ${esc(t.guardName)}</div>` : ''}
     </div>`;
 }
 function bindTaskRowClicks(){
@@ -1878,16 +1927,19 @@ function renderTaskTable(list){
       <tr class="lvl-${lvl}${newCompany?' co-start':''}" data-id="${t.id}">
         <td class="c-risk">${riskCell}${(lvl==='risk' && t.riskGradeHigh) ? '<span class="tt-sub">⊙ 상등급 포함</span>' : ''}</td>
         <td class="c-company">${newCompany
-          ? `<span class="tt-swatch" style="background:${col}"></span><span class="tt-company">${t.company}</span>`
+          ? `<span class="tt-swatch" style="background:${col}"></span><span class="tt-company">${esc(t.company)}</span>`
           : `<span class="tt-swatch" style="background:${col};opacity:0.4"></span>`}</td>
-        <td class="c-name"><span class="tt-name">${t.taskName}</span>${t.workType?`<span class="tt-sub">${t.workType}</span>`:''}</td>
+        <td class="c-name"><span class="tt-name">${esc(t.taskName)}</span>${t.workType?`<span class="tt-sub">${esc(t.workType)}</span>`:''}</td>
         <td class="c-loc">${fmtBuildings(t)}${floors?`<span class="tt-sub">${floors}</span>`:''}</td>
         <td class="c-num">${t.workers||0}</td>
-        <td class="c-time">${t.timeStart||'-'}~${t.timeEnd||'-'}${t.earlyStart?`<span class="tt-sub">조출 ${t.earlyStartTime||''}</span>`:''}</td>
-        <td class="c-guard">${t.guardDeployed ? (t.guardName || '배치') : '<span class="tt-dash">미배치</span>'}</td>
+        <td class="c-time">${t.timeStart||'-'}~${t.timeEnd||'-'}${t.earlyStart?`<span class="tt-sub">조출 ${esc(t.earlyStartTime||'')}</span>`:''}</td>
+        <td class="c-guard">${t.guardDeployed ? esc(t.guardName || '배치') : '<span class="tt-dash">미배치</span>'}</td>
         <td class="c-status"><span class="badge status-${t.status}">${t.status}</span></td>
       </tr>`;
   }).join('');
+
+  const companyCount = new Set(ordered.map(t=>t.company)).size;
+  const workerSum = ordered.reduce((s,t)=>s+(Number(t.workers)||0),0);
 
   return `
     <table class="task-table">
@@ -1902,6 +1954,13 @@ function renderTaskTable(list){
         <th class="c-status">상태</th>
       </tr></thead>
       <tbody>${rows}</tbody>
+      <tfoot><tr class="tt-total">
+        <td colspan="2">합계 · ${companyCount}개사</td>
+        <td>${ordered.length}건</td>
+        <td class="c-loc"></td>
+        <td class="c-num">${workerSum}</td>
+        <td colspan="3"></td>
+      </tr></tfoot>
     </table>`;
 }
 
@@ -2339,16 +2398,37 @@ function cancelEditTask(){
   showToast('수정을 취소하고 새 작업 등록 상태로 돌아왔습니다');
 }
 
+/* 필수 항목을 놓쳤을 때, 토스트만으로는 어느 칸인지 찾기 어렵습니다.
+   해당 칸으로 스크롤하고 잠깐 붉게 깜빡여 눈에 띄게 합니다. */
+function focusField(id){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.scrollIntoView({behavior:'smooth', block:'center'});
+  setTimeout(()=>el.focus({preventScroll:true}), 300);
+  flashField(id);
+}
+function flashField(id){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.scrollIntoView({behavior:'smooth', block:'center'});
+  el.classList.add('field-flash');
+  setTimeout(()=>el.classList.remove('field-flash'), 1600);
+}
+
 function handleSubmitTask(e){
   e.preventDefault();
   const fields = collectFormTaskFields();
 
-  if(!fields.company || !fields.taskName){ showToast('협력업체명과 작업명을 입력해 주세요'); return; }
-  if(!fields.buildings.length){ showToast('동을 최소 1개 이상 선택해 주세요'); return; }
+  if(!fields.company || !fields.taskName){
+    showToast('협력업체명과 작업명을 입력해 주세요');
+    focusField(!fields.company ? 'f_company' : 'f_taskname');
+    return;
+  }
+  if(!fields.buildings.length){ showToast('동을 최소 1개 이상 선택해 주세요'); flashField('buildingChips'); return; }
   // 층이 없으면 원청이 어디서 하는 작업인지 알 수 없습니다 (라벨에도 필수 표시가 있습니다)
-  if(!fields.floors.length){ showToast('층을 최소 1개 이상 선택해 주세요'); return; }
+  if(!fields.floors.length){ showToast('층을 최소 1개 이상 선택해 주세요'); flashField('floorGrid'); return; }
   if(fields.timeStart && fields.timeEnd && fields.timeStart === fields.timeEnd){
-    showToast('작업 시작과 종료 시간이 같습니다. 다시 확인해 주세요'); return;
+    showToast('작업 시작과 종료 시간이 같습니다. 다시 확인해 주세요'); focusField('f_timeend'); return;
   }
 
   if(state.editingTaskId){
@@ -2370,14 +2450,19 @@ function handleSubmitTask(e){
   }
 
   const task = { id: cuid('t'), ...fields, createdAt: new Date().toISOString() };
-  requireActionPassword('작업을 등록하려면 비밀번호를 입력하세요', ()=>{
+
+  // 같은 날, 같은 업체, 같은 작업명이 이미 있으면 중복 등록일 수 있으니 한 번 확인합니다.
+  // (여러 사람이 같은 계정으로 쓰다 보면 남이 이미 올린 걸 모르고 또 올리는 일이 생깁니다)
+  const dup = state.tasks.find(t=>t.date===task.date
+    && t.company===task.company
+    && t.taskName.trim()===task.taskName.trim());
+  const proceed = ()=> requireActionPassword('작업을 등록하려면 비밀번호를 입력하세요', ()=>{
     state.tasks.push(task);
     saveTasks();
     fbSaveTask(task);
 
     const savedDate = task.date;
     const keepGoing = document.getElementById('f_keepmode').checked;
-    // 같은 업체 작업을 연달아 올릴 때 업체명·책임자·시간을 매번 다시 치지 않도록 남겨둡니다
     const carry = keepGoing ? {
       company: fields.company, date: savedDate,
       director: fields.director, supervisorCo: fields.supervisorCo,
@@ -2409,6 +2494,13 @@ function handleSubmitTask(e){
     showToast('✓ 작업이 등록되었습니다');
     switchView('dashboard');
   });
+
+  if(dup){
+    showConfirm(`같은 날짜에 "${dup.company}"의 "${dup.taskName}" 작업이 이미 등록되어 있습니다. 그래도 등록할까요?`,
+      proceed, { label: '등록', color: 'var(--blue-600)' });
+  } else {
+    proceed();
+  }
 }
 
 /* =========================================================
@@ -2504,23 +2596,33 @@ function deletePump(id){
   }, { alwaysAsk: true });
 }
 function deletePumpConfirmed(id){
+  const removed = state.pumps.find(p=>p.id===id);
+  if(!removed) return;
+  const snapshot = {...removed};
   state.pumps = state.pumps.filter(p=>p.id!==id);
   savePumps();
   fbDeletePump(id);
   closePumpDetail();
   renderPumpList();
   renderDashboard();
-  showToast('양수기가 삭제되었습니다');
+  showUndoToast('양수기가 삭제되었습니다', ()=>{
+    state.pumps.push(snapshot);
+    savePumps();
+    fbSavePump(snapshot);
+    renderPumpList();
+    renderDashboard();
+    showToast('✓ 삭제를 취소했습니다');
+  });
 }
 function openPumpDetail(id){
   const p = state.pumps.find(x=>x.id===id);
   if(!p) return;
   document.getElementById('pumpDetailBody').innerHTML = `
     <div class="detail-company">양수기 No.${p.no}</div>
-    <h3 class="detail-title">💧 ${p.company}</h3>
+    <h3 class="detail-title">💧 ${esc(p.company)}</h3>
     <div style="margin-bottom:12px;"><span class="badge st-${p.status}" style="padding:4px 10px;">${p.status}</span></div>
     <div class="detail-grid">
-      <div class="detail-cell"><div class="k">📍 위치</div><div class="v">${p.location}</div></div>
+      <div class="detail-cell"><div class="k">📍 위치</div><div class="v">${esc(p.location)}</div></div>
       <div class="detail-cell"><div class="k">📏 규격</div><div class="v">${p.diameter}인치 × ${p.count}대</div></div>
       <div class="detail-cell"><div class="k">📅 등록일</div><div class="v">${p.regDate}</div></div>
       <div class="detail-cell"><div class="k">🏢 상태</div><div class="v">${p.status}</div></div>
@@ -2545,9 +2647,9 @@ function renderPumpList(){
   el.innerHTML = state.pumps.map(p=>`
     <div class="pump-card">
       <div class="pump-top"><span class="no">양수기 No.${p.no}</span><span class="st st-${p.status}">${p.status}</span></div>
-      <h4 class="pump-name">💧 ${p.company}</h4>
+      <h4 class="pump-name">💧 ${esc(p.company)}</h4>
       <div class="pump-meta">
-        <span>📍 ${p.location}</span>
+        <span>📍 ${esc(p.location)}</span>
         <span>📏 ${p.diameter}인치 × ${p.count}대</span>
         <span>📅 ${p.regDate}</span>
       </div>
@@ -2565,8 +2667,8 @@ function openDetail(id){
   if(!t) return;
   const risky = isHighRisk(t);
   document.getElementById('detailBody').innerHTML = `
-    <div class="detail-company">${t.company}</div>
-    <h3 class="detail-title">${t.taskName}</h3>
+    <div class="detail-company">${esc(t.company)}</div>
+    <h3 class="detail-title">${esc(t.taskName)}</h3>
     <div class="status-edit-row" id="statusEditRow">
       ${['예정','진행중','완료','작업취소'].map(s=>`
         <button type="button" class="status-edit-btn status-${s} ${t.status===s?'on':''}" onclick="changeTaskStatus('${t.id}','${s}')">${s}</button>
@@ -2581,27 +2683,27 @@ function openDetail(id){
     </div>
 
     ${risky ? `<div class="detail-banner"><div class="t">⚠ 고위험 작업</div>
-      <div class="s">${t.highRisk.filter(r=>r!=='해당 없음').join(', ')}</div></div>` : ''}
+      <div class="s">${t.highRisk.filter(r=>r!=='해당 없음').map(esc).join(', ')}</div></div>` : ''}
 
     ${t.riskGradeHigh ? `<div class="detail-banner" style="background:var(--amber-bg);"><div class="t" style="color:var(--amber);">⊙ 위험성평가 상등급</div>
       <div class="s" style="color:var(--amber);opacity:0.85;">작업 전 관리감독자 현장 점검 필수</div></div>` : ''}
 
-    ${t.location ? `<div class="detail-info"><div class="k">📍 상세 위치</div><div class="v">${t.location}</div></div>` : ''}
-    ${t.detail ? `<div class="detail-info"><div class="k">안전중점포인트(작업내용상세)</div><div class="v">${t.detail}</div></div>` : ''}
-    ${t.equipmentUsed ? `<div class="detail-info"><div class="k">🔧 사용 장비</div><div class="v">${t.equipmentType||'미기재'}</div></div>` : ''}
+    ${t.location ? `<div class="detail-info"><div class="k">📍 상세 위치</div><div class="v">${esc(t.location)}</div></div>` : ''}
+    ${t.detail ? `<div class="detail-info"><div class="k">안전중점포인트(작업내용상세)</div><div class="v">${esc(t.detail)}</div></div>` : ''}
+    ${t.equipmentUsed ? `<div class="detail-info"><div class="k">🔧 사용 장비</div><div class="v">${esc(t.equipmentType||'미기재')}</div></div>` : ''}
     ${((Number(t.platform)||0) || (Number(t.cutTool)||0)) ? `<div class="detail-info"><div class="k">안전 점검 항목</div><div class="v">작업대 ${Number(t.platform)||0}개 · 절단공구 ${Number(t.cutTool)||0}개</div></div>` : ''}
     ${t.hazmat ? `<div class="detail-info"><div class="k">유해위험물질 반입</div><div class="v">반입 (취급수칙 준수 · MSDS 비치)</div></div>` : ''}
-    ${t.director ? `<div class="detail-info"><div class="k">작업지휘자</div><div class="v">${t.director}</div></div>` : ''}
-    ${t.supervisorCo ? `<div class="detail-info"><div class="k">관리감독자 (협력사)</div><div class="v">${t.supervisorCo}</div></div>` : ''}
-    ${t.supervisorHDC ? `<div class="detail-info"><div class="k">관리감독자 (HDC)</div><div class="v">${t.supervisorHDC}</div></div>` : ''}
-    ${t.safetyManagerHDC ? `<div class="detail-info"><div class="k">안전관리자 (HDC)</div><div class="v">${t.safetyManagerHDC}</div></div>` : ''}
-    ${t.guardDeployed && t.guardName ? `<div class="detail-guard"><div class="k">🦺 감시단 / 안전전담자</div><div class="v">${t.guardName}</div></div>` : ''}
+    ${t.director ? `<div class="detail-info"><div class="k">작업지휘자</div><div class="v">${esc(t.director)}</div></div>` : ''}
+    ${t.supervisorCo ? `<div class="detail-info"><div class="k">관리감독자 (협력사)</div><div class="v">${esc(t.supervisorCo)}</div></div>` : ''}
+    ${t.supervisorHDC ? `<div class="detail-info"><div class="k">관리감독자 (HDC)</div><div class="v">${esc(t.supervisorHDC)}</div></div>` : ''}
+    ${t.safetyManagerHDC ? `<div class="detail-info"><div class="k">안전관리자 (HDC)</div><div class="v">${esc(t.safetyManagerHDC)}</div></div>` : ''}
+    ${t.guardDeployed && t.guardName ? `<div class="detail-guard"><div class="k">🦺 감시단 / 안전전담자</div><div class="v">${esc(t.guardName)}</div></div>` : ''}
     ${t.workPlanRequired ? `<div class="detail-info"><div class="k">작업계획서/사전작업허가서(P.T.W)</div><div class="v">해당</div></div>` : ''}
-    ${t.hazardType ? `<div class="detail-info"><div class="k">재해유형</div><div class="v">${t.hazardType}</div></div>` : ''}
-    ${t.earlyStart ? `<div class="detail-info"><div class="k">조출여부</div><div class="v">조출 (${t.earlyStartTime||''})</div></div>` : ''}
-    ${t.exclusionZone ? `<div class="detail-info"><div class="k">작업제외구역</div><div class="v">${t.exclusionZone}</div></div>` : ''}
+    ${t.hazardType ? `<div class="detail-info"><div class="k">재해유형</div><div class="v">${esc(t.hazardType)}</div></div>` : ''}
+    ${t.earlyStart ? `<div class="detail-info"><div class="k">조출여부</div><div class="v">조출 (${esc(t.earlyStartTime||'')})</div></div>` : ''}
+    ${t.exclusionZone ? `<div class="detail-info"><div class="k">작업제외구역</div><div class="v">${esc(t.exclusionZone)}</div></div>` : ''}
     ${t.mobileCCTV ? `<div class="detail-info"><div class="k">이동식 CCTV</div><div class="v">설치</div></div>` : ''}
-    ${t.remarks ? `<div class="detail-info"><div class="k">비고</div><div class="v">${t.remarks}</div></div>` : ''}
+    ${t.remarks ? `<div class="detail-info"><div class="k">비고</div><div class="v">${esc(t.remarks)}</div></div>` : ''}
 
     <div class="detail-actions">
       <button onclick="copyTaskToClipboard('${t.id}')">⧉ 복사</button>
@@ -2624,14 +2726,31 @@ function changeTaskStatus(id, status){
   const t = state.tasks.find(x=>x.id===id);
   if(!t) return;
   if(t.status === status) return;
-  t.status = status;
-  saveTasks();
-  fbSaveTask(t);
-  document.querySelectorAll('#statusEditRow .status-edit-btn').forEach(b=>{
-    b.classList.toggle('on', b.textContent.trim()===status);
-  });
-  renderAll();
-  showToast(`✓ 상태가 "${status}"(으)로 변경되었습니다`);
+
+  const apply = ()=>{
+    t.status = status;
+    saveTasks();
+    fbSaveTask(t);
+    document.querySelectorAll('#statusEditRow .status-edit-btn').forEach(b=>{
+      b.classList.toggle('on', b.textContent.trim()===status);
+    });
+    renderAll();
+    showToast(`✓ 상태가 "${status}"(으)로 변경되었습니다`);
+  };
+
+  // 마감된 작업(완료/작업취소)을 다시 진행 상태로 되돌리는 건 실수인 경우가 많아 한 번 확인합니다
+  const wasClosed = (t.status==='완료' || t.status==='작업취소');
+  const toActive  = (status==='예정' || status==='진행중');
+  if(wasClosed && toActive){
+    // 상세 시트 위에 확인창을 겹쳐 띄우기 위해 버튼 하이라이트를 먼저 원복
+    document.querySelectorAll('#statusEditRow .status-edit-btn').forEach(b=>{
+      b.classList.toggle('on', b.textContent.trim()===t.status);
+    });
+    showConfirm(`이미 "${t.status}"된 작업을 "${status}" 상태로 되돌리시겠습니까?`, apply,
+      { label:'되돌리기', color:'var(--blue-600)' });
+    return;
+  }
+  apply();
 }
 function deleteTask(id){
   // 삭제는 되돌릴 수 없으므로 10분 유예와 무관하게 매번 비밀번호를 확인합니다
@@ -2640,12 +2759,24 @@ function deleteTask(id){
   }, { alwaysAsk: true });
 }
 function deleteTaskConfirmed(id){
+  const removed = state.tasks.find(t=>t.id===id);
+  if(!removed) return;
+  const snapshot = {...removed};
   state.tasks = state.tasks.filter(t=>t.id!==id);
   saveTasks();
   fbDeleteTask(id);
   closeDetail();
   renderAll();
-  showToast('작업이 삭제되었습니다');
+  // 실수로 지운 경우를 대비해 6초 안에 되돌릴 수 있게 합니다
+  showUndoToast('작업이 삭제되었습니다', ()=>{
+    state.tasks.push(snapshot);
+    saveTasks();
+    fbSaveTask(snapshot);
+    state.date = snapshot.date;
+    document.getElementById('dateInput').value = state.date;
+    renderAll();
+    showToast('✓ 삭제를 취소했습니다');
+  });
 }
 function editTask(id){
   const t = state.tasks.find(x=>x.id===id);
@@ -2785,9 +2916,27 @@ function fillFormFromTask(t){
 let toastTimer;
 function showToast(msg){
   const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
+  t.innerHTML = ''; t.textContent = msg; t.classList.remove('with-action'); t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(()=>t.classList.remove('show'), 2600);
+}
+
+/* 되돌리기 버튼이 붙은 토스트. 삭제처럼 실수하면 곤란한 작업에 씁니다.
+   버튼을 누르면 onUndo가 실행되고, 6초가 지나면 사라집니다. */
+let _undoTimer = null;
+function showUndoToast(msg, onUndo){
+  const t = document.getElementById('toast');
+  clearTimeout(toastTimer);
+  clearTimeout(_undoTimer);
+  t.innerHTML = `<span>${esc(msg)}</span><button type="button" class="toast-undo">되돌리기</button>`;
+  t.classList.add('with-action', 'show');
+  const btn = t.querySelector('.toast-undo');
+  btn.onclick = ()=>{
+    clearTimeout(_undoTimer);
+    t.classList.remove('show', 'with-action');
+    onUndo();
+  };
+  _undoTimer = setTimeout(()=>t.classList.remove('show', 'with-action'), 6000);
 }
 
 /* =========================================================
@@ -2907,11 +3056,11 @@ function renderAdminBulkList(){
   el.innerHTML = list.map(t=>`
     <div class="task-row" data-id="${t.id}" style="border:1px solid var(--line);border-radius:12px;margin-bottom:8px;">
       <div class="top">
-        <h4 class="name">${t.taskName}</h4>
+        <h4 class="name">${esc(t.taskName)}</h4>
         <span class="badge status-${t.status}">${t.status}</span>
       </div>
       <div class="task-meta">
-        <span>🏢 ${t.company}</span>
+        <span>🏢 ${esc(t.company)}</span>
         <span>${fmtBuildings(t)}</span>
         <span>👥 ${t.workers||0}명</span>
       </div>
@@ -2940,10 +3089,12 @@ function bulkSetStatus(status){
 /* =========================================================
    FIREBASE SYNC (실시간 동기화)
 ========================================================= */
-function updateSyncStatus(){
+function updateSyncStatus(online){
   const el = document.getElementById('syncStatus');
   if(!el) return;
-  el.textContent = firebaseReady ? '연결됨 (실시간 동기화 중)' : '연결 중...';
+  if(!firebaseReady){ el.textContent = '연결 중...'; return; }
+  // online 인자가 없으면(초기 호출) 인증만 된 상태이므로 연결됨으로 표시
+  el.textContent = (online === false) ? '⚠ 연결 끊김 (오프라인)' : '연결됨 (실시간 동기화 중)';
 }
 
 let firebaseReady = false;
@@ -2973,6 +3124,16 @@ function initFirebase(){
 }
 
 function attachFirebaseListeners(){
+  // 실제 서버 연결 여부를 실시간으로 감시합니다.
+  // 현장에서 신호가 약해 끊기면, 입력이 다른 기기와 공유되지 않는데도
+  // 사용자는 모른 채 계속 쓰게 됩니다. 그 상태를 눈에 보이게 알려줍니다.
+  fbDb.ref('.info/connected').on('value', snap=>{
+    const online = snap.val() === true;
+    const banner = document.getElementById('offlineBanner');
+    if(banner) banner.style.display = online ? 'none' : '';
+    updateSyncStatus(online);
+  });
+
   fbDb.ref('tasks').on('value', snap=>{
     const val = snap.val() || {};
     state.tasks = Object.keys(val).map(k=>val[k]);
