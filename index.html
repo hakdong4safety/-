@@ -306,6 +306,30 @@
   /* pointer-events:none 필수 — 토스트는 사라질 때 opacity만 0이 되고 요소는 그대로 남습니다.
      z-index가 80이라 이게 없으면 화면 하단 가운데에 "보이지 않는 판"이 깔려서
      시트의 수정/삭제 버튼, 비밀번호 확인 버튼 클릭을 가로챕니다. */
+  /* 작업등록: 재사용 버튼 줄, 이어서 등록 옵션 */
+  .reuse-row{display:flex;gap:8px;margin-bottom:14px;}
+  .reuse-row .map-action-btn{flex:1;padding:11px;}
+  .keep-row{display:flex;align-items:center;gap:9px;padding:12px 14px;margin-bottom:10px;
+    background:var(--blue-100);border:1px solid var(--blue-600);border-radius:12px;
+    font-size:12.5px;font-weight:700;color:var(--blue-600);cursor:pointer;line-height:1.45;}
+  .keep-row input{width:18px;height:18px;flex-shrink:0;accent-color:var(--blue-600);cursor:pointer;}
+  .keep-row b{font-weight:700;color:var(--ink-400);}
+
+  /* 대시보드: 원청 점검 카드 */
+  .oversight{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--amber);
+    border-radius:var(--radius-md);box-shadow:var(--shadow);padding:12px 14px;margin-top:12px;}
+  .oversight h4{margin:0 0 9px;font-size:12.5px;font-weight:800;color:var(--ink-900);}
+  .ov-item{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;
+    padding:9px 10px;margin-bottom:6px;background:var(--bg);border:1px solid var(--line);
+    border-radius:9px;font-size:12.5px;font-weight:700;color:var(--ink-600);
+    font-family:inherit;text-align:left;}
+  .ov-item:last-child{margin-bottom:0;}
+  .ov-item.tap{cursor:pointer;}
+  .ov-item.tap:hover{background:#F2F5FA;}
+  .ov-item .n{flex-shrink:0;font-weight:800;color:var(--red);}
+  .ov-names{font-size:11.5px;font-weight:700;color:var(--ink-400);line-height:1.5;
+    padding:2px 10px 0;word-break:keep-all;}
+
   .toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);
     opacity:0;pointer-events:none;background:var(--ink-900);color:#fff;padding:12px 20px;border-radius:12px;font-size:13.5px;font-weight:700;
     box-shadow:0 8px 24px rgba(0,0,0,0.25);z-index:80;transition:all .25s ease;max-width:88%;text-align:center;}
@@ -545,6 +569,7 @@
         <div class="map-legend" id="mapLegend"></div>
       </div>
       <div class="summary-grid" id="summaryGrid"></div>
+      <div id="oversightCard"></div>
       <button class="export-btn" id="exportExcelBtn" onclick="exportToExcel()">📤 일일 고위험 작업 현황 내보내기</button>
 
       <div class="weather-card" id="weatherCard" onclick="fetchWeather()" style="cursor:pointer;" title="눌러서 새로고침">
@@ -587,7 +612,12 @@
           <span style="font-size:13px;font-weight:800;color:#8A5A16;">✎ <span id="editModeTaskName"></span> 수정 중</span>
           <button type="button" onclick="cancelEditTask()" style="flex-shrink:0;padding:7px 12px;border-radius:8px;border:none;background:#fff;color:var(--red);font-weight:800;font-size:12px;font-family:inherit;">취소</button>
         </div>
-        <button type="button" class="map-action-btn" id="pasteTaskBtn" style="width:100%;margin-bottom:14px;padding:11px;" onclick="pasteTaskFromClipboard()">📋 복사한 작업 붙여넣기</button>
+        <datalist id="dl_company"></datalist>
+        <datalist id="dl_person"></datalist>
+        <div class="reuse-row">
+          <button type="button" class="map-action-btn" onclick="openRecentTaskSheet()">🕘 최근 작업 불러오기</button>
+          <button type="button" class="map-action-btn" id="pasteTaskBtn" onclick="pasteTaskFromClipboard()">📋 복사한 작업 붙여넣기</button>
+        </div>
         <form id="taskForm" onsubmit="handleSubmitTask(event)">
           <!-- PC 좌측 단: 무엇을 · 어디서 · 누가 · 언제 (모바일에서는 display:contents로 지금과 똑같이 한 줄로 흐릅니다) -->
           <div class="form-col">
@@ -596,7 +626,8 @@
             <div class="field"><label>작업 일자 <span class="req">*</span></label>
               <input type="date" id="f_date" required onchange="onFormDateChange()"></div>
             <div class="field"><label>협력업체명 <span class="req">*</span></label>
-              <input type="text" id="f_company" placeholder="예: (주)한국건설" required></div>
+              <input type="text" id="f_company" placeholder="예: (주)한국건설" list="dl_company" autocomplete="off" required onblur="checkCompanyTypo()">
+              <div class="hint2" id="companyTypoHint" style="display:none;"></div></div>
             <div class="field"><label>작업명 <span class="req">*</span></label>
               <input type="text" id="f_taskname" placeholder="예: 101동 3층 슬라브 철근 배근" required></div>
           </div>
@@ -683,8 +714,8 @@
 
           <div class="form-card">
             <h3>책임자 · 감시단</h3>
-            <div class="field"><label>작업지휘자</label><input type="text" id="f_director" placeholder="성명 입력"></div>
-            <div class="field"><label>관리감독자 (협력사)</label><input type="text" id="f_supervisorco" placeholder="성명 입력"></div>
+            <div class="field"><label>작업지휘자</label><input type="text" id="f_director" placeholder="성명 입력" list="dl_person" autocomplete="off"></div>
+            <div class="field"><label>관리감독자 (협력사)</label><input type="text" id="f_supervisorco" placeholder="성명 입력" list="dl_person" autocomplete="off"></div>
             <div class="field"><label>관리감독자 (HDC)</label>
               <select id="f_supervisorhdc"><option value="">선택하세요</option></select></div>
             <div class="field"><label>안전관리자 (HDC)</label>
@@ -694,7 +725,7 @@
                 <button type="button" class="toggle-btn on-o" id="btn_guard_o" onclick="setGuardToggle(true)">배치</button>
                 <button type="button" class="toggle-btn" id="btn_guard_x" onclick="setGuardToggle(false)">미배치</button>
               </div>
-              <input type="text" id="f_guardname" placeholder="감시단 또는 안전전담자 성명" style="margin-top:8px;"></div>
+              <input type="text" id="f_guardname" placeholder="감시단 또는 안전전담자 성명" list="dl_person" autocomplete="off" style="margin-top:8px;"></div>
           </div>
 
           <div class="form-card">
@@ -735,6 +766,10 @@
             </div>
           </div>
 
+          <label class="keep-row" for="f_keepmode">
+            <input type="checkbox" id="f_keepmode">
+            <span>등록 후 이어서 등록하기 <b>(업체명·책임자·작업시간을 남겨둡니다)</b></span>
+          </label>
           <button type="submit" class="submit-btn" id="submitBtn">✓ 작업 등록하기</button>
         </form>
       </div>
@@ -881,7 +916,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-29 07:40 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-30 05:20 UTC</p>
       </div>
     </div>
   </div>
@@ -923,6 +958,28 @@
         max-height:42vh;overflow-y:auto;"></div>
       <button type="button" onclick="closeNoticeSheet()" style="width:100%;padding:13px;border-radius:10px;border:none;
         background:var(--blue-600);color:#fff;font-weight:800;font-size:14px;font-family:inherit;">확인했습니다</button>
+    </div>
+  </div>
+
+  <!-- 최근 작업 불러오기 -->
+  <div class="sheet" id="recentTaskSheet" style="z-index:55;">
+    <div class="sheet-inner">
+      <div class="sheet-handle"></div>
+      <h4 style="margin:0 0 4px;font-size:16px;">🕘 최근 작업 불러오기</h4>
+      <p class="hint" style="margin-top:0;">최근 7일간 등록한 작업입니다. 누르면 오늘 날짜로 폼이 채워집니다. 고위험 작업여부는 다시 선택해 주세요.</p>
+      <div id="recentTaskList" style="max-height:52vh;overflow-y:auto;"></div>
+      <button class="btn-secondary" style="width:100%;margin-top:12px;" onclick="closeRecentTaskSheet()">닫기</button>
+    </div>
+  </div>
+
+  <!-- 점검 필요 작업 목록 -->
+  <div class="sheet" id="taskListSheet" style="z-index:55;">
+    <div class="sheet-inner">
+      <div class="sheet-handle"></div>
+      <h4 style="margin:0 0 4px;font-size:16px;" id="taskListSheetTitle">작업 목록</h4>
+      <p class="hint" style="margin-top:0;" id="taskListSheetHint"></p>
+      <div id="taskListSheetBody" style="max-height:52vh;overflow-y:auto;"></div>
+      <button class="btn-secondary" style="width:100%;margin-top:12px;" onclick="closeTaskListSheet()">닫기</button>
     </div>
   </div>
 
@@ -1528,6 +1585,125 @@ function renderPinsInto(container, taskList, pumpList){
   });
 }
 
+/* =========================================================
+   입력 자동완성
+   협력업체명·성명을 매일 손으로 치면 오타가 생기고, 오타 하나로
+   같은 업체가 두 개로 쪼개져서 배치도 색·업체 묶음·엑셀 번호가 전부 어긋납니다.
+   그래서 이미 등록된 값을 목록으로 띄워 고를 수 있게 합니다.
+========================================================= */
+function refreshInputSuggestions(){
+  const esc = (s)=>String(s).replace(/"/g,'&quot;');
+  const byKo = (a,b)=>a.localeCompare(b,'ko');
+  const companies = [...new Set(state.tasks.map(t=>t.company).filter(Boolean))].sort(byKo);
+  const people = [...new Set(
+    state.tasks.flatMap(t=>[t.director, t.supervisorCo, t.guardName]).filter(Boolean)
+  )].sort(byKo);
+  const fill = (id, arr)=>{
+    const el = document.getElementById(id);
+    if(el) el.innerHTML = arr.map(v=>`<option value="${esc(v)}"></option>`).join('');
+  };
+  fill('dl_company', companies);
+  fill('dl_person', people);
+}
+
+/* 괄호·공백·"주식회사" 같은 차이를 무시하고 같은 업체인지 비교.
+   순서가 중요합니다 — 괄호를 먼저 지우면 "(주)"가 "주"로 남아 매칭이 어긋납니다. */
+function normalizeCompany(s){
+  return String(s||'')
+    .replace(/주식회사|유한회사|㈜|㈕|\(주\)|（주）|\(유\)|（유）|\(株\)|\(有\)/g, '')
+    .replace(/[\s()（）·.,\-_]/g, '')
+    .toLowerCase();
+}
+
+function checkCompanyTypo(){
+  const input = document.getElementById('f_company');
+  const hint = document.getElementById('companyTypoHint');
+  if(!input || !hint) return;
+  const typed = input.value.trim();
+  hint.style.display = 'none';
+  if(!typed) return;
+
+  const known = [...new Set(state.tasks.map(t=>t.company).filter(Boolean))];
+  if(known.includes(typed)) return;                       // 이미 쓰던 이름 그대로면 통과
+  const norm = normalizeCompany(typed);
+  const match = known.find(c=>normalizeCompany(c)===norm);
+  if(!match) return;                                      // 완전히 새 업체면 그대로 둠
+
+  hint.innerHTML = `이미 "<b>${match}</b>"로 등록된 업체 같습니다. ` +
+    `<button type="button" class="draw-btn" style="margin-left:4px;" onclick="applyCompanyName('${match.replace(/'/g,"\\'")}')">이 이름으로 맞추기</button>`;
+  hint.style.display = '';
+}
+function applyCompanyName(name){
+  document.getElementById('f_company').value = name;
+  document.getElementById('companyTypoHint').style.display = 'none';
+}
+
+/* =========================================================
+   최근 작업 불러오기
+   매일 같은 작업을 다시 등록하는 경우가 많은데, 기존에는
+   상세 열기 → 복사 → 등록탭 → 붙여넣기 4단계를 거쳐야 했습니다.
+========================================================= */
+function openRecentTaskSheet(){
+  const today = state.date;
+  const from = ymdLocal(new Date(new Date(today+'T00:00:00').getTime() - 7*86400000));
+  // 같은 업체+작업명은 가장 최근 것 하나만 보여줍니다
+  const seen = new Set();
+  const list = state.tasks
+    .filter(t=>t.date <= today && t.date >= from)
+    .sort((a,b)=> b.date.localeCompare(a.date))
+    .filter(t=>{
+      const key = t.company + '|' + t.taskName;
+      if(seen.has(key)) return false;
+      seen.add(key); return true;
+    })
+    .slice(0, 40);
+
+  document.getElementById('recentTaskList').innerHTML = list.length
+    ? list.map(t=>`
+      <div class="task-row" style="cursor:pointer;" onclick="loadRecentTask('${t.id}')">
+        <div class="top">
+          <h4 class="name">${t.taskName}</h4>
+          <span class="badge" style="background:var(--bg);color:var(--ink-400);">${t.date.slice(5)}</span>
+        </div>
+        <div class="task-meta">
+          <span>🏭 ${t.company}</span>
+          <span>🏢 ${fmtBuildings(t)}</span>
+          <span>👥 ${t.workers||0}명</span>
+        </div>
+      </div>`).join('')
+    : '<p class="hint">최근 7일간 등록된 작업이 없습니다.</p>';
+  document.getElementById('recentTaskSheet').classList.add('show');
+}
+function closeRecentTaskSheet(){ document.getElementById('recentTaskSheet').classList.remove('show'); }
+
+function loadRecentTask(id){
+  const t = state.tasks.find(x=>x.id===id);
+  if(!t) return;
+  state.editingTaskId = null;
+  fillFormFromTask(t);
+  document.getElementById('f_date').value = state.date;
+  resetRiskSelectionToNone();  // 고위험 여부는 매일 회의에서 다시 정해지므로 초기화
+  document.getElementById('submitBtn').textContent = '✓ 작업 등록하기';
+  updateEditModeBanner();
+  closeRecentTaskSheet();
+  onFormDateChange();
+  window.scrollTo({top:0, behavior:'smooth'});
+  showToast('✓ 불러왔습니다. 고위험 작업여부를 다시 선택해 주세요');
+}
+
+/* =========================================================
+   점검이 필요한 작업 목록 (원청용)
+========================================================= */
+function openTaskListSheet(title, hint, tasks){
+  document.getElementById('taskListSheetTitle').textContent = title;
+  document.getElementById('taskListSheetHint').textContent = hint || '';
+  document.getElementById('taskListSheetBody').innerHTML =
+    tasks.length ? tasks.map(taskRowHTML).join('') : '<p class="hint">해당 작업이 없습니다.</p>';
+  document.getElementById('taskListSheet').classList.add('show');
+  bindTaskRowClicks();
+}
+function closeTaskListSheet(){ document.getElementById('taskListSheet').classList.remove('show'); }
+
 function renderDashboard(){
   const list = tasksForDate(state.date);
   const pumps = state.pumps;
@@ -1568,7 +1744,55 @@ function renderDashboard(){
 
   document.getElementById('taskCountMeta').textContent = `전체 (${totalTasks}건)`;
   document.getElementById('dashboardTaskList').innerHTML = renderCompanyGroups(list);
+  renderOversight(list);
+  refreshInputSuggestions();
   bindTaskRowClicks();
+}
+
+/* 원청이 매일 확인해야 하는 것들을 한 칸에 모아 보여줍니다.
+   전부 문제없으면 카드 자체가 나타나지 않습니다. */
+function renderOversight(list){
+  const el = document.getElementById('oversightCard');
+  if(!el) return;
+
+  const noRegion  = list.filter(t=>!taskRegions(t).length);
+  const guardless = list.filter(t=>isHighRisk(t) && !t.guardDeployed);
+  const noPlan    = list.filter(t=>isHighRisk(t) && !t.workPlanRequired);
+  const missing   = companiesWithoutToday(list);
+
+  const rows = [];
+  if(missing.length){
+    rows.push(`<div class="ov-item"><span>📭 오늘 작업 미등록 업체</span><span class="n">${missing.length}개사</span></div>
+      <div class="ov-names">${missing.join(' · ')}</div>`);
+  }
+  if(noRegion.length){
+    rows.push(`<button type="button" class="ov-item tap" onclick="openTaskListSheet('배치도에 위치가 없는 작업','작업 위치를 지정하지 않으면 배치도에 표시되지 않습니다. 작업을 눌러 수정할 수 있습니다.', window._ovNoRegion)"><span>📍 배치도에 위치 미표시</span><span class="n">${noRegion.length}건</span></button>`);
+  }
+  if(guardless.length){
+    rows.push(`<button type="button" class="ov-item tap" onclick="openTaskListSheet('고위험인데 감시단 미배치','고위험 작업인데 감시단 또는 안전전담자가 배치되지 않았습니다.', window._ovGuardless)"><span>🦺 고위험 · 감시단 미배치</span><span class="n">${guardless.length}건</span></button>`);
+  }
+  if(noPlan.length){
+    rows.push(`<button type="button" class="ov-item tap" onclick="openTaskListSheet('고위험인데 작업계획서 미해당','고위험 작업인데 작업계획서 또는 P.T.W가 미해당으로 등록되어 있습니다.', window._ovNoPlan)"><span>📄 고위험 · 작업계획서 미해당</span><span class="n">${noPlan.length}건</span></button>`);
+  }
+
+  window._ovNoRegion = noRegion;
+  window._ovGuardless = guardless;
+  window._ovNoPlan = noPlan;
+
+  el.innerHTML = rows.length
+    ? `<div class="oversight"><h4>⚠️ 확인이 필요한 항목</h4>${rows.join('')}</div>`
+    : '';
+}
+
+/* 최근 7일 안에 작업을 올렸는데 오늘은 등록이 없는 업체 = 미제출 가능성 */
+function companiesWithoutToday(todayList){
+  const today = state.date;
+  const from = ymdLocal(new Date(new Date(today+'T00:00:00').getTime() - 7*86400000));
+  const recent = [...new Set(
+    state.tasks.filter(t=>t.date < today && t.date >= from && t.company).map(t=>t.company)
+  )];
+  const hasToday = new Set(todayList.map(t=>t.company));
+  return recent.filter(c=>!hasToday.has(c)).sort((a,b)=>a.localeCompare(b,'ko'));
 }
 
 /* =========================================================
@@ -2100,6 +2324,8 @@ function resetTaskForm(){
   document.getElementById('buildingOtherChip').classList.remove('on');
   document.getElementById('f_building_custom').style.display='none';
   document.getElementById('f_building_custom').value='';
+  const typoHint = document.getElementById('companyTypoHint');
+  if(typoHint) typoHint.style.display = 'none';
   document.getElementById('f_date').value = state.date;
   onFormDateChange();
   state.editingTaskId = null;
@@ -2128,6 +2354,11 @@ function handleSubmitTask(e){
 
   if(!fields.company || !fields.taskName){ showToast('협력업체명과 작업명을 입력해 주세요'); return; }
   if(!fields.buildings.length){ showToast('동을 최소 1개 이상 선택해 주세요'); return; }
+  // 층이 없으면 원청이 어디서 하는 작업인지 알 수 없습니다 (라벨에도 필수 표시가 있습니다)
+  if(!fields.floors.length){ showToast('층을 최소 1개 이상 선택해 주세요'); return; }
+  if(fields.timeStart && fields.timeEnd && fields.timeStart === fields.timeEnd){
+    showToast('작업 시작과 종료 시간이 같습니다. 다시 확인해 주세요'); return;
+  }
 
   if(state.editingTaskId){
     const idx = state.tasks.findIndex(x=>x.id===state.editingTaskId);
@@ -2154,11 +2385,37 @@ function handleSubmitTask(e){
     fbSaveTask(task);
 
     const savedDate = task.date;
+    const keepGoing = document.getElementById('f_keepmode').checked;
+    // 같은 업체 작업을 연달아 올릴 때 업체명·책임자·시간을 매번 다시 치지 않도록 남겨둡니다
+    const carry = keepGoing ? {
+      company: fields.company, date: savedDate,
+      director: fields.director, supervisorCo: fields.supervisorCo,
+      supervisorHDC: fields.supervisorHDC, safetyManagerHDC: fields.safetyManagerHDC,
+      timeStart: fields.timeStart, timeEnd: fields.timeEnd,
+    } : null;
+
     resetTaskForm();
-    showToast('✓ 작업이 등록되었습니다');
     state.date = savedDate;
     document.getElementById('dateInput').value = state.date;
     renderAll();
+
+    if(carry){
+      document.getElementById('f_keepmode').checked = true;
+      document.getElementById('f_company').value = carry.company;
+      document.getElementById('f_date').value = carry.date;
+      document.getElementById('f_director').value = carry.director || '';
+      document.getElementById('f_supervisorco').value = carry.supervisorCo || '';
+      document.getElementById('f_supervisorhdc').value = carry.supervisorHDC || '';
+      document.getElementById('f_safetymanager').value = carry.safetyManagerHDC || '';
+      document.getElementById('f_timestart').value = carry.timeStart || '07:00';
+      document.getElementById('f_timeend').value = carry.timeEnd || '16:00';
+      onFormDateChange();
+      document.getElementById('f_taskname').focus();
+      window.scrollTo({top:0, behavior:'smooth'});
+      showToast('✓ 등록되었습니다. 이어서 입력하세요');
+      return;
+    }
+    showToast('✓ 작업이 등록되었습니다');
     switchView('dashboard');
   });
 }
@@ -2253,7 +2510,7 @@ function editPump(id){
 function deletePump(id){
   requireActionPassword('양수기를 삭제하려면 비밀번호를 입력하세요', ()=>{
     showConfirm('이 양수기를 삭제하시겠습니까?', ()=> deletePumpConfirmed(id));
-  });
+  }, { alwaysAsk: true });
 }
 function deletePumpConfirmed(id){
   state.pumps = state.pumps.filter(p=>p.id!==id);
@@ -2386,9 +2643,10 @@ function changeTaskStatus(id, status){
   showToast(`✓ 상태가 "${status}"(으)로 변경되었습니다`);
 }
 function deleteTask(id){
+  // 삭제는 되돌릴 수 없으므로 10분 유예와 무관하게 매번 비밀번호를 확인합니다
   requireActionPassword('작업을 삭제하려면 비밀번호를 입력하세요', ()=>{
     showConfirm('이 작업을 삭제하시겠습니까?', ()=> deleteTaskConfirmed(id));
-  });
+  }, { alwaysAsk: true });
 }
 function deleteTaskConfirmed(id){
   state.tasks = state.tasks.filter(t=>t.id!==id);
@@ -2568,10 +2826,19 @@ function runConfirm(){
 ========================================================= */
 const ACTION_PASSWORD = '5072';
 let _actionPwCallback = null;
-function requireActionPassword(message, onSuccess){
+let _actionPwAlwaysAsk = false;
+/* 하루에 작업을 열 건 올리면 비밀번호를 열 번 쳐야 해서, 한 번 확인하면
+   10분 동안은 다시 묻지 않습니다. 다만 삭제는 되돌릴 수 없으므로 매번 확인합니다. */
+const ACTION_PW_GRACE_MS = 10 * 60 * 1000;
+let _actionPwUntil = 0;
+
+function requireActionPassword(message, onSuccess, options){
+  const alwaysAsk = !!(options && options.alwaysAsk);
+  if(!alwaysAsk && Date.now() < _actionPwUntil){ onSuccess(); return; }
   document.getElementById('actionPwMessage').textContent = message;
   document.getElementById('actionPwInput').value = '';
   _actionPwCallback = onSuccess;
+  _actionPwAlwaysAsk = alwaysAsk;
   document.getElementById('actionPwSheet').classList.add('show');
   setTimeout(()=>{
     const input = document.getElementById('actionPwInput');
@@ -2586,6 +2853,8 @@ function runActionPassword(){
   const input = document.getElementById('actionPwInput');
   if(input.value === ACTION_PASSWORD){
     const cb = _actionPwCallback;
+    // 삭제처럼 매번 확인해야 하는 작업은 유예를 주지 않습니다
+    if(!_actionPwAlwaysAsk) _actionPwUntil = Date.now() + ACTION_PW_GRACE_MS;
     closeActionPassword();
     if(cb) cb();
   } else {
