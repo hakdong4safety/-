@@ -371,6 +371,11 @@
   .sheet-actions{display:flex;gap:8px;margin-top:12px;}
   .sheet-actions button{flex:1;padding:12px;border-radius:10px;border:none;font-weight:800;font-size:13.5px;font-family:inherit;}
   .btn-secondary{background:var(--bg);color:var(--ink-900);}
+  /* 시트 하단 단독 닫기 버튼 — 손가락으로 누르기 쉽게 크고 뚜렷하게 */
+  .sheet-close-btn{width:100%;margin-top:14px;padding:16px;border:none;border-radius:12px;
+    background:var(--ink-900);color:#fff;font-size:15px;font-weight:800;font-family:inherit;
+    cursor:pointer;-webkit-tap-highlight-color:transparent;}
+  .sheet-close-btn:active{opacity:0.85;}
   .btn-primary{background:var(--blue-600);color:#fff;}
   .btn-danger{background:var(--red-bg);color:var(--red);}
 
@@ -943,7 +948,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-30 07:20 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-30 08:10 UTC</p>
       </div>
     </div>
   </div>
@@ -995,7 +1000,7 @@
       <h4 style="margin:0 0 4px;font-size:16px;">🕘 최근 작업 불러오기</h4>
       <p class="hint" style="margin-top:0;">최근 7일간 등록한 작업입니다. 누르면 오늘 날짜로 폼이 채워집니다. 고위험 작업여부는 다시 선택해 주세요.</p>
       <div id="recentTaskList" style="max-height:52vh;overflow-y:auto;"></div>
-      <button class="btn-secondary" style="width:100%;margin-top:12px;" onclick="closeRecentTaskSheet()">닫기</button>
+      <button class="sheet-close-btn" onclick="closeRecentTaskSheet()">닫기</button>
     </div>
   </div>
 
@@ -1006,7 +1011,7 @@
       <h4 style="margin:0 0 4px;font-size:16px;" id="taskListSheetTitle">작업 목록</h4>
       <p class="hint" style="margin-top:0;" id="taskListSheetHint"></p>
       <div id="taskListSheetBody" style="max-height:52vh;overflow-y:auto;"></div>
-      <button class="btn-secondary" style="width:100%;margin-top:12px;" onclick="closeTaskListSheet()">닫기</button>
+      <button class="sheet-close-btn" onclick="closeTaskListSheet()">닫기</button>
     </div>
   </div>
 
@@ -1119,8 +1124,27 @@ const SAFETY_MANAGERS_HDC = ['서진수(안전총괄책임자)','노을(안전)'
 
 const DEFAULT_SITE_IMAGE = './map.jpg';
 
-const COMPANY_COLORS = ['#2F5FDB','#E5484D','#1E9E5A','#D9822B','#7C5CDB','#0EA5A5','#C2410C','#4B5563',
-  '#0891B2','#BE185D','#65A30D','#9333EA'];
+/* 색상환을 큰 폭으로 건너뛰며 배치해, 서로 이웃한 색끼리도 확실히 구분됩니다.
+   앞쪽 8색은 빨강·파랑·초록·주황·보라·청록·분홍·황토로 완전히 다른 계열이라,
+   업체가 8개 이하일 때는 누가 봐도 헷갈리지 않습니다. */
+const COMPANY_COLORS = [
+  '#DC2626', // 빨강
+  '#2563EB', // 파랑
+  '#16A34A', // 초록
+  '#EA580C', // 주황
+  '#9333EA', // 보라
+  '#0891B2', // 청록
+  '#DB2777', // 분홍
+  '#CA8A04', // 황토
+  '#4F46E5', // 남보라
+  '#84CC16', // 연두
+  '#F97316', // 밝은주황
+  '#0EA5E9', // 하늘
+  '#BE123C', // 장미
+  '#7C3AED', // 자주
+  '#14B8A6', // 민트
+  '#1E3A8A'  // 감청
+];
 let companyColorMap = {};
 /* 업체 색상은 이름에서 계산합니다.
    예전에는 화면에 나타난 순서대로 색을 나눠줘서, 같은 업체가 기기마다·날짜마다
@@ -1128,9 +1152,12 @@ let companyColorMap = {};
 function companyColor(name){
   const key = String(name||'');
   if(companyColorMap[key]) return companyColorMap[key];
-  let h = 0;
-  for(let i=0;i<key.length;i++){ h = (h*31 + key.charCodeAt(i)) >>> 0; }
-  companyColorMap[key] = COMPANY_COLORS[h % COMPANY_COLORS.length];
+  // 팔레트 앞쪽일수록 서로 대비가 큽니다. 그래서 해시로 흩뿌리지 않고
+  // 등록된 순서대로 앞 색부터 차례로 배정해, 초반 업체들이 가장 뚜렷하게 갈립니다.
+  // (배정 순서는 renderAll의 assignCompanyColors가 이름 가나다순으로 고정합니다.)
+  const n = COMPANY_COLORS.length;
+  const idx = Object.keys(companyColorMap).length % n;
+  companyColorMap[key] = COMPANY_COLORS[idx];
   return companyColorMap[key];
 }
 
@@ -1479,6 +1506,7 @@ function registerServiceWorker(){
 }
 
 function renderAll(){
+  assignCompanyColors();
   renderDateLabel();
   updateTodayBtn();
   applySiteImage();
@@ -1489,6 +1517,16 @@ function renderAll(){
   renderBuildingList();
   renderPumpList();
   if(adminUnlocked){ renderAdminBulkList(); }
+}
+
+/* 색을 매기는 순서가 기기마다 다르면(누가 먼저 화면에 떴는지에 따라) 색도 달라집니다.
+   그래서 렌더 전에 전체 업체를 항상 같은 기준(이름 가나다순)으로 한 번에 배정합니다. */
+function assignCompanyColors(){
+  const names = [...new Set([
+    ...state.tasks.map(t=>t.company),
+    ...state.pumps.map(p=>p.company)
+  ].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+  names.forEach(companyColor);
 }
 
 /* =========================================================
@@ -1780,7 +1818,6 @@ function renderOversight(list){
   const noRegion  = list.filter(t=>!taskRegions(t).length);
   const guardless = list.filter(t=>isHighRisk(t) && !t.guardDeployed);
   const noPlan    = list.filter(t=>isHighRisk(t) && !t.workPlanRequired);
-  const missing   = companiesWithoutToday(list);
   // 지난 날짜인데 아직 예정/진행중으로 남은 작업 = 마감이 안 된 기록
   const unclosed  = state.date < todayStr()
     ? list.filter(t=>t.status==='예정' || t.status==='진행중') : [];
@@ -1788,10 +1825,6 @@ function renderOversight(list){
   const rows = [];
   if(unclosed.length){
     rows.push(`<button type="button" class="ov-item tap" onclick="openTaskListSheet('아직 마감되지 않은 작업','지난 날짜인데 예정 또는 진행중으로 남아 있습니다. 관리 탭의 일괄 상태 변경으로 정리할 수 있습니다.', window._ovUnclosed)"><span>🕗 지난 날짜 · 미마감</span><span class="n">${unclosed.length}건</span></button>`);
-  }
-  if(missing.length){
-    rows.push(`<div class="ov-item"><span>📭 오늘 작업 미등록 업체</span><span class="n">${missing.length}개사</span></div>
-      <div class="ov-names">${missing.join(' · ')}</div>`);
   }
   if(noRegion.length){
     rows.push(`<button type="button" class="ov-item tap" onclick="openTaskListSheet('배치도에 위치가 없는 작업','작업 위치를 지정하지 않으면 배치도에 표시되지 않습니다. 작업을 눌러 수정할 수 있습니다.', window._ovNoRegion)"><span>📍 배치도에 위치 미표시</span><span class="n">${noRegion.length}건</span></button>`);
@@ -1822,17 +1855,6 @@ function renderOversight(list){
   el.innerHTML = rows.length
     ? `<div class="oversight"><h4>⚠️ 확인이 필요한 항목</h4>${rows.join('')}</div>`
     : '';
-}
-
-/* 최근 7일 안에 작업을 올렸는데 오늘은 등록이 없는 업체 = 미제출 가능성 */
-function companiesWithoutToday(todayList){
-  const today = state.date;
-  const from = ymdLocal(new Date(new Date(today+'T00:00:00').getTime() - 7*86400000));
-  const recent = [...new Set(
-    state.tasks.filter(t=>t.date < today && t.date >= from && t.company).map(t=>t.company)
-  )];
-  const hasToday = new Set(todayList.map(t=>t.company));
-  return recent.filter(c=>!hasToday.has(c)).sort((a,b)=>a.localeCompare(b,'ko'));
 }
 
 /* =========================================================
