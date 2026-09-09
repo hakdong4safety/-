@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>일일 안전보건 현장관리 | 광주 학동4구역</title>
+<title>일일 안전보건 현장관리 | 아이파크무등산스카이포레</title>
 
 <!-- PWA -->
 <link rel="manifest" href="./manifest.json">
@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="학동4구역 안전관리">
+<meta name="apple-mobile-web-app-title" content="스카이포레 안전관리">
 <link rel="apple-touch-icon" href="./icon-192.png">
 <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png">
@@ -563,7 +563,7 @@
   <div class="topbar" onclick="switchView('dashboard')" style="cursor:pointer;">
     <img class="icon" src="./logo.png" alt="로고">
     <div>
-      <h1 id="siteTitle">광주 학동4구역 <span style="color:var(--blue-600);font-weight:800;">S</span><span style="color:var(--ink-900);">.</span><span style="color:var(--red);font-weight:800;">O</span><span style="color:var(--ink-900);">.</span><span style="color:var(--green);font-weight:800;">S</span> 시스템 <span style="color:var(--ink-400);font-weight:600;font-size:0.87em;">(<span style="color:var(--blue-600);font-weight:700;">S</span>afety&nbsp;&nbsp;&nbsp;<span style="color:var(--red);font-weight:700;">O</span>n&nbsp;&nbsp;&nbsp;<span style="color:var(--green);font-weight:700;">S</span>ystem)</span></h1>
+      <h1 id="siteTitle" data-site="아이파크무등산스카이포레">아이파크무등산스카이포레 <span style="color:var(--blue-600);font-weight:800;">S</span><span style="color:var(--ink-900);">.</span><span style="color:var(--red);font-weight:800;">O</span><span style="color:var(--ink-900);">.</span><span style="color:var(--green);font-weight:800;">S</span> 시스템 <span style="color:var(--ink-400);font-weight:600;font-size:0.87em;">(<span style="color:var(--blue-600);font-weight:700;">S</span>afety&nbsp;&nbsp;&nbsp;<span style="color:var(--red);font-weight:700;">O</span>n&nbsp;&nbsp;&nbsp;<span style="color:var(--green);font-weight:700;">S</span>ystem)</span></h1>
       <div class="sub">작업前, 안전을 켜다. <span style="color:var(--ink-400);font-weight:500;">· 일일 고위험 현장관리 시스템</span></div>
     </div>
   </div>
@@ -607,7 +607,7 @@
       <div class="weather-card" id="weatherCard" onclick="fetchWeather()" style="cursor:pointer;" title="눌러서 새로고침">
         <div class="weather-top">
           <div>
-            <div class="weather-loc">📍 광주 동구 학동4구역</div>
+            <div class="weather-loc">📍 아이파크무등산스카이포레</div>
             <div class="weather-time" id="weatherTime">불러오는 중...</div>
           </div>
           <div class="weather-icon" id="weatherIcon">⏳</div>
@@ -949,7 +949,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-09-09 05:00 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-09-09 05:40 UTC</p>
       </div>
     </div>
   </div>
@@ -3826,7 +3826,9 @@ async function exportToExcel(){
     const ordered = sortForExport(list, companyNum);
     const rows = buildExportRows(ordered, companyNum);
     const mapImageBase64 = await buildExportMapImage(ordered, companyNum);
-    const siteName = document.getElementById('siteTitle').textContent;
+    // 엑셀에는 'S.O.S 시스템 (Safety On System)' 같은 꾸밈말 없이 현장명만 넣습니다
+    const titleEl = document.getElementById('siteTitle');
+    const siteName = (titleEl.dataset.site || titleEl.textContent).trim();
     const colCount = EXPORT_HEADERS.length;
 
     const wb = new ExcelJS.Workbook();
