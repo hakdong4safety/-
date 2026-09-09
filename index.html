@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>일일 안전보건 현장관리 | 광주 학동4구역</title>
 
 <!-- PWA -->
@@ -656,7 +656,8 @@
           <div class="form-card">
             <h3>기본 정보</h3>
             <div class="field"><label>작업 일자 <span class="req">*</span></label>
-              <input type="date" id="f_date" required onchange="onFormDateChange()"></div>
+              <input type="date" id="f_date" required onchange="onFormDateChange()">
+              <div class="hint2" id="f_date_warn" style="display:none;"></div></div>
             <div class="field"><label>협력업체명 <span class="req">*</span></label>
               <input type="text" id="f_company" placeholder="예: (주)한국건설" list="dl_company" autocomplete="off" required onblur="checkCompanyTypo()">
               <div class="hint2" id="companyTypoHint" style="display:none;"></div></div>
@@ -948,7 +949,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-08-30 08:10 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-09-09 05:00 UTC</p>
       </div>
     </div>
   </div>
@@ -1197,6 +1198,7 @@ let state = {
   formEarly: false,
   formCctv: false,
   editingTaskId: null,
+  editingSnapshot: null,
   editingPumpId: null,
   clipboardTask: null,
   siteImageVersions: {},   // { 'YYYY-MM-DD': dataUrl, ... } 날짜별 전경사진 버전
@@ -1566,7 +1568,7 @@ function switchView(name){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-'+name).classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.view===name));
-  if(name==='register'){ document.getElementById('f_date').value = state.date; updateEditModeBanner(); }
+  if(name==='register'){ document.getElementById('f_date').value = state.date; onFormDateChange(); updateEditModeBanner(); }
   if(name==='admin'){ adminUnlocked ? showAdminPanel() : showAdminLocked(); }
   document.getElementById('app').classList.toggle('wide-view', ['register','status','building'].includes(name));
   window.scrollTo({top:0, behavior:'smooth'});
@@ -1592,8 +1594,12 @@ function esc(v){
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
-function fmtBuildings(t){ return (t.buildings||[]).map(esc).join(', ') || '-'; }
-function fmtFloors(t){ return (t.floors||[]).map(esc).join(', '); }
+/* 순수 문자열 — 엑셀 등 화면 밖으로 나갈 때 사용 */
+function fmtBuildingsRaw(t){ return (t.buildings||[]).join(', ') || '-'; }
+function fmtFloorsRaw(t){ return (t.floors||[]).join(', '); }
+/* HTML에 넣을 때 사용 — 특수문자가 태그로 해석되지 않게 이스케이프됨 */
+function fmtBuildings(t){ return esc(fmtBuildingsRaw(t)); }
+function fmtFloors(t){ return esc(fmtFloorsRaw(t)); }
 
 function taskRegions(t){
   if(Array.isArray(t.regions)) return t.regions;
@@ -1740,6 +1746,7 @@ function loadRecentTask(id){
   const t = state.tasks.find(x=>x.id===id);
   if(!t) return;
   state.editingTaskId = null;
+  state.editingSnapshot = null;
   fillFormFromTask(t);
   document.getElementById('f_date').value = state.date;
   resetRiskSelectionToNone();  // 고위험 여부는 매일 회의에서 다시 정해지므로 초기화
@@ -1834,17 +1841,6 @@ function renderOversight(list){
   }
   if(noPlan.length){
     rows.push(`<button type="button" class="ov-item tap" onclick="openTaskListSheet('고위험인데 작업계획서 미해당','고위험 작업인데 작업계획서 또는 P.T.W가 미해당으로 등록되어 있습니다.', window._ovNoPlan)"><span>📄 고위험 · 작업계획서 미해당</span><span class="n">${noPlan.length}건</span></button>`);
-  }
-
-  // 작업 등록 인원과 출역인원 입력이 크게 어긋나면 둘 중 하나가 빠진 것입니다
-  const attRows = state.attendanceByDate[state.date] || [];
-  if(attRows.length && list.length){
-    const taskSum = list.reduce((s,t)=>s+(Number(t.workers)||0),0);
-    const attSum  = attRows.reduce((s,r)=>s+(Number(r.workers)||0),0);
-    const gap = Math.abs(taskSum - attSum);
-    if(gap > 0){
-      rows.push(`<button type="button" class="ov-item tap" onclick="openAttendanceSheet()"><span>👥 작업 인원 ${taskSum}명 · 출역 입력 ${attSum}명</span><span class="n">${gap}명 차이</span></button>`);
-    }
   }
 
   window._ovNoRegion = noRegion;
@@ -2148,6 +2144,26 @@ function onFormDateChange(){
     statusSel.disabled = false;
     hint.style.display = 'none';
   }
+
+  // 대시보드에서 다른 날짜를 보다가 등록 탭에 오면 그 날짜가 그대로 들어옵니다.
+  // 협력사가 "오늘 작업"이라 생각하고 어제로 등록하는 실수를 막기 위해 눈에 띄게 알립니다.
+  const warn = document.getElementById('f_date_warn');
+  if(!warn) return;
+  const today = todayStr();
+  if(dateVal && dateVal !== today){
+    const label = dateVal < today ? '지난 날짜' : '앞으로의 날짜';
+    const escd = esc(dateVal);
+    warn.innerHTML = `⚠ <b>${label}</b>로 등록됩니다 (${escd}). 오늘 작업이면 ` +
+      `<button type="button" class="draw-btn" onclick="setFormDateToday()">오늘로 바꾸기</button>`;
+    warn.style.display = '';
+    warn.style.color = 'var(--amber)';
+  } else {
+    warn.style.display = 'none';
+  }
+}
+function setFormDateToday(){
+  document.getElementById('f_date').value = todayStr();
+  onFormDateChange();
 }
 function onEquipmentToggle(){
   const checked = document.getElementById('f_equipment').checked;
@@ -2401,6 +2417,7 @@ function resetTaskForm(){
   document.getElementById('f_date').value = state.date;
   onFormDateChange();
   state.editingTaskId = null;
+  state.editingSnapshot = null;
   document.getElementById('submitBtn').textContent = '✓ 작업 등록하기';
   updateEditModeBanner();
 }
@@ -2455,19 +2472,42 @@ function handleSubmitTask(e){
 
   if(state.editingTaskId){
     const idx = state.tasks.findIndex(x=>x.id===state.editingTaskId);
-    if(idx===-1){ resetTaskForm(); return; }
-    requireActionPassword('수정을 완료하려면 비밀번호를 입력하세요', ()=>{
-      const merged = { ...state.tasks[idx], ...fields };
-      state.tasks[idx] = merged;
-      saveTasks();
-      fbSaveTask(merged);
-      state.date = merged.date;
-      showToast('✓ 작업이 수정되었습니다');
-      resetTaskForm();
-      document.getElementById('dateInput').value = state.date;
-      renderAll();
-      switchView('dashboard');
-    });
+
+    // 수정하는 사이 다른 사람이 이 작업을 삭제한 경우 — 입력이 사라지는 이유를 알려줍니다
+    if(idx===-1){
+      showConfirm('이 작업은 수정하시는 동안 다른 기기에서 삭제되었습니다.\n지금 입력한 내용으로 새 작업으로 등록할까요?', ()=>{
+        state.editingTaskId = null;
+        state.editingSnapshot = null;
+        updateEditModeBanner();
+        document.getElementById('submitBtn').textContent = '✓ 작업 등록하기';
+        handleSubmitTask(e);   // 신규 등록 흐름으로 다시 진입
+      }, { label:'새로 등록', color:'var(--blue-600)' });
+      return;
+    }
+
+    const doSave = ()=>{
+      requireActionPassword('수정을 완료하려면 비밀번호를 입력하세요', ()=>{
+        const merged = { ...state.tasks[idx], ...fields };
+        state.tasks[idx] = merged;
+        saveTasks();
+        fbSaveTask(merged);
+        state.date = merged.date;
+        showToast('✓ 작업이 수정되었습니다');
+        resetTaskForm();
+        document.getElementById('dateInput').value = state.date;
+        renderAll();
+        switchView('dashboard');
+      });
+    };
+
+    // 수정하는 사이 다른 사람이 같은 작업을 먼저 고친 경우 — 상대 변경을 덮어쓰기 전에 확인합니다
+    const changedByOther = state.editingSnapshot && JSON.stringify(state.tasks[idx]) !== state.editingSnapshot;
+    if(changedByOther){
+      showConfirm('수정하시는 동안 다른 기기에서 이 작업이 변경되었습니다.\n지금 내용으로 덮어쓸까요? (상대방의 변경은 사라집니다)', doSave,
+        { label:'덮어쓰기', color:'var(--red)' });
+      return;
+    }
+    doSave();
     return;
   }
 
@@ -2807,6 +2847,8 @@ function editTask(id){
   switchView('register');
   switchRegisterTab('task');
   state.editingTaskId = t.id;
+  // 저장 시점에 다른 사람이 먼저 고쳤는지 알아내기 위해 지금 내용을 기억해둡니다
+  state.editingSnapshot = JSON.stringify(t);
   fillFormFromTask(t);
   document.getElementById('submitBtn').textContent = '✎ 수정 완료';
   updateEditModeBanner();
@@ -2824,6 +2866,7 @@ function pasteTaskFromClipboard(){
   const t = state.clipboardTask;
   if(!t){ showToast('복사된 작업이 없습니다. 먼저 작업 상세에서 "복사"를 눌러주세요'); return; }
   state.editingTaskId = null;
+  state.editingSnapshot = null;
   fillFormFromTask(t);
   document.getElementById('f_date').value = state.date;
   resetRiskSelectionToNone(); // 복사한 작업은 고위험 작업여부를 다시 선정해야 하므로 "해당없음"으로 초기화
@@ -3745,8 +3788,8 @@ function buildExportRows(ordered, companyNum){
   return ordered.map((t)=>({
     no: companyNum[t.company] || '',
     company: t.company,
-    buildings: fmtBuildings(t),
-    floors: [fmtFloors(t), t.location].filter(Boolean).join(' / ') || '-',
+    buildings: fmtBuildingsRaw(t),
+    floors: [fmtFloorsRaw(t), t.location].filter(Boolean).join(' / ') || '-',
     equipment: buildEquipmentCell(t),
     hazardType: t.hazardType || '-',
     workers: t.workers || 0,
