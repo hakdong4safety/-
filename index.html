@@ -256,6 +256,7 @@
   .st-가동중{background:var(--green-bg);color:var(--green);}
   .st-외부배수{background:var(--blue-100);color:var(--blue-600);}
   .st-미가동{background:#EEF0F4;color:var(--ink-400);}
+  .st-철거{background:var(--red-bg);color:var(--red);text-decoration:line-through;}
   .pump-name{font-size:14.5px;font-weight:800;margin:0 0 4px;}
   .pump-meta{font-size:12px;color:var(--ink-600);font-weight:600;display:flex;gap:10px;flex-wrap:wrap;}
   .pump-actions{display:flex;gap:6px;margin-top:9px;}
@@ -328,6 +329,17 @@
     30%,60%{box-shadow:0 0 0 3px rgba(229,72,77,0.45);}
   }
   .field-flash{animation:fieldFlash 1.4s ease;border-radius:10px;}
+
+  /* 작업현황 검색창 */
+  .search-row{position:relative;margin-bottom:10px;}
+  .search-row input{width:100%;padding:12px 40px 12px 14px;border:1.5px solid var(--line);border-radius:12px;
+    font-size:14px;font-family:inherit;background:var(--card);box-sizing:border-box;-webkit-appearance:none;}
+  .search-row input:focus{outline:none;border-color:var(--blue-600);box-shadow:0 0 0 3px var(--blue-100);}
+  .search-clear{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:28px;height:28px;
+    border:none;border-radius:50%;background:var(--bg);color:var(--ink-400);font-size:13px;font-weight:800;
+    cursor:pointer;font-family:inherit;}
+
+  .pump-card.removed{opacity:0.55;}
 
   .toast.with-action{display:flex;align-items:center;gap:14px;padding-right:8px;}
   .toast-undo{flex-shrink:0;background:rgba(255,255,255,0.22);color:#fff;border:none;
@@ -820,7 +832,7 @@
             <div class="field"><label>대수</label><input type="number" id="p_count" min="1" placeholder="1" value="1"></div>
           </div>
           <div class="field"><label>상태</label>
-            <select id="p_status"><option value="가동중">가동중</option><option value="외부배수">외부배수</option><option value="미가동">미가동</option></select></div>
+            <select id="p_status"><option value="가동중">가동중</option><option value="외부배수">외부배수</option><option value="미가동">미가동</option><option value="철거">철거 (지도에서 숨김)</option></select></div>
           <div class="field"><label>등록일</label><input type="date" id="p_date"></div>
           <p class="hint" style="margin-bottom:8px;">아래 배치도를 터치해 위치를 지정하세요.</p>
           <div class="map-wrap" id="pumpMapWrap" style="border-radius:12px; aspect-ratio:1000/572;">
@@ -840,6 +852,11 @@
   <div class="view" id="view-status">
     <div class="section">
       <div class="section-head"><h2>작업현황</h2><span class="meta" id="statusCountMeta"></span></div>
+      <div class="search-row">
+        <input type="search" id="taskSearchInput" placeholder="🔍 작업명 · 업체명 · 위치 · 담당자 검색 (최근 60일)"
+          oninput="onTaskSearchInput()" autocomplete="off">
+        <button type="button" class="search-clear" id="taskSearchClear" onclick="clearTaskSearch()" style="display:none;">✕</button>
+      </div>
       <div class="filter-scroll" id="statusFilters"></div>
       <div class="filter-scroll" id="riskFilters" style="margin-top:8px;"></div>
     </div>
@@ -919,6 +936,26 @@
         </div>
 
         <div class="form-card">
+          <h3>🏁 하루 마감</h3>
+          <p class="hint" style="margin-top:0;">퇴근 전 한 번 누르면 이 날짜의 <b>진행중</b> 작업이 모두 <b>완료</b>로 바뀝니다. 예정·작업취소는 건드리지 않습니다.</p>
+          <div class="field"><label>마감할 날짜</label>
+            <input type="date" id="closeDayDate" onchange="renderCloseDayPreview()"></div>
+          <p class="hint" id="closeDayPreview" style="margin:0 0 10px;"></p>
+          <button type="button" class="submit-btn" style="margin:0;" onclick="closeDay()">🏁 진행중 → 완료 일괄 마감</button>
+        </div>
+
+        <div class="form-card">
+          <h3>🔗 업체명 병합</h3>
+          <p class="hint" style="margin-top:0;">오타나 표기 차이로 두 개로 나뉜 업체를 하나로 합칩니다. 작업·양수기·출역인원의 업체명이 모두 바뀌고, <b>되돌릴 수 없습니다.</b></p>
+          <div class="field"><label>없앨 이름 (이 이름의 데이터가 아래 이름으로 바뀜)</label>
+            <select id="mergeFrom" onchange="renderMergePreview()"><option value="">선택하세요</option></select></div>
+          <div class="field"><label>남길 이름</label>
+            <select id="mergeTo" onchange="renderMergePreview()"><option value="">선택하세요</option></select></div>
+          <p class="hint" id="mergePreview" style="margin:0 0 10px;"></p>
+          <button type="button" class="submit-btn" style="margin:0;background:var(--amber);" onclick="mergeCompanies()">🔗 병합 실행</button>
+        </div>
+
+        <div class="form-card">
           <h3>👥 출역인원 입력 항목 설정</h3>
           <p class="hint" style="margin-top:0;">"총 출역인원" 입력 표에 추가 항목을 켜고 끌 수 있습니다. (모든 기기에 공통 적용)</p>
           <div style="display:flex;flex-direction:column;gap:10px;">
@@ -949,7 +986,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-09-09 05:40 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-09-11 07:00 UTC</p>
       </div>
     </div>
   </div>
@@ -1164,7 +1201,7 @@ function companyColor(name){
 
 const STORAGE_TASKS = 'siteSafetyTasks_v2';
 const STORAGE_PUMPS = 'siteSafetyPumps_v2';
-const SITE_IMG_VERSIONS_KEY = 'siteSafetySiteImgVersions_v1';
+const SITE_IMG_CACHE_KEY = 'siteSafetySiteImgCache_v2';   // 현재 쓰는 사진 1장 + 날짜 목록만 보관
 const ATTENDANCE_KEY = 'siteSafetyAttendance_v1';
 const ATTENDANCE_FIELDS_KEY = 'siteSafetyAttendanceFields_v1';
 const NOTICE_KEY = 'siteSafetyNotice_v1';
@@ -1201,7 +1238,8 @@ let state = {
   editingSnapshot: null,
   editingPumpId: null,
   clipboardTask: null,
-  siteImageVersions: {},   // { 'YYYY-MM-DD': dataUrl, ... } 날짜별 전경사진 버전
+  siteImageDates: [],      // 등록된 전경사진 버전 날짜 목록 (인덱스만, 사진 없음)
+  siteImageCache: {},      // { 'YYYY-MM-DD': dataUrl } 실제로 내려받은 사진만
   pendingSiteImage: null,  // 방금 선택했지만 아직 적용 날짜를 확정 안 한 사진
   attendanceByDate: {},    // { 'YYYY-MM-DD': [{company, workers, newWorkers, outdoor, vulnerable}, ...] } 날짜별 총 출역인원 입력값
   attendanceFields: { outdoor:false, vulnerable:false }, // 옥외작업인원/취약근로자 칸 사용 여부 (관리 탭에서 on/off, 전체 공유)
@@ -1507,7 +1545,28 @@ function registerServiceWorker(){
   });
 }
 
+/* ── 작업 데이터 로드 창 ─────────────────────────────────── */
+const TASK_WINDOW_DAYS = 60;
+function taskWindowStart(){
+  return ymdLocal(new Date(Date.now() - TASK_WINDOW_DAYS*86400000));
+}
+/* 60일 밖의 날짜로 이동했을 때 그 날짜 작업만 한 번 받아옵니다 */
+const _oldDatesLoaded = new Set();
+function ensureTasksForDate(dateStr){
+  if(!dateStr || dateStr >= taskWindowStart()) return;
+  if(_oldDatesLoaded.has(dateStr) || !fbDb || !firebaseReady) return;
+  _oldDatesLoaded.add(dateStr);
+  fbDb.ref('tasks').orderByChild('date').equalTo(dateStr).once('value').then(snap=>{
+    const val = snap.val() || {};
+    const have = new Set(state.tasks.map(t=>t.id));
+    let added = 0;
+    Object.keys(val).forEach(k=>{ if(!have.has(val[k].id)){ state.tasks.push(val[k]); added++; } });
+    if(added) renderAll();
+  }).catch(err=>console.warn('옛 날짜 작업 로드 실패', err));
+}
+
 function renderAll(){
+  ensureTasksForDate(state.date);
   assignCompanyColors();
   renderDateLabel();
   updateTodayBtn();
@@ -1771,9 +1830,12 @@ function openTaskListSheet(title, hint, tasks){
 }
 function closeTaskListSheet(){ document.getElementById('taskListSheet').classList.remove('show'); }
 
+/* 지도에 표시할 양수기 — 철거된 것은 목록에는 남기되 지도에서는 뺍니다 */
+function activePumps(){ return state.pumps.filter(p=>p.status!=='철거'); }
+
 function renderDashboard(){
   const list = tasksForDate(state.date);
-  const pumps = state.pumps;
+  const pumps = activePumps();
 
   const mapWrap = document.getElementById('mapWrap');
   renderPinsInto(mapWrap, list, pumps);
@@ -1982,7 +2044,57 @@ function renderTaskTable(list){
     </table>`;
 }
 
+/* ── 작업 검색 ────────────────────────────────────────────── */
+let _taskSearchTimer = null;
+function onTaskSearchInput(){
+  clearTimeout(_taskSearchTimer);
+  _taskSearchTimer = setTimeout(renderStatusList, 180);   // 타이핑 중 과도한 재렌더 방지
+}
+function clearTaskSearch(){
+  const inp = document.getElementById('taskSearchInput');
+  if(inp){ inp.value = ''; inp.focus(); }
+  renderStatusList();
+}
+function taskSearchQuery(){
+  const inp = document.getElementById('taskSearchInput');
+  return inp ? inp.value.trim().toLowerCase() : '';
+}
+function taskMatchesQuery(t, q){
+  const hay = [t.taskName, t.company, t.location, t.detail, t.director, t.supervisorCo,
+               t.guardName, t.remarks, fmtBuildingsRaw(t), fmtFloorsRaw(t)]
+    .filter(Boolean).join(' ').toLowerCase();
+  // 띄어쓰기로 나눈 단어가 전부 들어 있으면 매칭 (예: "103동 동바리")
+  return q.split(/\s+/).every(w=>hay.includes(w));
+}
+function renderSearchResults(list, q){
+  if(!list.length){
+    return `<div class="empty-state"><div class="ic">🔍</div><div class="t">"${esc(q)}" 검색 결과가 없습니다</div><div class="s">최근 60일 작업에서 찾습니다. 더 오래된 작업은 대시보드에서 날짜를 이동해 확인하세요.</div></div>`;
+  }
+  // 날짜별로 묶어 최신순
+  const byDate = {};
+  list.forEach(t=>{ (byDate[t.date] = byDate[t.date] || []).push(t); });
+  return Object.keys(byDate).sort().reverse().map(d=>`
+    <div class="company-group">
+      <div class="company-head"><span class="name">📅 ${d}${d===todayStr()?' (오늘)':''}</span><span class="cnt">${byDate[d].length}건</span></div>
+      ${byDate[d].map(t=>taskRowHTML(t).replace('<h4 class="name">', `<h4 class="name"><span class="tt-dash" style="font-size:11px;margin-right:6px;">${esc(t.company)}</span>`)).join('')}
+    </div>`).join('');
+}
+
 function renderStatusList(){
+  const q = taskSearchQuery();
+  const clearBtn = document.getElementById('taskSearchClear');
+  if(clearBtn) clearBtn.style.display = q ? '' : 'none';
+
+  // 검색어가 있으면 날짜와 무관하게 불러온 전체 작업에서 찾습니다
+  if(q){
+    const hits = state.tasks.filter(t=>taskMatchesQuery(t, q))
+      .sort((a,b)=> b.date.localeCompare(a.date) || (a.company||'').localeCompare(b.company||'','ko'));
+    document.getElementById('statusCountMeta').textContent = `검색 ${hits.length}건`;
+    document.getElementById('statusTaskList').innerHTML = renderSearchResults(hits, q);
+    bindTaskRowClicks();
+    return;
+  }
+
   let list = tasksForDate(state.date);
   if(state.statusFilter!=='전체') list = list.filter(t=>t.status===state.statusFilter);
   if(state.riskFilter==='고위험') list = list.filter(isHighRisk);
@@ -2699,15 +2811,19 @@ function openPumpDetail(id){
 }
 function closePumpDetail(){ document.getElementById('pumpDetailSheet').classList.remove('show'); }
 function renderPumpList(){
-  document.getElementById('pumpListMeta').textContent = `${state.pumps.length}대`;
+  const removed = state.pumps.filter(p=>p.status==='철거').length;
+  document.getElementById('pumpListMeta').textContent =
+    removed ? `${state.pumps.length - removed}대 (철거 ${removed}대)` : `${state.pumps.length}대`;
   const el = document.getElementById('pumpList');
   if(!el) return;
   if(!state.pumps.length){
     el.innerHTML = `<div class="empty-state"><div class="ic">💧</div><div class="t">등록된 양수기가 없습니다</div></div>`;
     return;
   }
-  el.innerHTML = state.pumps.map(p=>`
-    <div class="pump-card">
+  // 철거된 양수기는 뒤로 보내고 흐리게 표시합니다
+  const sorted = [...state.pumps].sort((a,b)=>(a.status==='철거') - (b.status==='철거') || (a.no - b.no));
+  el.innerHTML = sorted.map(p=>`
+    <div class="pump-card${p.status==='철거' ? ' removed' : ''}">
       <div class="pump-top"><span class="no">양수기 No.${p.no}</span><span class="st st-${p.status}">${p.status}</span></div>
       <h4 class="pump-name">💧 ${esc(p.company)}</h4>
       <div class="pump-meta">
@@ -2776,12 +2892,17 @@ function openDetail(id){
 
     <div class="detail-map-title">도면 위치</div>
     <div class="detail-map" id="detailMap">
-      <img src="${resolveSiteImageForDate(t.date)}" alt="배치도">
+      <img id="detailMapImg" src="${resolveSiteImageForDate(t.date)}" alt="배치도">
       ${taskRegions(t).map(r=>`<div class="region-box" style="left:${r.x}%;top:${r.y}%;width:${r.w}%;height:${r.h}%;"></div>`).join('')}
     </div>
   `;
   document.getElementById('detailMap').style.position = 'relative';
   document.getElementById('detailSheet').classList.add('show');
+  // 그 날짜 전경사진이 아직 기기에 없으면 받아와서 교체
+  ensureSiteImage(t.date, (src)=>{
+    const im = document.getElementById('detailMapImg');
+    if(im && im.src !== src) im.src = src;
+  });
 }
 function closeDetail(){ document.getElementById('detailSheet').classList.remove('show'); }
 function changeTaskStatus(id, status){
@@ -3095,6 +3216,9 @@ function showAdminPanel(){
   document.getElementById('adminLocked').style.display = 'none';
   document.getElementById('adminPanel').style.display = '';
   document.getElementById('adminBulkDate').value = state.date || todayStr();
+  document.getElementById('closeDayDate').value = state.date || todayStr();
+  renderCloseDayPreview();
+  renderMergeSelects();
   renderAdminBulkList();
   renderSiteImageVersionList();
   renderAttendanceFieldToggles();
@@ -3135,6 +3259,112 @@ function renderAdminBulkList(){
     row.onclick = ()=> openDetail(row.dataset.id);
   });
 }
+/* =========================================================
+   하루 마감 — 이 날짜의 진행중 작업을 전부 완료로
+========================================================= */
+function renderCloseDayPreview(){
+  const dateStr = document.getElementById('closeDayDate').value || todayStr();
+  const running = state.tasks.filter(t=>t.date===dateStr && t.status==='진행중');
+  const planned = state.tasks.filter(t=>t.date===dateStr && t.status==='예정');
+  const el = document.getElementById('closeDayPreview');
+  if(!el) return;
+  el.textContent = running.length
+    ? `진행중 ${running.length}건이 완료로 바뀝니다.` + (planned.length ? ` (예정 ${planned.length}건은 그대로 둡니다)` : '')
+    : `이 날짜에 진행중인 작업이 없습니다.`;
+}
+function closeDay(){
+  const dateStr = document.getElementById('closeDayDate').value || todayStr();
+  const running = state.tasks.filter(t=>t.date===dateStr && t.status==='진행중');
+  if(!running.length){ showToast('이 날짜에 진행중인 작업이 없습니다'); return; }
+  showConfirm(`${dateStr} 진행중 작업 ${running.length}건을 모두 완료로 마감할까요?`, ()=>{
+    running.forEach(t=>{ t.status = '완료'; fbSaveTask(t); });
+    saveTasks();
+    renderAll();
+    renderCloseDayPreview();
+    renderAdminBulkList();
+    showToast(`✓ ${running.length}건 마감 완료`);
+  }, { label:'마감', color:'var(--ink-900)' });
+}
+
+/* =========================================================
+   업체명 병합 — 오타로 쪼개진 업체를 하나로
+   60일 창 밖의 옛 작업도 서버에서 업체명으로 직접 찾아 함께 바꿉니다.
+========================================================= */
+function allCompanyNames(){
+  const names = new Set();
+  state.tasks.forEach(t=>t.company && names.add(t.company));
+  state.pumps.forEach(p=>p.company && names.add(p.company));
+  Object.values(state.attendanceByDate||{}).forEach(rows=>(rows||[]).forEach(r=>r.company && names.add(r.company)));
+  return [...names].sort((a,b)=>a.localeCompare(b,'ko'));
+}
+function renderMergeSelects(){
+  const names = allCompanyNames();
+  const opts = '<option value="">선택하세요</option>' + names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  const from = document.getElementById('mergeFrom'), to = document.getElementById('mergeTo');
+  if(from){ const v=from.value; from.innerHTML = opts; from.value = v; }
+  if(to){ const v=to.value; to.innerHTML = opts; to.value = v; }
+  renderMergePreview();
+}
+function renderMergePreview(){
+  const el = document.getElementById('mergePreview');
+  if(!el) return;
+  const from = document.getElementById('mergeFrom').value;
+  const to = document.getElementById('mergeTo').value;
+  if(!from || !to){ el.textContent = ''; return; }
+  if(from===to){ el.textContent = '같은 이름입니다. 다른 이름을 고르세요.'; return; }
+  const n = state.tasks.filter(t=>t.company===from).length;
+  const p = state.pumps.filter(x=>x.company===from).length;
+  el.innerHTML = `"<b>${esc(from)}</b>" → "<b>${esc(to)}</b>"  ·  최근 작업 ${n}건, 양수기 ${p}대 + 옛 작업·출역인원 전체`;
+}
+function mergeCompanies(){
+  const from = document.getElementById('mergeFrom').value;
+  const to = document.getElementById('mergeTo').value;
+  if(!from || !to){ showToast('없앨 이름과 남길 이름을 모두 고르세요'); return; }
+  if(from===to){ showToast('같은 이름은 병합할 수 없습니다'); return; }
+
+  showConfirm(`"${from}"의 모든 데이터를 "${to}"로 합칩니다.\n되돌릴 수 없습니다. 진행할까요?`, ()=>{
+    requireActionPassword('업체명 병합은 비밀번호가 필요합니다', async ()=>{
+      let changed = 0;
+      // 1) 지금 불러온 작업
+      state.tasks.forEach(t=>{ if(t.company===from){ t.company=to; fbSaveTask(t); changed++; } });
+      // 2) 양수기
+      state.pumps.forEach(p=>{ if(p.company===from){ p.company=to; fbSavePump(p); changed++; } });
+      saveTasks(); savePumps();
+      // 3) 60일 밖 옛 작업 — 서버에서 업체명으로 찾아서 바꿈
+      if(fbDb){
+        try{
+          const snap = await fbDb.ref('tasks').orderByChild('company').equalTo(from).once('value');
+          const val = snap.val() || {};
+          const updates = {};
+          Object.keys(val).forEach(k=>{ updates['tasks/'+k+'/company'] = to; changed++; });
+          if(Object.keys(updates).length) await fbDb.ref().update(updates);
+        }catch(err){ console.warn('옛 작업 병합 실패', err); }
+        // 4) 출역인원 전체
+        try{
+          const snap = await fbDb.ref('attendance').once('value');
+          const all = snap.val() || {};
+          const updates = {};
+          Object.keys(all).forEach(d=>{
+            const rows = all[d] || [];
+            let touched = false;
+            const next = (Array.isArray(rows) ? rows : Object.values(rows)).map(r=>{
+              if(r && r.company===from){ touched=true; return {...r, company:to}; }
+              return r;
+            });
+            if(touched){ updates['attendance/'+d] = next; state.attendanceByDate[d] = next; changed++; }
+          });
+          if(Object.keys(updates).length) await fbDb.ref().update(updates);
+        }catch(err){ console.warn('출역인원 병합 실패', err); }
+      }
+      // 색상 배정도 다시 (없어진 이름 정리)
+      delete companyColorMap[from];
+      renderAll();
+      renderMergeSelects();
+      showToast(`✓ "${from}" → "${to}" 병합 완료 (${changed}건)`);
+    });
+  }, { label:'병합', color:'var(--amber)' });
+}
+
 function bulkSetStatus(status){
   const dateStr = document.getElementById('adminBulkDate').value || todayStr();
   const list = state.tasks.filter(t=>t.date===dateStr);
@@ -3199,9 +3429,18 @@ function attachFirebaseListeners(){
     updateSyncStatus(online);
   });
 
-  fbDb.ref('tasks').on('value', snap=>{
+  /* 작업은 최근 60일치만 실시간으로 받습니다.
+     예전에는 전체를 통째로 받아서, 데이터가 쌓일수록 앱을 열 때마다 내려받는 양이
+     계속 늘어났습니다(1년이면 수 MB). 60일 밖의 날짜는 그 날짜로 이동할 때 그날 것만 따로 받습니다.
+     ※ 이 쿼리가 서버에서 걸러지려면 데이터베이스 규칙에 tasks의 .indexOn: ["date","company"]가 있어야 합니다.
+        없어도 동작은 하지만(클라이언트에서 거름) 데이터 절감 효과가 없습니다. */
+  fbDb.ref('tasks').orderByChild('date').startAt(taskWindowStart()).on('value', snap=>{
     const val = snap.val() || {};
-    state.tasks = Object.keys(val).map(k=>val[k]);
+    const windowed = Object.keys(val).map(k=>val[k]);
+    const start = taskWindowStart();
+    // 옛 날짜를 보려고 따로 받아둔 작업은 그대로 유지합니다
+    const keptOld = state.tasks.filter(t=>t.date < start);
+    state.tasks = keptOld.concat(windowed);
     saveTasks();
     if(!fbTasksLoaded){ fbTasksLoaded = true; }
     renderAll();
@@ -3221,10 +3460,26 @@ function attachFirebaseListeners(){
     showToast('⚠ 실시간 동기화 오류: ' + err.message);
   });
 
-  fbDb.ref('siteImages').on('value', snap=>{
-    const val = snap.val() || {};
-    state.siteImageVersions = val;
-    try{ localStorage.setItem(SITE_IMG_VERSIONS_KEY, JSON.stringify(state.siteImageVersions)); }catch(e){}
+  /* 전경사진은 "날짜 목록(인덱스)"만 실시간으로 받고, 사진 자체는 필요한 한 장만 따로 받습니다.
+     예전에는 모든 버전의 사진을 통째로 받아서, 사진이 몇 장 쌓이면 앱 열 때마다 수 MB를 내려받았습니다.
+     (Storage로 옮기면 깔끔하지만 2026년 2월부터 Storage는 유료 요금제 전용이 되어 이 방식을 씁니다) */
+  fbDb.ref('siteImageIndex').on('value', snap=>{
+    const idx = snap.val() || {};
+    state.siteImageDates = Object.keys(idx).sort();
+    if(!state.siteImageDates.length && !_siteImageMigrated){
+      // 예전 구조(siteImages에 사진만 저장)에서 처음 한 번, 인덱스를 만들어 줍니다
+      _siteImageMigrated = true;
+      fbDb.ref('siteImages').once('value').then(s2=>{
+        const all = s2.val() || {};
+        const dates = Object.keys(all);
+        if(!dates.length){ applySiteImage(); renderSiteImageVersionList(); return; }
+        const updates = {};
+        dates.forEach(d=>{ updates['siteImageIndex/'+d] = true; state.siteImageCache[d] = all[d]; });
+        fbDb.ref().update(updates).catch(err=>console.warn('전경사진 인덱스 생성 실패', err));
+      }).catch(err=>console.warn('전경사진 이전 읽기 실패', err));
+      return;
+    }
+    persistSiteImageCache();
     applySiteImage();
     renderSiteImageVersionList();
   }, err=>{
@@ -3296,24 +3551,43 @@ function fbDeletePump(id){
     showToast('⚠ 실시간 삭제 실패: ' + err.message);
   });
 }
+let _siteImageMigrated = false;
 function fbSaveSiteImage(dateStr, dataUrl){
   if(!fbDb) return;
-  fbDb.ref('siteImages/' + dateStr).set(dataUrl).catch(err=>{
+  const updates = {};
+  updates['siteImages/' + dateStr] = dataUrl;
+  updates['siteImageIndex/' + dateStr] = true;
+  fbDb.ref().update(updates).catch(err=>{
     console.error('전경사진 저장 실패', err);
     showToast('⚠ 실시간 저장 실패: ' + err.message);
   });
 }
 function fbDeleteSiteImage(dateStr){
   if(!fbDb) return;
-  fbDb.ref('siteImages/' + dateStr).remove().catch(err=>{
+  const updates = {};
+  updates['siteImages/' + dateStr] = null;
+  updates['siteImageIndex/' + dateStr] = null;
+  fbDb.ref().update(updates).catch(err=>{
     console.error('전경사진 삭제 실패', err);
     showToast('⚠ 실시간 삭제 실패: ' + err.message);
   });
 }
+/* 오프라인 대비로 날짜 목록과 "지금 보고 있는 사진 1장"만 기기에 남겨둡니다 */
+function persistSiteImageCache(){
+  try{
+    const key = siteImageKeyForDate(state.date);
+    const cache = key && state.siteImageCache[key] ? { [key]: state.siteImageCache[key] } : {};
+    localStorage.setItem(SITE_IMG_CACHE_KEY, JSON.stringify({ dates: state.siteImageDates, cache }));
+  }catch(e){}
+}
 function loadSiteImageVersions(){
   try{
-    const raw = localStorage.getItem(SITE_IMG_VERSIONS_KEY);
-    if(raw) state.siteImageVersions = JSON.parse(raw);
+    const raw = localStorage.getItem(SITE_IMG_CACHE_KEY);
+    if(raw){
+      const saved = JSON.parse(raw);
+      state.siteImageDates = Array.isArray(saved.dates) ? saved.dates : [];
+      state.siteImageCache = saved.cache || {};
+    }
   }catch(e){}
   applySiteImage();
   renderSiteImageVersionList();
@@ -3324,17 +3598,38 @@ function loadSiteImageVersions(){
    siteImages/{YYYY-MM-DD}: 그 날짜부터 적용되는 배치도 사진
    특정 날짜 조회 시: 그 날짜 이전(포함) 중 가장 최근 버전을 사용
 ========================================================= */
-function resolveSiteImageForDate(dateStr){
-  const dates = Object.keys(state.siteImageVersions).sort();
+/* 그 날짜에 적용되는 버전의 날짜 키 (없으면 null) */
+function siteImageKeyForDate(dateStr){
   let chosen = null;
-  for(const d of dates){
+  for(const d of state.siteImageDates){
     if(d <= dateStr) chosen = d; else break;
   }
-  return chosen ? state.siteImageVersions[chosen] : DEFAULT_SITE_IMAGE;
+  return chosen;
+}
+/* 이미 받아둔 사진이 있으면 그것, 없으면 기본 배치도 (즉시 반환) */
+function resolveSiteImageForDate(dateStr){
+  const key = siteImageKeyForDate(dateStr);
+  return (key && state.siteImageCache[key]) ? state.siteImageCache[key] : DEFAULT_SITE_IMAGE;
+}
+/* 그 날짜 사진이 아직 없으면 서버에서 한 장만 받아서 콜백으로 전달 */
+function ensureSiteImage(dateStr, onReady){
+  const key = siteImageKeyForDate(dateStr);
+  if(!key){ onReady(DEFAULT_SITE_IMAGE); return; }
+  if(state.siteImageCache[key]){ onReady(state.siteImageCache[key]); return; }
+  if(!fbDb){ onReady(DEFAULT_SITE_IMAGE); return; }
+  fbDb.ref('siteImages/' + key).once('value').then(snap=>{
+    const v = snap.val();
+    if(v){ state.siteImageCache[key] = v; persistSiteImageCache(); }
+    onReady(v || DEFAULT_SITE_IMAGE);
+  }).catch(()=>onReady(DEFAULT_SITE_IMAGE));
 }
 function applySiteImage(){
-  const img = resolveSiteImageForDate(state.date);
-  document.querySelectorAll('.map-wrap img.bg').forEach(el=>{ el.src = img; });
+  const now = resolveSiteImageForDate(state.date);
+  document.querySelectorAll('.map-wrap img.bg').forEach(el=>{ el.src = now; });
+  ensureSiteImage(state.date, (src)=>{
+    if(src === now) return;
+    document.querySelectorAll('.map-wrap img.bg').forEach(el=>{ el.src = src; });
+  });
 }
 function triggerSiteImageUpload(){
   document.getElementById('siteImageInput').click();
@@ -3375,8 +3670,9 @@ function confirmSiteImageDate(){
   const dateStr = document.getElementById('siteImageDateInput').value;
   if(!dateStr){ showToast('적용 날짜를 선택해주세요'); return; }
   if(!state.pendingSiteImage) return;
-  state.siteImageVersions[dateStr] = state.pendingSiteImage;
-  try{ localStorage.setItem(SITE_IMG_VERSIONS_KEY, JSON.stringify(state.siteImageVersions)); }catch(e){}
+  state.siteImageCache[dateStr] = state.pendingSiteImage;
+  if(!state.siteImageDates.includes(dateStr)){ state.siteImageDates.push(dateStr); state.siteImageDates.sort(); }
+  persistSiteImageCache();
   fbSaveSiteImage(dateStr, state.pendingSiteImage);
   closeSiteImageDatePrompt();
   applySiteImage();
@@ -3385,8 +3681,9 @@ function confirmSiteImageDate(){
 }
 function deleteSiteImageVersion(dateStr){
   showConfirm(`${dateStr}부터 적용되던 사진을 삭제하시겠습니까?`, ()=>{
-    delete state.siteImageVersions[dateStr];
-    try{ localStorage.setItem(SITE_IMG_VERSIONS_KEY, JSON.stringify(state.siteImageVersions)); }catch(e){}
+    delete state.siteImageCache[dateStr];
+    state.siteImageDates = state.siteImageDates.filter(d=>d!==dateStr);
+    persistSiteImageCache();
     fbDeleteSiteImage(dateStr);
     applySiteImage();
     renderSiteImageVersionList();
@@ -3396,7 +3693,7 @@ function deleteSiteImageVersion(dateStr){
 function renderSiteImageVersionList(){
   const el = document.getElementById('siteImageVersionList');
   if(!el) return;
-  const dates = Object.keys(state.siteImageVersions).sort().reverse();
+  const dates = [...state.siteImageDates].sort().reverse();
   if(!dates.length){
     el.innerHTML = `<p class="hint" style="margin:0;">등록된 사진 버전이 없습니다 (기본 배치도가 표시됩니다)</p>`;
     return;
@@ -3637,7 +3934,7 @@ function openImageLightbox(){
   img.src = resolveSiteImageForDate(state.date);
   document.getElementById('lightboxStage').classList.remove('zoomed');
   document.getElementById('imageLightboxSheet').classList.add('show');
-  renderPinsInto(document.getElementById('lightboxStage'), tasksForDate(state.date), state.pumps);
+  renderPinsInto(document.getElementById('lightboxStage'), tasksForDate(state.date), activePumps());
 }
 function closeImageLightbox(){
   document.getElementById('imageLightboxSheet').classList.remove('show');
