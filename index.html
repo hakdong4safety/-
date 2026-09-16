@@ -341,6 +341,24 @@
 
   .pump-card.removed{opacity:0.55;}
 
+  /* 관리 탭: HDC 담당자 목록 */
+  .staff-block{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px;}
+  .staff-head{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;font-weight:800;
+    color:var(--ink-900);margin-bottom:8px;}
+  .staff-head .meta{font-size:11px;font-weight:700;color:var(--ink-400);}
+  .staff-list{display:flex;flex-wrap:wrap;gap:6px;min-height:28px;}
+  .staff-item{display:inline-flex;align-items:center;gap:6px;padding:6px 8px 6px 11px;background:var(--card);
+    border:1px solid var(--line);border-radius:20px;font-size:12px;font-weight:700;color:var(--ink-900);}
+  .staff-item .rm{width:18px;height:18px;border-radius:50%;border:none;background:var(--bg);color:var(--ink-400);
+    font-size:12px;font-weight:800;line-height:18px;text-align:center;cursor:pointer;padding:0;font-family:inherit;}
+  .staff-item .rm:hover{background:var(--red-bg);color:var(--red);}
+  .staff-add{display:flex;gap:8px;margin-top:10px;}
+  .staff-add input{flex:1;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font-size:13px;
+    font-family:inherit;background:var(--card);}
+  .staff-add input:focus{outline:none;border-color:var(--blue-600);}
+  .staff-add .map-action-btn{flex-shrink:0;padding:10px 16px;}
+  .staff-empty{font-size:11.5px;color:var(--ink-400);padding:4px 2px;}
+
   .toast.with-action{display:flex;align-items:center;gap:14px;padding-right:8px;}
   .toast-undo{flex-shrink:0;background:rgba(255,255,255,0.22);color:#fff;border:none;
     padding:7px 14px;border-radius:8px;font-size:13px;font-weight:800;font-family:inherit;
@@ -956,6 +974,29 @@
         </div>
 
         <div class="form-card">
+          <h3>🪪 HDC 담당자 목록</h3>
+          <p class="hint" style="margin-top:0;">작업 등록 폼의 <b>관리감독자(HDC)</b>·<b>안전관리자(HDC)</b> 선택 목록입니다. 여기서 고치면 모든 기기에 바로 반영됩니다. 이름 뒤 괄호에 직종을 함께 적으면 구분이 쉽습니다. 예: 홍길동(건축)</p>
+
+          <div class="staff-block">
+            <div class="staff-head"><span>관리감독자 (HDC)</span><span class="meta" id="hdcSupCount"></span></div>
+            <div class="staff-list" id="hdcSupList"></div>
+            <div class="staff-add">
+              <input type="text" id="hdcSupInput" placeholder="예: 홍길동(건축)" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();addHdcStaff('supervisors');}">
+              <button type="button" class="map-action-btn" onclick="addHdcStaff('supervisors')">추가</button>
+            </div>
+          </div>
+
+          <div class="staff-block" style="margin-top:14px;">
+            <div class="staff-head"><span>안전관리자 (HDC)</span><span class="meta" id="hdcSafeCount"></span></div>
+            <div class="staff-list" id="hdcSafeList"></div>
+            <div class="staff-add">
+              <input type="text" id="hdcSafeInput" placeholder="예: 홍길동(안전)" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();addHdcStaff('safetyManagers');}">
+              <button type="button" class="map-action-btn" onclick="addHdcStaff('safetyManagers')">추가</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-card">
           <h3>👥 출역인원 입력 항목 설정</h3>
           <p class="hint" style="margin-top:0;">"총 출역인원" 입력 표에 추가 항목을 켜고 끌 수 있습니다. (모든 기기에 공통 적용)</p>
           <div style="display:flex;flex-direction:column;gap:10px;">
@@ -986,7 +1027,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-09-11 07:00 UTC</p>
+        <p style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-09-16 09:00 UTC</p>
       </div>
     </div>
   </div>
@@ -1153,12 +1194,14 @@ const RISK_ITEMS = ['타워크레인 설치/인상/해체','호이스트 설치/
   '시스템비계 및 동바리 설치/해체','옥탑 구조물 작업','로프,곤돌라 작업','제연덕트 설치 작업',
   '밀폐공간 작업','기타(직접입력)','해당 없음'];
 
-const SUPERVISORS_HDC = ['김양선(토목)','김진수(전기)','박수환(건축)','박치호(건축)','신승묵(건축)',
+/* HDC 담당자 기본 목록 — 처음 한 번만 쓰이고, 이후에는 관리 탭에서 고친 목록이
+   Firebase(settings/hdcStaff)에 저장되어 모든 기기에 반영됩니다. 인사이동 시 코드를 고칠 필요가 없습니다. */
+const DEFAULT_SUPERVISORS_HDC = ['김양선(토목)','김진수(전기)','박수환(건축)','박치호(건축)','신승묵(건축)',
   '우승주(건축)','위광용(건축)','이민우(건축)','이성원(건축)','이정호(건축)','임규운(전기)',
   '조석곤(기계)','채수혁(토목)','최성환(건축)'];
-
-const SAFETY_MANAGERS_HDC = ['서진수(안전총괄책임자)','노을(안전)','최교훈(안전)','김대량(안전)',
+const DEFAULT_SAFETY_MANAGERS_HDC = ['서진수(안전총괄책임자)','노을(안전)','최교훈(안전)','김대량(안전)',
   '김백호(안전)','박두봉(안전)','이상재(안전)','임경찬(안전)','이상훈(안전)','편정훈(안전)'];
+const HDC_STAFF_KEY = 'siteSafetyHdcStaff_v1';
 
 const DEFAULT_SITE_IMAGE = './map.jpg';
 
@@ -1236,6 +1279,7 @@ let state = {
   formCctv: false,
   editingTaskId: null,
   editingSnapshot: null,
+  hdcStaff: { supervisors: [...DEFAULT_SUPERVISORS_HDC], safetyManagers: [...DEFAULT_SAFETY_MANAGERS_HDC] },
   editingPumpId: null,
   clipboardTask: null,
   siteImageDates: [],      // 등록된 전경사진 버전 날짜 목록 (인덱스만, 사진 없음)
@@ -1486,6 +1530,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadSiteImageVersions();
   loadAttendance();
   loadAttendanceFields();
+  loadHdcStaff();
   loadNotice();
   buildRegisterChips();
   setupDrawMap();
@@ -2190,11 +2235,24 @@ function buildRegisterChips(){
     <button type="button" class="floor-chip" data-f="${f}" onclick="toggleFormChip(this,'formFloorSel','floorSelLine')">${f}</button>`).join('');
   document.getElementById('riskChips').innerHTML = RISK_ITEMS.map(r=>`
     <button type="button" class="chip" data-r="${r}" onclick="toggleRiskChip(this)">${r}</button>`).join('');
-  document.getElementById('f_supervisorhdc').innerHTML = '<option value="">선택하세요</option>' +
-    SUPERVISORS_HDC.map(s=>`<option value="${s}">${s}</option>`).join('');
-  document.getElementById('f_safetymanager').innerHTML = '<option value="">선택하세요</option>' +
-    SAFETY_MANAGERS_HDC.map(s=>`<option value="${s}">${s}</option>`).join('');
+  renderHdcStaffSelects();
   document.getElementById('f_date').value = state.date;
+}
+/* 등록 폼의 HDC 담당자 셀렉트를 현재 목록으로 채웁니다. 선택돼 있던 값은 유지합니다. */
+function renderHdcStaffSelects(){
+  const fill = (id, list)=>{
+    const el = document.getElementById(id); if(!el) return;
+    const keep = el.value;
+    el.innerHTML = '<option value="">선택하세요</option>' +
+      list.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+    // 이전 값이 목록에서 빠졌어도(퇴사 등) 기존 작업을 열었을 때 값이 사라지지 않게 임시 옵션으로 남깁니다
+    if(keep && !list.includes(keep)){
+      el.innerHTML += `<option value="${esc(keep)}">${esc(keep)} (목록에서 제외됨)</option>`;
+    }
+    el.value = keep;
+  };
+  fill('f_supervisorhdc', state.hdcStaff.supervisors);
+  fill('f_safetymanager', state.hdcStaff.safetyManagers);
 }
 function toggleFormChip(el, arrKey, lineId){
   el.classList.toggle('on');
@@ -3219,6 +3277,7 @@ function showAdminPanel(){
   document.getElementById('closeDayDate').value = state.date || todayStr();
   renderCloseDayPreview();
   renderMergeSelects();
+  renderHdcStaffAdmin();
   renderAdminBulkList();
   renderSiteImageVersionList();
   renderAttendanceFieldToggles();
@@ -3508,6 +3567,21 @@ function attachFirebaseListeners(){
     }
   }, err=>{
     console.error('출역인원 항목 설정 동기화 오류', err);
+  });
+
+  fbDb.ref('settings/hdcStaff').on('value', snap=>{
+    const val = snap.val();
+    if(val && Array.isArray(val.supervisors) && Array.isArray(val.safetyManagers)){
+      state.hdcStaff = val;
+      try{ localStorage.setItem(HDC_STAFF_KEY, JSON.stringify(state.hdcStaff)); }catch(e){}
+    } else if(!val){
+      // 서버에 아직 없으면(첫 배포) 기본 목록을 올려서 모든 기기가 같은 목록을 쓰게 합니다
+      fbDb.ref('settings/hdcStaff').set(state.hdcStaff).catch(()=>{});
+    }
+    renderHdcStaffSelects();
+    if(adminUnlocked) renderHdcStaffAdmin();
+  }, err=>{
+    console.error('HDC 담당자 목록 동기화 오류', err);
   });
 
   fbDb.ref('settings/notice').on('value', snap=>{
@@ -3859,6 +3933,67 @@ function fbSaveAttendanceFields(){
     console.error('출역인원 항목 설정 저장 실패', err);
     showToast('⚠ 실시간 저장 실패: ' + err.message);
   });
+}
+
+/* =========================================================
+   HDC 담당자 목록 (관리 탭에서 추가·삭제 → 등록 폼 셀렉트에 반영)
+========================================================= */
+function loadHdcStaff(){
+  try{
+    const raw = localStorage.getItem(HDC_STAFF_KEY);
+    if(raw){
+      const v = JSON.parse(raw);
+      if(v && Array.isArray(v.supervisors) && Array.isArray(v.safetyManagers)) state.hdcStaff = v;
+    }
+  }catch(e){}
+}
+function saveHdcStaff(){
+  try{ localStorage.setItem(HDC_STAFF_KEY, JSON.stringify(state.hdcStaff)); }catch(e){}
+  if(!fbDb) return;
+  fbDb.ref('settings/hdcStaff').set(state.hdcStaff).catch(err=>{
+    console.error('HDC 담당자 목록 저장 실패', err);
+    showToast('⚠ 실시간 저장 실패: ' + err.message);
+  });
+}
+function renderHdcStaffAdmin(){
+  const render = (listId, countId, key)=>{
+    const el = document.getElementById(listId); if(!el) return;
+    const list = state.hdcStaff[key] || [];
+    document.getElementById(countId).textContent = `${list.length}명`;
+    el.innerHTML = list.length
+      ? list.map(n=>`<span class="staff-item">${esc(n)}<button type="button" class="rm" title="삭제" data-name="${esc(n)}" onclick="removeHdcStaff('${key}', this.dataset.name)">×</button></span>`).join('')
+      : '<div class="staff-empty">등록된 담당자가 없습니다. 아래에서 추가하세요.</div>';
+  };
+  render('hdcSupList', 'hdcSupCount', 'supervisors');
+  render('hdcSafeList', 'hdcSafeCount', 'safetyManagers');
+}
+function addHdcStaff(key){
+  const inputId = key==='supervisors' ? 'hdcSupInput' : 'hdcSafeInput';
+  const input = document.getElementById(inputId);
+  const name = (input.value || '').trim().replace(/\s+/g,' ');
+  if(!name){ showToast('이름을 입력하세요'); input.focus(); return; }
+  if(name.length > 30){ showToast('이름이 너무 깁니다 (30자 이내)'); return; }
+  const list = state.hdcStaff[key];
+  if(list.includes(name)){ showToast('이미 목록에 있는 이름입니다'); input.select(); return; }
+  list.push(name);
+  list.sort((a,b)=>a.localeCompare(b,'ko'));
+  saveHdcStaff();
+  renderHdcStaffAdmin();
+  renderHdcStaffSelects();
+  input.value = '';
+  input.focus();
+  showToast(`✓ "${name}" 추가됨`);
+}
+function removeHdcStaff(key, name){
+  const label = key==='supervisors' ? '관리감독자' : '안전관리자';
+  // 이미 등록된 작업에는 이름이 그대로 남으니 이력은 안전합니다 — 그 점을 확인창에 알려줍니다
+  showConfirm(`${label} 목록에서 "${name}"을(를) 삭제할까요?\n기존에 등록된 작업의 담당자 정보는 그대로 유지됩니다.`, ()=>{
+    state.hdcStaff[key] = state.hdcStaff[key].filter(n=>n!==name);
+    saveHdcStaff();
+    renderHdcStaffAdmin();
+    renderHdcStaffSelects();
+    showToast(`"${name}" 삭제됨`);
+  }, { label:'삭제', color:'var(--red)' });
 }
 
 /* =========================================================
