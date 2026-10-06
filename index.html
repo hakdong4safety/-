@@ -361,6 +361,8 @@
   .staff-add .map-action-btn{flex-shrink:0;padding:10px 16px;}
   .staff-empty{font-size:11.5px;color:var(--ink-400);padding:4px 2px;}
 
+  /* 되돌리기 버튼이 있는 토스트만 클릭을 받습니다 — .toast의 pointer-events:none이 자식까지 막고 있었음 */
+  .toast.with-action.show{pointer-events:auto;}
   .toast.with-action{display:flex;align-items:center;gap:14px;padding-right:8px;}
   .toast-undo{flex-shrink:0;background:rgba(255,255,255,0.22);color:#fff;border:none;
     padding:7px 14px;border-radius:8px;font-size:13px;font-weight:800;font-family:inherit;
