@@ -954,6 +954,7 @@
             <button type="button" class="toggle-btn" style="background:var(--blue-600);border-color:var(--blue-600);color:#fff;" onclick="bulkSetStatus('진행중')">전체 진행중</button>
             <button type="button" class="toggle-btn" style="background:var(--ink-900);border-color:var(--ink-900);color:#fff;" onclick="bulkSetStatus('완료')">전체 완료</button>
             <button type="button" class="toggle-btn" style="background:var(--red-bg);border-color:var(--red);color:var(--red);" onclick="bulkSetStatus('작업취소')">전체 작업취소</button>
+          <p class="hint" style="margin:8px 0 0;">※ 이미 <b>작업취소</b>된 작업은 일괄 변경·하루 마감에서 제외됩니다. 되살리려면 작업 상세에서 개별로 바꾸세요.</p>
           </div>
         </div>
 
@@ -1043,7 +1044,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p class="admin-build" style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-10-06 07:00 UTC</p>
+        <p class="admin-build" style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-10-07 02:00 UTC</p>
       </div>
     </div>
   </div>
@@ -3465,9 +3466,19 @@ function mergeCompanies(){
 
 function bulkSetStatus(status){
   const dateStr = document.getElementById('adminBulkDate').value || todayStr();
-  const list = state.tasks.filter(t=>t.date===dateStr);
-  if(!list.length){ showToast('해당 날짜에 등록된 작업이 없습니다'); return; }
-  showConfirm(`${dateStr} 작업 ${list.length}건을 전부 "${status}" 상태로 변경하시겠습니까?`, ()=>{
+  const all = state.tasks.filter(t=>t.date===dateStr);
+  if(!all.length){ showToast('해당 날짜에 등록된 작업이 없습니다'); return; }
+
+  // "작업취소"는 협력사가 의도적으로 내린 결정이므로 일괄 변경이 건드리지 않습니다.
+  // (취소된 작업이 마감·일괄 처리로 되살아나면 실제 하지 않은 작업이 보고서에 올라갑니다)
+  const cancelled = all.filter(t=>t.status==='작업취소');
+  const list = all.filter(t=>t.status!=='작업취소' && t.status!==status);
+  if(!list.length){
+    showToast(cancelled.length ? `변경할 작업이 없습니다 (작업취소 ${cancelled.length}건은 제외)` : '이미 모두 해당 상태입니다');
+    return;
+  }
+  const skipNote = cancelled.length ? `\n(작업취소 ${cancelled.length}건은 변경하지 않습니다)` : '';
+  showConfirm(`${dateStr} 작업 ${list.length}건을 "${status}" 상태로 변경하시겠습니까?${skipNote}`, ()=>{
     list.forEach(t=>{
       t.status = status;
       fbSaveTask(t);
@@ -3475,7 +3486,7 @@ function bulkSetStatus(status){
     saveTasks();
     renderAdminBulkList();
     renderAll();
-    showToast(`✓ ${list.length}건을 "${status}"(으)로 일괄 변경했습니다`);
+    showToast(`✓ ${list.length}건을 "${status}"(으)로 일괄 변경했습니다` + (cancelled.length ? ` (작업취소 ${cancelled.length}건 제외)` : ''));
   }, { label:'일괄 적용', color:'var(--blue-600)' });
 }
 
