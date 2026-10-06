@@ -1043,7 +1043,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p class="admin-build" style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-10-06 03:00 UTC</p>
+        <p class="admin-build" style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-10-06 05:30 UTC</p>
       </div>
     </div>
   </div>
@@ -1509,7 +1509,8 @@ function autoAdvanceScheduledTasks(){
   const nowStr = nowKSTDateTimeStr();
   let changed = false;
   state.tasks.forEach(t=>{
-    if(t.status === '예정'){
+    if(t.id === state.editingTaskId) return;   // 수정 중인 작업을 건드리면 "다른 기기에서 변경"으로 오인됨
+    if(t.status === '예정' && t.date){
       const startStr = `${t.date}T${t.timeStart || '00:00'}`;
       if(startStr <= nowStr){
         t.status = '진행중';
@@ -1849,7 +1850,7 @@ function openRecentTaskSheet(){
       <div class="task-row" style="cursor:pointer;" onclick="loadRecentTask('${t.id}')">
         <div class="top">
           <h4 class="name">${esc(t.taskName)}</h4>
-          <span class="badge" style="background:var(--bg);color:var(--ink-400);">${t.date.slice(5)}</span>
+          <span class="badge" style="background:var(--bg);color:var(--ink-400);">${(t.date||'').slice(5)}</span>
         </div>
         <div class="task-meta">
           <span>🏭 ${esc(t.company)}</span>
@@ -2695,7 +2696,7 @@ function handleSubmitTask(e){
     };
 
     // 수정하는 사이 다른 사람이 같은 작업을 먼저 고친 경우 — 상대 변경을 덮어쓰기 전에 확인합니다
-    const changedByOther = state.editingSnapshot && JSON.stringify(state.tasks[idx]) !== state.editingSnapshot;
+    const changedByOther = state.editingSnapshot && taskFingerprint(state.tasks[idx]) !== state.editingSnapshot;
     if(changedByOther){
       showConfirm('수정하시는 동안 다른 기기에서 이 작업이 변경되었습니다.\n지금 내용으로 덮어쓸까요? (상대방의 변경은 사라집니다)', doSave,
         { label:'덮어쓰기', color:'var(--red)' });
@@ -2711,7 +2712,7 @@ function handleSubmitTask(e){
   // (여러 사람이 같은 계정으로 쓰다 보면 남이 이미 올린 걸 모르고 또 올리는 일이 생깁니다)
   const dup = state.tasks.find(t=>t.date===task.date
     && t.company===task.company
-    && t.taskName.trim()===task.taskName.trim());
+    && (t.taskName||'').trim()===(task.taskName||'').trim());
   const proceed = ()=> requireActionPassword('작업을 등록하려면 비밀번호를 입력하세요', ()=>{
     state.tasks.push(task);
     saveTasks();
@@ -3051,7 +3052,7 @@ function editTask(id){
   switchRegisterTab('task');
   state.editingTaskId = t.id;
   // 저장 시점에 다른 사람이 먼저 고쳤는지 알아내기 위해 지금 내용을 기억해둡니다
-  state.editingSnapshot = JSON.stringify(t);
+  state.editingSnapshot = taskFingerprint(t);
   fillFormFromTask(t);
   document.getElementById('submitBtn').textContent = '✎ 수정 완료';
   updateEditModeBanner();
@@ -3490,9 +3491,14 @@ function recordError(msg){
   _errLog.unshift(line); if(_errLog.length > 8) _errLog.pop();
   const el = document.getElementById('diagErrors'); if(el) el.textContent = _errLog.join('\n') || '없음';
 }
+const _errSeen = {};
 window.addEventListener('error', e=>{
-  recordError('스크립트 오류: ' + (e.message || '') + ' @' + (e.filename||'').split('/').pop() + ':' + (e.lineno||''));
-  showToast('⚠ 앱 오류가 발생했습니다. 관리 탭 하단 진단 정보를 담당자에게 보내주세요');
+  const msg = (e.message || '알 수 없는 오류');
+  recordError('스크립트 오류: ' + msg + ' @' + (e.filename||'').split('/').pop() + ':' + (e.lineno||''));
+  const now = Date.now();
+  if(_errSeen[msg] && now - _errSeen[msg] < 60000) return;   // 같은 오류는 1분에 한 번만 알림
+  _errSeen[msg] = now;
+  showToast('⚠ 앱 오류: ' + msg.slice(0, 70) + ' — 관리 탭 하단 진단 정보를 보내주세요');
 });
 window.addEventListener('unhandledrejection', e=>{
   const r = e.reason; recordError('비동기 오류: ' + (r && (r.code ? r.code + ' ' : '') + (r.message || r)));
@@ -3681,7 +3687,26 @@ function attachFirebaseListeners(){
   });
 }
 
+/* 충돌 감지용 지문. Firebase에서 내려온 객체는 키 순서가 알파벳순이고 빈 값이 빠져 있어
+   JSON 문자열을 그대로 비교하면 내용이 같아도 "변경됨"으로 잘못 판정됩니다.
+   → 저장 시각(updatedAt)이 있으면 그것으로, 없으면 키를 정렬하고 빈 값을 제거한 뒤 비교합니다. */
+function normalizeForFingerprint(v){
+  if(Array.isArray(v)){ const arr = v.map(normalizeForFingerprint).filter(x=>x!==undefined); return arr.length ? arr : undefined; }
+  if(v && typeof v === 'object'){
+    const out = {};
+    Object.keys(v).sort().forEach(k=>{ if(k==='updatedAt') return; const n = normalizeForFingerprint(v[k]); if(n!==undefined) out[k]=n; });
+    return Object.keys(out).length ? out : undefined;
+  }
+  if(v===null || v===undefined || v==='' || v===false) return undefined;
+  return v;
+}
+function taskFingerprint(t){
+  if(t && t.updatedAt) return 'u:' + t.updatedAt;
+  return 'n:' + JSON.stringify(normalizeForFingerprint(t) || {});
+}
+
 function fbSaveTask(task){
+  task.updatedAt = new Date().toISOString();   // 충돌 감지·이력용 저장 시각
   if(!fbDb) return;
   fbDb.ref('tasks/' + task.id).set(task).catch(err=>{
     console.error('작업 저장 실패', err);
