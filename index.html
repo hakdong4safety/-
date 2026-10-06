@@ -1043,7 +1043,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p class="admin-build" style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-10-06 05:30 UTC</p>
+        <p class="admin-build" style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-10-06 07:00 UTC</p>
       </div>
     </div>
   </div>
@@ -1612,6 +1612,19 @@ const TASK_WINDOW_DAYS = 60;
 function taskWindowStart(){
   return ymdLocal(new Date(Date.now() - TASK_WINDOW_DAYS*86400000));
 }
+/* 서버에서 내려온 작업을 앱이 기대하는 모양으로 맞춥니다.
+   Firebase는 빈 배열을 저장하지 않고, 배열을 객체로 돌려주기도 하며, 수동으로 넣은 데이터는 id가 빠질 수 있습니다.
+   그대로 쓰면 화면 어딘가에서 터집니다. */
+function normalizeTask(t, key){
+  if(!t || typeof t !== 'object') return { id: key, date:'', company:'', taskName:'', status:'예정' };
+  if(!t.id) t.id = key;
+  ['buildings','floors','regions','highRisk'].forEach(f=>{
+    const v = t[f];
+    if(v == null) return;
+    if(!Array.isArray(v)) t[f] = Object.values(v);
+  });
+  return t;
+}
 /* 60일 밖의 날짜로 이동했을 때 그 날짜 작업만 한 번 받아옵니다 */
 const _oldDatesLoaded = new Set();
 function ensureTasksForDate(dateStr){
@@ -1622,7 +1635,7 @@ function ensureTasksForDate(dateStr){
     const val = snap.val() || {};
     const have = new Set(state.tasks.map(t=>t.id));
     let added = 0;
-    Object.keys(val).forEach(k=>{ if(!have.has(val[k].id)){ state.tasks.push(val[k]); added++; } });
+    Object.keys(val).forEach(k=>{ const t = normalizeTask(val[k], k); if(!have.has(t.id)){ state.tasks.push(t); added++; } });
     if(added) renderAll();
   }).catch(err=>console.warn('옛 날짜 작업 로드 실패', err));
 }
@@ -2150,7 +2163,7 @@ function renderStatusList(){
   // 검색어가 있으면 날짜와 무관하게 불러온 전체 작업에서 찾습니다
   if(q){
     const hits = state.tasks.filter(t=>taskMatchesQuery(t, q))
-      .sort((a,b)=> b.date.localeCompare(a.date) || (a.company||'').localeCompare(b.company||'','ko'));
+      .sort((a,b)=> (b.date||'').localeCompare(a.date||'') || (a.company||'').localeCompare(b.company||'','ko'));
     document.getElementById('statusCountMeta').textContent = `검색 ${hits.length}건`;
     document.getElementById('statusTaskList').innerHTML = renderSearchResults(hits, q);
     bindTaskRowClicks();
@@ -3501,17 +3514,20 @@ window.addEventListener('error', e=>{
   showToast('⚠ 앱 오류: ' + msg.slice(0, 70) + ' — 관리 탭 하단 진단 정보를 보내주세요');
 });
 window.addEventListener('unhandledrejection', e=>{
-  const r = e.reason; recordError('비동기 오류: ' + (r && (r.code ? r.code + ' ' : '') + (r.message || r)));
+  const r = e.reason; const m = r ? ((r.code ? r.code + ' ' : '') + (r.message || (typeof r === 'string' ? r : JSON.stringify(r).slice(0,120)))) : '알 수 없음';
+  recordError('비동기 오류: ' + m);
 });
+let _bannerDefaultText = null;
 function showAuthFailBanner(detail){
   if(firebaseReady) return;
   const b = document.getElementById('offlineBanner'); if(!b) return;
+  if(_bannerDefaultText === null) _bannerDefaultText = b.textContent;
   b.textContent = '📡 서버 인증이 되지 않아 실시간 공유가 안 됩니다 — 회사 네트워크에서 Firebase 차단 여부를 확인하세요 (' + detail + ')';
   b.style.display = '';
   updateSyncStatus(false);
 }
 function diagInfo(){
-  const u = (firebase && firebase.auth && firebase.auth().currentUser) || null;
+  let u = null; try{ u = firebase.auth().currentUser; }catch(e){}
   return [
     'build: ' + (document.querySelector('.admin-build') ? document.querySelector('.admin-build').textContent.trim() : ''),
     '시각: ' + new Date().toISOString(),
@@ -3557,6 +3573,9 @@ function initFirebase(){
     firebase.auth().onAuthStateChanged(user=>{
       if(user){
         firebaseReady = true;
+        // 느린 망에서 10초 뒤 인증된 경우 — 인증 실패 문구를 원래 오프라인 문구로 되돌립니다
+        const bn = document.getElementById('offlineBanner');
+        if(bn && _bannerDefaultText !== null){ bn.textContent = _bannerDefaultText; bn.style.display = 'none'; }
         updateSyncStatus();
         attachFirebaseListeners();
       }
@@ -3585,7 +3604,7 @@ function attachFirebaseListeners(){
         없어도 동작은 하지만(클라이언트에서 거름) 데이터 절감 효과가 없습니다. */
   fbDb.ref('tasks').orderByChild('date').startAt(taskWindowStart()).on('value', snap=>{
     const val = snap.val() || {};
-    const windowed = Object.keys(val).map(k=>val[k]);
+    const windowed = Object.keys(val).map(k=>normalizeTask(val[k], k));
     const start = taskWindowStart();
     // 옛 날짜를 보려고 따로 받아둔 작업은 그대로 유지합니다
     const keptOld = state.tasks.filter(t=>t.date < start);
