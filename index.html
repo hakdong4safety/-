@@ -1044,7 +1044,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p class="admin-build" style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-10-07 02:00 UTC</p>
+        <p class="admin-build" style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-10-07 06:00 UTC</p>
       </div>
     </div>
   </div>
@@ -1370,8 +1370,22 @@ function loadData(){
     if(raw) state.clipboardTask = JSON.parse(raw);
   }catch(e){}
 }
-function saveTasks(){ localStorage.setItem(STORAGE_TASKS, JSON.stringify(state.tasks)); }
-function savePumps(){ localStorage.setItem(STORAGE_PUMPS, JSON.stringify(state.pumps)); }
+/* 기기 임시 보관 — 서버(Firebase)가 원본이고 이건 오프라인·첫 화면용 보조 사본입니다.
+   60일치 1,000건이 넘으면 localStorage 한도(약 5MB)를 넘어 QuotaExceededError가 나고,
+   그 예외가 등록 흐름을 끊어 서버 저장까지 막았습니다(2026-10-07 진단).
+   → 최근 14일만 보관하고, 그래도 넘치면 더 줄이거나 포기하되 절대 예외를 밖으로 내보내지 않습니다. */
+const LOCAL_CACHE_DAYS = 14;
+function _trySet(key, value){ try{ localStorage.setItem(key, value); return true; }catch(e){ return false; } }
+function saveTasks(){
+  const cut = (days)=> ymdLocal(new Date(Date.now() - days*86400000));
+  for(const days of [LOCAL_CACHE_DAYS, 7, 3]){
+    const subset = state.tasks.filter(t=> (t.date||'') >= cut(days));
+    if(_trySet(STORAGE_TASKS, JSON.stringify(subset))) return;
+  }
+  try{ localStorage.removeItem(STORAGE_TASKS); }catch(e){}
+  if(!saveTasks._warned){ saveTasks._warned = true; recordError('기기 임시 보관 용량 초과 — 서버 저장은 정상, 오프라인 사본만 생략'); }
+}
+function savePumps(){ _trySet(STORAGE_PUMPS, JSON.stringify(state.pumps)); }
 
 /* =========================================================
    날씨 (Open-Meteo — 브라우저에서 바로 호출 가능한 무료 기상 API)
@@ -2698,8 +2712,8 @@ function handleSubmitTask(e){
       requireActionPassword('수정을 완료하려면 비밀번호를 입력하세요', ()=>{
         const merged = { ...state.tasks[idx], ...fields };
         state.tasks[idx] = merged;
-        saveTasks();
         fbSaveTask(merged);
+        saveTasks();
         state.date = merged.date;
         showToast('✓ 작업이 수정되었습니다');
         resetTaskForm();
@@ -2729,8 +2743,8 @@ function handleSubmitTask(e){
     && (t.taskName||'').trim()===(task.taskName||'').trim());
   const proceed = ()=> requireActionPassword('작업을 등록하려면 비밀번호를 입력하세요', ()=>{
     state.tasks.push(task);
-    saveTasks();
     fbSaveTask(task);
+    saveTasks();
 
     const savedDate = task.date;
     const keepGoing = document.getElementById('f_keepmode').checked;
@@ -3009,8 +3023,8 @@ function changeTaskStatus(id, status){
 
   const apply = ()=>{
     t.status = status;
-    saveTasks();
     fbSaveTask(t);
+    saveTasks();
     document.querySelectorAll('#statusEditRow .status-edit-btn').forEach(b=>{
       b.classList.toggle('on', b.textContent.trim()===status);
     });
@@ -3050,8 +3064,8 @@ function deleteTaskConfirmed(id){
   // 실수로 지운 경우를 대비해 6초 안에 되돌릴 수 있게 합니다
   showUndoToast('작업이 삭제되었습니다', ()=>{
     state.tasks.push(snapshot);
-    saveTasks();
     fbSaveTask(snapshot);
+    saveTasks();
     state.date = snapshot.date;
     document.getElementById('dateInput').value = state.date;
     renderAll();
@@ -3791,7 +3805,7 @@ function persistSiteImageCache(){
   try{
     const key = siteImageKeyForDate(state.date);
     const cache = key && state.siteImageCache[key] ? { [key]: state.siteImageCache[key] } : {};
-    localStorage.setItem(SITE_IMG_CACHE_KEY, JSON.stringify({ dates: state.siteImageDates, cache }));
+    _trySet(SITE_IMG_CACHE_KEY, JSON.stringify({ dates: state.siteImageDates, cache }));
   }catch(e){}
 }
 function loadSiteImageVersions(){
