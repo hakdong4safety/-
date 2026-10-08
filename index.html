@@ -127,6 +127,24 @@
   .stat-card .lbl{font-size:9px;color:var(--ink-400);font-weight:700;margin-top:2px;line-height:1.2;}
   .stat-card.risk .num{color:var(--red);}
   .stat-card.grade .num{color:var(--amber);}
+  .export-btn-img{border-color:var(--green);background:var(--green-bg);color:var(--green);margin-top:8px;}
+  /* 이미지 내보내기용 오프스크린 표 — 화면에는 보이지 않고 캔버스로만 그려집니다 */
+  #imgExportStage{position:absolute;left:-20000px;top:0;width:1600px;background:#fff;padding:24px 28px;
+    font-family:'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo','Noto Sans KR',sans-serif;color:#000;z-index:-1;}
+  #imgExportStage .ttl{font-size:28px;font-weight:800;text-align:center;margin:0 0 10px;}
+  #imgExportStage .meta{display:flex;gap:40px;font-size:15px;font-weight:700;margin-bottom:8px;}
+  #imgExportStage .lg{display:flex;flex-direction:column;gap:3px;font-size:13px;margin-bottom:10px;}
+  #imgExportStage .lg span{display:inline-flex;align-items:center;gap:8px;}
+  #imgExportStage .lg i{display:inline-block;width:22px;height:14px;border:1px solid #333;}
+  #imgExportStage table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:13px;}
+  #imgExportStage th{background:#EFEFEF;border:1px solid #333;padding:6px 4px;font-weight:800;text-align:center;vertical-align:middle;word-break:keep-all;}
+  #imgExportStage td{border:1px solid #333;padding:5px 5px;vertical-align:top;white-space:pre-wrap;word-break:break-word;line-height:1.35;}
+  #imgExportStage td.c{text-align:center;}
+  #imgExportStage .sign{position:absolute;right:28px;top:20px;display:flex;border:1px solid #333;}
+  #imgExportStage .sign div{width:78px;text-align:center;border-left:1px solid #333;}
+  #imgExportStage .sign div:first-child{border-left:none;}
+  #imgExportStage .sign b{display:block;background:#EFEFEF;border-bottom:1px solid #333;font-size:12px;padding:3px 0;}
+  #imgExportStage .sign em{display:block;height:52px;}
   .export-btn{width:100%;margin-top:10px;padding:13px;border:1.5px dashed var(--blue-600);border-radius:12px;
     background:var(--blue-100);color:var(--blue-700);font-size:13.5px;font-weight:800;font-family:inherit;}
   .export-btn:active{opacity:0.8;}
@@ -637,6 +655,7 @@
       <div class="summary-grid" id="summaryGrid"></div>
       <div id="oversightCard"></div>
       <button class="export-btn" id="exportExcelBtn" onclick="exportToExcel()">📤 일일 고위험 작업 현황 내보내기</button>
+      <button class="export-btn export-btn-img" id="exportImageBtn" onclick="exportToImage()">🖼 이미지로 내보내기 (카톡 전송용 · 색상·열 그대로)</button>
 
       <div class="weather-card" id="weatherCard" onclick="fetchWeather()" style="cursor:pointer;" title="눌러서 새로고침">
         <div class="weather-top">
@@ -1044,7 +1063,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p class="admin-build" style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-10-08 08:00 UTC</p>
+        <p class="admin-build" style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-10-08 10:00 UTC</p>
       </div>
     </div>
   </div>
@@ -4485,6 +4504,81 @@ function buildExportRows(ordered, companyNum){
 /* =========================================================
    EXCEL(.xlsx) 다운로드 — 인터넷/구글 연동 없이 기기에 바로 저장
 ========================================================= */
+/* =========================================================
+   이미지(PNG) 내보내기 — 카카오톡 전송용
+   엑셀을 아이폰 단축어/미리보기가 PDF로 바꾸면 셀 색이 빠지고 열이 다른 쪽으로 넘어갑니다.
+   앱이 표를 직접 그려서 PNG로 저장하면 색·열·글꼴이 그대로이고, 단축어에서 'PDF 만들기'가 필요 없습니다.
+========================================================= */
+function loadScriptOnce(src){
+  return new Promise((resolve, reject)=>{
+    if(document.querySelector(`script[src="${src}"]`)){ resolve(); return; }
+    const el = document.createElement('script'); el.src = src; el.onload = resolve; el.onerror = ()=>reject(new Error('load fail'));
+    document.head.appendChild(el);
+  });
+}
+async function exportToImage(){
+  const list = tasksForDate(state.date);
+  if(!list.length){ showToast('내보낼 작업이 없습니다'); return; }
+  const btn = document.getElementById('exportImageBtn');
+  const btnLabel = btn ? btn.textContent : '';
+  if(btn){ btn.disabled = true; btn.textContent = '이미지 생성 중...'; }
+  try{
+    if(typeof html2canvas === 'undefined'){
+      await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+    }
+    const titleEl = document.getElementById('siteTitle');
+    const siteName = (titleEl.dataset.site || titleEl.textContent).trim();
+    const companyNum = computeCompanyNumbers(list);
+    const ordered = sortForExport(list, companyNum);
+    const rows = buildExportRows(ordered, companyNum);
+
+    // 엑셀과 같은 열 폭 비율
+    const widths = [5,12,8,14,26,20,12,10,66,14,16,16,16,12,10];
+    const total = widths.reduce((a,b)=>a+b,0);
+    const cols = widths.map(w=>`<col style="width:${(w/total*100).toFixed(2)}%">`).join('');
+    const head = EXPORT_HEADERS.map(h=>`<th>${esc(h)}</th>`).join('');
+    const body = rows.map(r=>{
+      const bg = r.hasHighRisk ? '#FFF2CC' : (r.riskGradeHigh ? '#F4CCCC' : '#FFFFFF');
+      const vals = [r.no, r.company, r.buildings, r.floors, r.taskContent, r.equipment, r.hazardType, r.workers,
+        r.riskNote, r.supervisorCo, r.supervisorHDC, r.guardName, r.workPlan, r.earlyStart, r.mobileCCTV];
+      return `<tr style="background:${bg}">` + vals.map((v,i)=>`<td class="${i===0||i===7?'c':''}">${esc(v==null?'':String(v))}</td>`).join('') + '</tr>';
+    }).join('');
+    const sign = ['담당','토목','건축','안전','현장소장'].map(n=>`<div><b>${n}</b><em></em></div>`).join('');
+
+    let stage = document.getElementById('imgExportStage');
+    if(!stage){ stage = document.createElement('div'); stage.id = 'imgExportStage'; document.body.appendChild(stage); }
+    stage.innerHTML = `
+      <div class="sign">${sign}</div>
+      <div class="ttl">일일 고위험 작업 현황</div>
+      <div class="meta"><span>현장명: ${esc(siteName)}</span><span>작업일: ${esc(state.date)}</span></div>
+      <div class="lg">
+        <span><i style="background:#F4CCCC"></i>상등급 작업(작업전 점검 대상)</span>
+        <span><i style="background:#FFF2CC"></i>고위험 작업(관리자 및 SSK 수시점검)</span>
+        <span><i style="background:#FFFFFF"></i>일상작업</span>
+      </div>
+      <table><colgroup>${cols}</colgroup><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+
+    // 캔버스 픽셀 한도(아이폰 약 1,670만)를 넘지 않게 배율 조정
+    const w = stage.offsetWidth, h = stage.offsetHeight;
+    const scale = Math.max(1, Math.min(2, Math.sqrt(16000000 / (w*h))));
+    // scrollX/Y:0 — 페이지가 스크롤된 상태에서 캡처하면 위가 잘리는 html2canvas 특성 방어
+    const canvas = await html2canvas(stage, { scale, backgroundColor:'#ffffff', useCORS:true, logging:false,
+      scrollX:0, scrollY:0, windowWidth:1700, windowHeight:h+200 });
+    const blob = await new Promise(res=> canvas.toBlob(res, 'image/png'));
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `일일현황_${state.date}.png`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 10000);
+    showToast(`✓ 이미지 저장: 일일현황_${state.date}.png (${rows.length}건)`);
+  }catch(err){
+    console.error(err); recordError('이미지 내보내기 실패: ' + err.message);
+    showToast('⚠ 이미지 생성에 실패했습니다: ' + err.message);
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = btnLabel; }
+  }
+}
+
 async function exportToExcel(){
   if(typeof ExcelJS === 'undefined'){
     showToast('⚠ 엑셀 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인해주세요');
