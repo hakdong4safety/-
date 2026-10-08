@@ -1044,7 +1044,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p class="admin-build" style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-10-08 05:00 UTC</p>
+        <p class="admin-build" style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-10-08 08:00 UTC</p>
       </div>
     </div>
   </div>
@@ -4514,6 +4514,9 @@ async function exportToExcel(){
     });
 
     // 인쇄 설정: 가로 A3, 폭 1페이지에 맞춤(세로는 필요시 여러 페이지로 자동 확장)
+    // 단색 채우기 — Excel은 fgColor만으로 되지만, 아이폰·맥의 미리보기/단축어 PDF 변환은
+    // bgColor가 없으면 색을 그리지 않습니다. 두 값을 같이 넣어야 어디서 열어도 같은 색이 나옵니다.
+    const solid = (argb)=>({ type:'pattern', pattern:'solid', fgColor:{ argb }, bgColor:{ argb } });
     ws.pageSetup = {
       paperSize: 8, // A3
       orientation: 'landscape',
@@ -4547,15 +4550,15 @@ async function exportToExcel(){
 
     // 범례 (한 줄씩 아래로: A열=색상 네모, B열=설명)
     const thinBorder = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
-    ws.getCell(3,1).fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFF4CCCC'} };
+    ws.getCell(3,1).fill = solid('FFF4CCCC');
     ws.getCell(3,1).border = thinBorder;
     ws.getCell(3,2).value = '상등급 작업(작업전 점검 대상)';
 
-    ws.getCell(4,1).fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFFFF2CC'} };
+    ws.getCell(4,1).fill = solid('FFFFF2CC');
     ws.getCell(4,1).border = thinBorder;
     ws.getCell(4,2).value = '고위험 작업(관리자 및 SSK 수시점검)';
 
-    ws.getCell(5,1).fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFFFFFFF'} };
+    ws.getCell(5,1).fill = solid('FFFFFFFF');
     ws.getCell(5,1).border = thinBorder;
     ws.getCell(5,2).value = '일상작업';
 
@@ -4568,7 +4571,7 @@ async function exportToExcel(){
       headerCell.font = { bold:true, name:'맑은 고딕' };
       headerCell.alignment = { horizontal:'center', vertical:'middle' };
       headerCell.border = thinBorder;
-      headerCell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFEFEFEF'} };
+      headerCell.fill = solid('FFEFEFEF');
 
       ws.mergeCells(2, col, 5, col); // 서명란: 2~5행 병합된 빈 칸
       const boxCell = ws.getCell(2, col);
@@ -4581,7 +4584,7 @@ async function exportToExcel(){
     EXPORT_HEADERS.forEach((h,idx)=>{ headerRow.getCell(idx+1).value = h; });
     headerRow.font = { bold:true, name:'맑은 고딕' };
     headerRow.eachCell(c=>{
-      c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFEFEFEF'} };
+      c.fill = solid('FFEFEFEF');
       c.alignment = { horizontal:'center', vertical:'middle', wrapText:true };
       c.border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
     });
@@ -4599,7 +4602,7 @@ async function exportToExcel(){
       if(r.hasHighRisk) argb = 'FFFFF2CC';       // 고위험이 상등급보다 상위 개념 — 둘 다면 노란색(고위험)
       else if(r.riskGradeHigh) argb = 'FFF4CCCC'; // 고위험 항목 없이 상등급만 해당하면 빨간색
       row.eachCell({includeEmpty:true}, c=>{
-        c.fill = { type:'pattern', pattern:'solid', fgColor:{argb} };
+        c.fill = solid(argb);
         c.alignment = { vertical:'top', wrapText:true };
         c.border = { top:{style:'thin'}, bottom:{style:'thin'},
           left:{style:'thin'}, right:{style:'thin'} };
