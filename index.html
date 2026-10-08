@@ -1044,7 +1044,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p class="admin-build" style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-10-07 06:00 UTC</p>
+        <p class="admin-build" style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-10-08 05:00 UTC</p>
       </div>
     </div>
   </div>
@@ -1296,6 +1296,7 @@ let state = {
   formCctv: false,
   editingTaskId: null,
   editingSnapshot: null,
+  editingAdminOk: null,     // 잠긴 고위험 작업을 관리자 비밀번호로 열었을 때 그 작업 id
   hdcStaff: { supervisors: [...DEFAULT_SUPERVISORS_HDC], safetyManagers: [...DEFAULT_SAFETY_MANAGERS_HDC] },
   editingPumpId: null,
   clipboardTask: null,
@@ -1528,9 +1529,8 @@ function autoAdvanceScheduledTasks(){
     if(t.status === '예정' && t.date){
       const startStr = `${t.date}T${t.timeStart || '00:00'}`;
       if(startStr <= nowStr){
-        t.status = '진행중';
         changed = true;
-        fbSaveTask(t);
+        fbUpdateTaskFields(t, { status: '진행중' });
       }
     }
   });
@@ -1896,6 +1896,7 @@ function loadRecentTask(id){
   if(!t) return;
   state.editingTaskId = null;
   state.editingSnapshot = null;
+  state.editingAdminOk = null;
   fillFormFromTask(t);
   document.getElementById('f_date').value = state.date;
   resetRiskSelectionToNone();  // 고위험 여부는 매일 회의에서 다시 정해지므로 초기화
@@ -2633,6 +2634,7 @@ function resetTaskForm(){
   onFormDateChange();
   state.editingTaskId = null;
   state.editingSnapshot = null;
+  state.editingAdminOk = null;
   document.getElementById('submitBtn').textContent = '✓ 작업 등록하기';
   updateEditModeBanner();
 }
@@ -2701,6 +2703,7 @@ function handleSubmitTask(e){
       showConfirm('이 작업은 수정하시는 동안 다른 기기에서 삭제되었습니다.\n지금 입력한 내용으로 새 작업으로 등록할까요?', ()=>{
         state.editingTaskId = null;
         state.editingSnapshot = null;
+  state.editingAdminOk = null;
         updateEditModeBanner();
         document.getElementById('submitBtn').textContent = '✓ 작업 등록하기';
         handleSubmitTask(e);   // 신규 등록 흐름으로 다시 진입
@@ -2709,8 +2712,19 @@ function handleSubmitTask(e){
     }
 
     const doSave = ()=>{
-      requireActionPassword('수정을 완료하려면 비밀번호를 입력하세요', ()=>{
-        const merged = { ...state.tasks[idx], ...fields };
+      const prev = state.tasks[idx];
+      const save = ()=>{
+        const merged = { ...prev, ...fields };
+        // 고위험 선정일: 이번에 새로 고위험이 되면 오늘, 유지되면 기존 날짜, 해제되면 삭제
+        if(isHighRisk(merged)) merged.highRiskSetAt = isHighRisk(prev) ? (prev.highRiskSetAt || prev.date) : todayStr();
+        else delete merged.highRiskSetAt;
+        // 고위험 여부가 바뀌면 언제·어느 기기에서 바뀌었는지 남깁니다 (최근 5건)
+        const before = JSON.stringify(prev.highRisk||[]), after = JSON.stringify(merged.highRisk||[]);
+        if(before !== after){
+          const log = Array.isArray(prev.highRiskLog) ? prev.highRiskLog.slice(-4) : [];
+          log.push({ at: new Date().toISOString(), from: (prev.highRisk||[]).join(',') || '-', to: (merged.highRisk||[]).join(',') || '-', via: '수정', ua: (navigator.userAgent.match(/iPhone|Android|Windows|Mac/)||['?'])[0] });
+          merged.highRiskLog = log;
+        }
         state.tasks[idx] = merged;
         fbSaveTask(merged);
         saveTasks();
@@ -2720,7 +2734,10 @@ function handleSubmitTask(e){
         document.getElementById('dateInput').value = state.date;
         renderAll();
         switchView('dashboard');
-      });
+      };
+      // 잠긴 고위험 작업은 수정 진입 때 이미 관리자 비밀번호를 확인했으므로 저장 시 다시 묻지 않습니다
+      if(state.editingAdminOk === prev.id){ state.editingAdminOk = null; save(); return; }
+      requireActionPassword('수정을 완료하려면 비밀번호를 입력하세요', save);
     };
 
     // 수정하는 사이 다른 사람이 같은 작업을 먼저 고친 경우 — 상대 변경을 덮어쓰기 전에 확인합니다
@@ -2735,6 +2752,7 @@ function handleSubmitTask(e){
   }
 
   const task = { id: cuid('t'), ...fields, createdAt: new Date().toISOString() };
+  if(isHighRisk(task)) task.highRiskSetAt = todayStr();
 
   // 같은 날, 같은 업체, 같은 작업명이 이미 있으면 중복 등록일 수 있으니 한 번 확인합니다.
   // (여러 사람이 같은 계정으로 쓰다 보면 남이 이미 올린 걸 모르고 또 올리는 일이 생깁니다)
@@ -2971,6 +2989,8 @@ function openDetail(id){
       <div class="detail-cell"><div class="k">🏢 위치</div><div class="v">${fmtBuildings(t)} ${fmtFloors(t)}</div></div>
     </div>
 
+    ${Array.isArray(t.highRiskLog) && t.highRiskLog.length ? `<div class="hint" style="margin:0 0 8px;color:var(--ink-400);">고위험 변경 이력: ${t.highRiskLog.slice(-2).map(l=>`${esc(String(l.at).slice(5,16).replace('T',' '))} ${esc(l.from)} → ${esc(l.to)} (${esc(l.via)}·${esc(l.ua||'')})`).join(' / ')}</div>` : ''}
+    ${isHighRiskLocked(t) ? `<div class="detail-banner" style="background:var(--bg);border:1px dashed var(--ink-400);"><div class="t" style="color:var(--ink-900);">🔒 고위험 확정 (선정일 ${esc(t.highRiskSetAt || t.date)})</div><div class="s">다음날부터 수정·삭제·작업취소는 관리자 비밀번호로만 가능합니다</div></div>` : ''}
     ${risky ? `<div class="detail-banner"><div class="t">⚠ 고위험 작업</div>
       <div class="s">${t.highRisk.filter(r=>r!=='해당 없음').map(esc).join(', ')}</div></div>` : ''}
 
@@ -3020,10 +3040,16 @@ function changeTaskStatus(id, status){
   const t = state.tasks.find(x=>x.id===id);
   if(!t) return;
   if(t.status === status) return;
+  // 잠긴 고위험 작업을 '작업취소'로 돌리는 것은 기록 삭제와 같은 효과이므로 관리자 비밀번호 필요
+  if(status === '작업취소' && isHighRiskLocked(t) && _adminCancelOkId !== id){
+    requireAdminPassword('고위험으로 선정된 작업은 관리자 비밀번호로만 작업취소할 수 있습니다', ()=>{
+      _adminCancelOkId = id; changeTaskStatus(id, status); _adminCancelOkId = null;
+    });
+    return;
+  }
 
   const apply = ()=>{
-    t.status = status;
-    fbSaveTask(t);
+    fbUpdateTaskFields(t, { status });
     saveTasks();
     document.querySelectorAll('#statusEditRow .status-edit-btn').forEach(b=>{
       b.classList.toggle('on', b.textContent.trim()===status);
@@ -3047,6 +3073,13 @@ function changeTaskStatus(id, status){
   apply();
 }
 function deleteTask(id){
+  const t = state.tasks.find(x=>x.id===id);
+  if(t && isHighRiskLocked(t)){
+    requireAdminPassword('고위험으로 선정된 작업은 관리자 비밀번호로만 삭제할 수 있습니다', ()=>{
+      showConfirm('고위험 작업 기록을 삭제하시겠습니까?\n삭제하면 안전 기록에서 사라집니다.', ()=> deleteTaskConfirmed(id), { label:'삭제', color:'var(--red)' });
+    });
+    return;
+  }
   // 삭제는 되돌릴 수 없으므로 10분 유예와 무관하게 매번 비밀번호를 확인합니다
   requireActionPassword('작업을 삭제하려면 비밀번호를 입력하세요', ()=>{
     showConfirm('이 작업을 삭제하시겠습니까?', ()=> deleteTaskConfirmed(id));
@@ -3075,6 +3108,13 @@ function deleteTaskConfirmed(id){
 function editTask(id){
   const t = state.tasks.find(x=>x.id===id);
   if(!t) return;
+  if(isHighRiskLocked(t) && state.editingAdminOk !== t.id){
+    requireAdminPassword(`고위험으로 선정된 작업(선정일 ${t.highRiskSetAt || t.date})은 다음날부터 관리자 비밀번호로만 수정할 수 있습니다`, ()=>{
+      state.editingAdminOk = t.id;
+      editTask(id);
+    });
+    return;
+  }
   closeDetail();
   switchView('register');
   switchRegisterTab('task');
@@ -3099,6 +3139,7 @@ function pasteTaskFromClipboard(){
   if(!t){ showToast('복사된 작업이 없습니다. 먼저 작업 상세에서 "복사"를 눌러주세요'); return; }
   state.editingTaskId = null;
   state.editingSnapshot = null;
+  state.editingAdminOk = null;
   fillFormFromTask(t);
   document.getElementById('f_date').value = state.date;
   resetRiskSelectionToNone(); // 복사한 작업은 고위험 작업여부를 다시 선정해야 하므로 "해당없음"으로 초기화
@@ -3171,6 +3212,13 @@ function fillFormFromTask(t){
   document.getElementById('f_equipment_type').value = t.equipmentType || '';
 
   state.formRiskSel = [...(t.highRisk||[])];
+  // 기타(직접입력)로 저장된 값은 목록 칩이 아니라서 아무것도 켜지지 않았음 → 기타 칩을 켜고 입력칸에 복원
+  const known = new Set([...document.querySelectorAll('#riskChips .chip')].map(c=>c.dataset.r));
+  const customVal = state.formRiskSel.find(v=>!known.has(v));
+  if(customVal){
+    state.formRiskSel = state.formRiskSel.map(v=>v===customVal ? '기타(직접입력)' : v);
+    document.getElementById('f_risk_custom').value = customVal;
+  }
   document.querySelectorAll('#riskChips .chip').forEach(el=>{
     const on = state.formRiskSel.includes(el.dataset.r);
     el.classList.toggle('on', on);
@@ -3269,6 +3317,27 @@ let _actionPwAlwaysAsk = false;
 const ACTION_PW_GRACE_MS = 10 * 60 * 1000;
 let _actionPwUntil = 0;
 
+/* ── 고위험 작업 잠금 ─────────────────────────────────────────
+   고위험으로 선정된 작업은 선정 다음날부터 함부로 고치지 못합니다.
+   (협력사가 다음날 고위험 표시를 지우거나 작업취소로 돌리면 안전 기록이 사라지므로)
+   잠긴 작업의 수정·삭제·작업취소는 관리자 비밀번호로만 가능합니다.
+   예정·진행중·완료 같은 통상 상태 변경은 잠겨 있어도 그대로 됩니다. */
+function isHighRiskLocked(t){
+  if(!t || !isHighRisk(t)) return false;
+  const setAt = t.highRiskSetAt || t.date;   // 선정일 기록이 없는 옛 작업은 작업일 기준
+  return !!setAt && todayStr() > setAt;
+}
+let _adminPwCallback = null;
+let _adminCancelOkId = null;   // 관리자 확인을 거친 작업취소 대상 (작업 객체에 붙이지 않음 — 서버에 저장되면 안 됨)
+function requireAdminPassword(message, onSuccess){
+  document.getElementById('actionPwMessage').textContent = message;
+  document.getElementById('actionPwInput').value = '';
+  _actionPwCallback = null;
+  _adminPwCallback = onSuccess;
+  document.getElementById('actionPwSheet').classList.add('show');
+  setTimeout(()=>{ const i = document.getElementById('actionPwInput'); if(i) i.focus(); }, 150);
+}
+
 function requireActionPassword(message, onSuccess, options){
   const alwaysAsk = !!(options && options.alwaysAsk);
   if(!alwaysAsk && Date.now() < _actionPwUntil){ onSuccess(); return; }
@@ -3285,9 +3354,19 @@ function requireActionPassword(message, onSuccess, options){
 function closeActionPassword(){
   document.getElementById('actionPwSheet').classList.remove('show');
   _actionPwCallback = null;
+  _adminPwCallback = null;
 }
 function runActionPassword(){
   const input = document.getElementById('actionPwInput');
+  // 관리자 비밀번호를 요구한 경우 — 일반 비밀번호로는 통과 불가
+  if(_adminPwCallback){
+    if(input.value === ADMIN_PASSWORD){
+      const cb = _adminPwCallback; closeActionPassword(); if(cb) cb();
+    } else {
+      showToast('관리자 비밀번호가 올바르지 않습니다'); input.value = ''; input.focus();
+    }
+    return;
+  }
   if(input.value === ACTION_PASSWORD){
     const cb = _actionPwCallback;
     // 삭제처럼 매번 확인해야 하는 작업은 유예를 주지 않습니다
@@ -3390,7 +3469,7 @@ function closeDay(){
   const running = state.tasks.filter(t=>t.date===dateStr && t.status==='진행중');
   if(!running.length){ showToast('이 날짜에 진행중인 작업이 없습니다'); return; }
   showConfirm(`${dateStr} 진행중 작업 ${running.length}건을 모두 완료로 마감할까요?`, ()=>{
-    running.forEach(t=>{ t.status = '완료'; fbSaveTask(t); });
+    running.forEach(t=>{ fbUpdateTaskFields(t, { status: '완료' }); });
     saveTasks();
     renderAll();
     renderCloseDayPreview();
@@ -3439,7 +3518,7 @@ function mergeCompanies(){
     requireActionPassword('업체명 병합은 비밀번호가 필요합니다', async ()=>{
       let changed = 0;
       // 1) 지금 불러온 작업
-      state.tasks.forEach(t=>{ if(t.company===from){ t.company=to; fbSaveTask(t); changed++; } });
+      state.tasks.forEach(t=>{ if(t.company===from){ fbUpdateTaskFields(t, { company: to }); changed++; } });
       // 2) 양수기
       state.pumps.forEach(p=>{ if(p.company===from){ p.company=to; fbSavePump(p); changed++; } });
       saveTasks(); savePumps();
@@ -3493,10 +3572,7 @@ function bulkSetStatus(status){
   }
   const skipNote = cancelled.length ? `\n(작업취소 ${cancelled.length}건은 변경하지 않습니다)` : '';
   showConfirm(`${dateStr} 작업 ${list.length}건을 "${status}" 상태로 변경하시겠습니까?${skipNote}`, ()=>{
-    list.forEach(t=>{
-      t.status = status;
-      fbSaveTask(t);
-    });
+    list.forEach(t=>{ fbUpdateTaskFields(t, { status }); });
     saveTasks();
     renderAdminBulkList();
     renderAll();
@@ -3747,6 +3823,20 @@ function normalizeForFingerprint(v){
 function taskFingerprint(t){
   if(t && t.updatedAt) return 'u:' + t.updatedAt;
   return 'n:' + JSON.stringify(normalizeForFingerprint(t) || {});
+}
+
+/* 상태·업체명처럼 일부 필드만 바꿀 때는 그 필드만 서버에 보냅니다.
+   전체를 set()으로 덮어쓰면, 통신이 끊겼다 붙은 기기가 갖고 있던 "옛" 작업 전체가
+   서버의 최신(예: 오후에 지정된 고위험)을 지워버립니다. 밤새 켜둔 휴대폰의 자동 상태 전환이 그 경로였습니다. */
+function fbUpdateTaskFields(task, fields){
+  const updatedAt = new Date().toISOString();
+  Object.assign(task, fields, { updatedAt });
+  if(!fbDb) return;
+  fbDb.ref('tasks/' + task.id).update({ ...fields, updatedAt }).catch(err=>{
+    console.error('작업 부분 저장 실패', err);
+    recordError('작업 부분 저장 실패: ' + (err.code || '') + ' ' + err.message);
+    showToast('⚠ 서버 저장 실패 — 이 기기에는 반영됐지만 다른 기기와 공유되지 않습니다 (' + (err.code || err.message) + ')');
+  });
 }
 
 function fbSaveTask(task){
