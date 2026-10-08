@@ -655,7 +655,6 @@
       <div class="summary-grid" id="summaryGrid"></div>
       <div id="oversightCard"></div>
       <button class="export-btn" id="exportExcelBtn" onclick="exportToExcel()">📤 일일 고위험 작업 현황 내보내기</button>
-      <button class="export-btn export-btn-img" id="exportImageBtn" onclick="exportToImage()">🖼 이미지로 내보내기 (카톡 전송용 · 색상·열 그대로)</button>
 
       <div class="weather-card" id="weatherCard" onclick="fetchWeather()" style="cursor:pointer;" title="눌러서 새로고침">
         <div class="weather-top">
@@ -947,6 +946,12 @@
 
       <div id="adminPanel" style="display:none;">
         <div class="form-card">
+          <h3>🖼 일일 고위험 작업 현황 이미지 내보내기</h3>
+          <p class="hint" style="margin-top:0;">카카오톡 전송용. 대시보드에서 보고 있는 날짜(<b id="imgExportDateLabel"></b>)의 현황을 색상·열 그대로 한 장의 PNG로 저장합니다. 엑셀을 PDF로 바꿀 때 색이 빠지고 열이 잘리는 문제가 없습니다.</p>
+          <button type="button" class="export-btn export-btn-img" id="exportImageBtn" style="margin-top:0;" onclick="exportToImage()">🖼 이미지로 내보내기</button>
+        </div>
+
+        <div class="form-card">
           <h3>📢 공지사항 관리</h3>
           <p class="hint" style="margin-top:0;">앱을 열 때 모든 사용자에게 팝업으로 표시됩니다. 항상 1개만 유지되며, 새로 게시하면 이전 공지는 사라집니다.</p>
           <textarea id="noticeInput" placeholder="공지 내용을 입력하세요" style="width:100%;min-height:100px;padding:12px;
@@ -1063,7 +1068,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p class="admin-build" style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-10-08 10:00 UTC</p>
+        <p class="admin-build" style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-10-08 11:00 UTC</p>
       </div>
     </div>
   </div>
@@ -3430,6 +3435,7 @@ function showAdminPanel(){
   renderMergeSelects();
   renderHdcStaffAdmin();
   renderDiag();
+  const lbl = document.getElementById('imgExportDateLabel'); if(lbl) lbl.textContent = state.date;
   renderAdminBulkList();
   renderSiteImageVersionList();
   renderAttendanceFieldToggles();
