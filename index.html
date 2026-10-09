@@ -127,6 +127,11 @@
   .stat-card .lbl{font-size:9px;color:var(--ink-400);font-weight:700;margin-top:2px;line-height:1.2;}
   .stat-card.risk .num{color:var(--red);}
   .stat-card.grade .num{color:var(--amber);}
+  .dash-company-row{margin:0 0 10px;}
+  .dash-company-row select{width:100%;padding:11px 36px 11px 12px;border:1.5px solid var(--line);border-radius:12px;font-size:13.5px;
+    font-weight:700;font-family:inherit;background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23596072' stroke-width='1.8' fill='none'/%3E%3C/svg%3E") no-repeat right 14px center;
+    color:var(--ink-900);-webkit-appearance:none;appearance:none;}
+  .dash-company-row select:focus{outline:none;border-color:var(--blue-600);}
   .export-btn-img{border-color:var(--green);background:var(--green-bg);color:var(--green);margin-top:8px;}
   /* 이미지 내보내기용 오프스크린 표 — 화면에는 보이지 않고 캔버스로만 그려집니다 */
   #imgExportStage{position:absolute;left:-20000px;top:0;width:1600px;background:#fff;padding:24px 28px;
@@ -677,6 +682,11 @@
 
     <div class="section">
       <div class="section-head"><h2>주요 작업 목록</h2><span class="meta" id="taskCountMeta"></span></div>
+      <div class="dash-company-row">
+        <select id="dashCompanyFilter" onchange="setDashCompany(this.value)">
+          <option value="">전체 협력업체</option>
+        </select>
+      </div>
       <div id="dashboardTaskList"></div>
     </div>
   </div>
@@ -948,6 +958,10 @@
         <div class="form-card">
           <h3>🖼 일일 고위험 작업 현황 이미지 내보내기</h3>
           <p class="hint" style="margin-top:0;">카카오톡 전송용. 대시보드에서 보고 있는 날짜(<b id="imgExportDateLabel"></b>)의 현황을 색상·열 그대로 한 장의 PNG로 저장합니다. 엑셀을 PDF로 바꿀 때 색이 빠지고 열이 잘리는 문제가 없습니다.</p>
+          <div class="filter-scroll" style="margin:0 0 10px;">
+            <button type="button" class="chip on" id="imgScopeAll" onclick="setImgScope('all')">전체 작업</button>
+            <button type="button" class="chip" id="imgScopeRisk" onclick="setImgScope('risk')">고위험·상등급만</button>
+          </div>
           <button type="button" class="export-btn export-btn-img" id="exportImageBtn" style="margin-top:0;" onclick="exportToImage()">🖼 이미지로 내보내기</button>
         </div>
 
@@ -1068,7 +1082,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p class="admin-build" style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-10-08 11:00 UTC</p>
+        <p class="admin-build" style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-10-10 03:00 UTC</p>
       </div>
     </div>
   </div>
@@ -1320,7 +1334,8 @@ let state = {
   formCctv: false,
   editingTaskId: null,
   editingSnapshot: null,
-  editingAdminOk: null,     // 잠긴 고위험 작업을 관리자 비밀번호로 열었을 때 그 작업 id
+  editingAdminOk: null,
+  dashCompany: '',           // 대시보드 주요 작업 목록 업체 필터     // 잠긴 고위험 작업을 관리자 비밀번호로 열었을 때 그 작업 id
   hdcStaff: { supervisors: [...DEFAULT_SUPERVISORS_HDC], safetyManagers: [...DEFAULT_SAFETY_MANAGERS_HDC] },
   editingPumpId: null,
   clipboardTask: null,
@@ -1948,6 +1963,7 @@ function closeTaskListSheet(){ document.getElementById('taskListSheet').classLis
 /* 지도에 표시할 양수기 — 철거된 것은 목록에는 남기되 지도에서는 뺍니다 */
 function activePumps(){ return state.pumps.filter(p=>p.status!=='철거'); }
 
+function setDashCompany(v){ state.dashCompany = v || ''; renderDashboard(); bindTaskRowClicks(); }
 function renderDashboard(){
   const list = tasksForDate(state.date);
   const pumps = activePumps();
@@ -1986,8 +2002,20 @@ function renderDashboard(){
     <div class="stat-card grade" onclick="goToStatusView('전체','상등급')" style="cursor:pointer;"><div class="num">${gradeCount}</div><div class="lbl">상등급</div></div>
   `;
 
-  document.getElementById('taskCountMeta').textContent = `전체 (${totalTasks}건)`;
-  document.getElementById('dashboardTaskList').innerHTML = renderCompanyGroups(list);
+  // 협력업체 드롭다운 — 그 날짜에 등록된 업체만 (선택값은 목록이 바뀌어도 유지)
+  const sel = document.getElementById('dashCompanyFilter');
+  if(sel){
+    const names = [...new Set(list.map(t=>t.company).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+    if(state.dashCompany && !names.includes(state.dashCompany)) state.dashCompany = '';
+    sel.innerHTML = '<option value="">전체 협력업체</option>' + names.map(n=>{
+      const cnt = list.filter(t=>t.company===n).length;
+      return `<option value="${esc(n)}"${n===state.dashCompany?' selected':''}>${esc(n)} (${cnt})</option>`;
+    }).join('');
+  }
+  const shown = state.dashCompany ? list.filter(t=>t.company===state.dashCompany) : list;
+  document.getElementById('taskCountMeta').textContent = state.dashCompany ? `${shown.length}건 / 전체 ${totalTasks}건` : `전체 (${totalTasks}건)`;
+  document.getElementById('dashboardTaskList').innerHTML = shown.length ? renderCompanyGroups(shown)
+    : `<div class="empty-state"><div class="ic">🏢</div><div class="t">선택한 업체의 작업이 없습니다</div></div>`;
   renderOversight(list);
   refreshInputSuggestions();
   bindTaskRowClicks();
@@ -4522,9 +4550,18 @@ function loadScriptOnce(src){
     document.head.appendChild(el);
   });
 }
+let _imgScope = 'all';   // 'all' | 'risk'
+function setImgScope(v){
+  _imgScope = v;
+  document.getElementById('imgScopeAll').classList.toggle('on', v==='all');
+  document.getElementById('imgScopeRisk').classList.toggle('on', v==='risk');
+}
 async function exportToImage(){
-  const list = tasksForDate(state.date);
-  if(!list.length){ showToast('내보낼 작업이 없습니다'); return; }
+  const all = tasksForDate(state.date);
+  // 고위험·상등급만: 일상작업을 빼고 보냅니다 (단톡방에서 핵심만 보이게)
+  const list = _imgScope === 'risk' ? all.filter(t=>riskLevel(t)!=='normal') : all;
+  if(!all.length){ showToast('내보낼 작업이 없습니다'); return; }
+  if(!list.length){ showToast('고위험·상등급 작업이 없습니다. 전체 작업으로 바꿔 내보내세요'); return; }
   const btn = document.getElementById('exportImageBtn');
   const btnLabel = btn ? btn.textContent : '';
   if(btn){ btn.disabled = true; btn.textContent = '이미지 생성 중...'; }
@@ -4555,12 +4592,12 @@ async function exportToImage(){
     if(!stage){ stage = document.createElement('div'); stage.id = 'imgExportStage'; document.body.appendChild(stage); }
     stage.innerHTML = `
       <div class="sign">${sign}</div>
-      <div class="ttl">일일 고위험 작업 현황</div>
+      <div class="ttl">일일 고위험 작업 현황${_imgScope==="risk" ? " (고위험·상등급)" : ""}</div>
       <div class="meta"><span>현장명: ${esc(siteName)}</span><span>작업일: ${esc(state.date)}</span></div>
       <div class="lg">
         <span><i style="background:#F4CCCC"></i>상등급 작업(작업전 점검 대상)</span>
         <span><i style="background:#FFF2CC"></i>고위험 작업(관리자 및 SSK 수시점검)</span>
-        <span><i style="background:#FFFFFF"></i>일상작업</span>
+        ${_imgScope==='risk' ? '' : '<span><i style="background:#FFFFFF"></i>일상작업</span>'}
       </div>
       <table><colgroup>${cols}</colgroup><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
 
@@ -4573,10 +4610,10 @@ async function exportToImage(){
     const blob = await new Promise(res=> canvas.toBlob(res, 'image/png'));
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = `일일현황_${state.date}.png`;
+    a.href = url; a.download = `일일현황_${state.date}${_imgScope==='risk' ? '_고위험' : ''}.png`;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(()=>URL.revokeObjectURL(url), 10000);
-    showToast(`✓ 이미지 저장: 일일현황_${state.date}.png (${rows.length}건)`);
+    showToast(`✓ 이미지 저장 (${_imgScope==='risk' ? '고위험·상등급 ' : ''}${rows.length}건)`);
   }catch(err){
     console.error(err); recordError('이미지 내보내기 실패: ' + err.message);
     showToast('⚠ 이미지 생성에 실패했습니다: ' + err.message);
