@@ -23,7 +23,10 @@
     --blue-100:#E7EDFC;
     --ink-900:#161B26;
     --ink-600:#5B6472;
-    --ink-400:#8B93A3;
+    --ink-400:#6E7686;   /* 흰 배경 대비 4.5:1 — 햇빛 아래 보조 텍스트 가독성 */
+    --ink-700:#3A4150;
+    --brand-red:#F01428;
+    --focus:0 0 0 3px rgba(47,95,219,.22);
     --bg:#F4F5F7;
     --card:#FFFFFF;
     --line:#E7E9EE;
@@ -608,6 +611,133 @@
     #app, #app.wide-view{max-width:1320px;}
     .bottom-nav, #app.wide-view .bottom-nav{max-width:1320px;}
   }
+
+  /* ═══════════════════════════════════════════════════════════
+     UI 개선 2026-10 — 현장 가독성·터치·일관성
+     기능 훅(id·data-*)은 건드리지 않고 표현만 바꿉니다.
+     ═══════════════════════════════════════════════════════════ */
+  body{font-size:14.5px;line-height:1.45;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+  *:focus-visible{outline:none;box-shadow:var(--focus);border-radius:8px;}
+  button{touch-action:manipulation;}
+  @media (prefers-reduced-motion:reduce){ *{transition:none !important;animation:none !important;} }
+
+  /* 상단바 — 브랜드 락업 */
+  .topbar{padding:calc(10px + env(safe-area-inset-top)) 16px 10px;gap:10px;}
+  .topbar .icon{width:34px;height:34px;border-radius:9px;}
+  .topbar h1{display:flex;align-items:baseline;gap:8px;font-size:15px;line-height:1.2;}
+  .brand-mark{font-size:19px;font-weight:900;letter-spacing:.02em;display:inline-flex;align-items:baseline;}
+  .brand-mark i{font-style:normal;color:var(--ink-400);margin:0 1px;}
+  .brand-mark .m1{color:var(--blue-600);} .brand-mark .m2{color:var(--brand-red);} .brand-mark .m3{color:var(--green);}
+  .brand-site{font-size:13px;font-weight:700;color:var(--ink-700);letter-spacing:-0.01em;}
+  .topbar .sub{font-size:11.5px;color:var(--ink-400);font-weight:600;margin-top:1px;}
+  .topbar .sub-tag{color:var(--ink-400);font-weight:500;opacity:.8;margin-left:4px;}
+  @media (max-width:380px){ .brand-site{display:none;} .topbar .sub::before{content:"아이파크무등산스카이포레 · ";color:var(--ink-700);font-weight:700;} }
+
+  /* 하단 탭 — SVG 아이콘·활성 표시·터치 영역 */
+  .bottom-nav{padding:6px 6px calc(6px + env(safe-area-inset-bottom));box-shadow:0 -4px 16px rgba(20,30,50,0.05);}
+  .nav-btn{gap:4px;padding:6px 2px 4px;min-height:52px;border-radius:12px;color:var(--ink-400);transition:color .15s;}
+  .nav-btn .nic{width:40px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:14px;transition:background .18s,transform .18s;}
+  .nav-btn .nic svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;}
+  .nav-btn .nlb{font-size:11px;font-weight:700;letter-spacing:-0.01em;}
+  .nav-btn.active{color:var(--blue-700);}
+  .nav-btn.active .nic{background:var(--blue-100);}
+  .nav-btn:active .nic{transform:scale(.92);}
+
+  /* 날짜 이동 — 더 크고 분명하게 */
+  .date-nav button{width:40px;height:40px;border-radius:12px;font-size:20px;}
+  .date-nav button.today-btn{height:40px;padding:0 14px;font-size:13px;font-weight:800;background:var(--blue-100);color:var(--blue-700);border-color:transparent;}
+  .date-picker .date-text{font-size:16px;}
+
+  /* 섹션 머리 */
+  .section-head{margin:18px 0 10px;align-items:baseline;}
+  .section-head h2{font-size:16px;font-weight:800;}
+  .section-head .meta{font-size:12px;font-weight:700;color:var(--ink-600);background:var(--card);border:1px solid var(--line);padding:3px 9px;border-radius:20px;}
+
+  /* 통계 타일 — 현장에서 한눈에 */
+  .stat-card{padding:12px 8px 10px;border-radius:var(--radius-md);}
+  .stat-card .num{font-size:24px;font-weight:900;letter-spacing:-0.03em;line-height:1.1;font-variant-numeric:tabular-nums;}
+  .stat-card .lbl{font-size:11px;font-weight:700;color:var(--ink-600);margin-top:4px;word-break:keep-all;line-height:1.25;}
+  .stat-card.risk{background:var(--red-bg);border-color:transparent;} .stat-card.grade{background:var(--amber-bg);border-color:transparent;}
+  .stat-card[onclick]{position:relative;} .stat-card[onclick]::after{content:"";position:absolute;right:8px;top:8px;width:6px;height:6px;border-radius:50%;background:var(--blue-600);opacity:.7;}
+
+  /* 작업 카드 — 위험도 왼쪽 띠 + 위계 */
+  .task-row{padding:13px 14px 13px 16px;border-left:4px solid transparent;transition:background .12s;}
+  .task-row.rl-risk{border-left-color:var(--red);} .task-row.rl-grade{border-left-color:var(--amber);} .task-row.rl-normal{border-left-color:var(--line);}
+  .task-row:active{background:var(--bg);}
+  .task-row .name{font-size:15px;line-height:1.3;color:var(--ink-900);}
+  .task-row .task-meta{font-size:12.5px;color:var(--ink-600);gap:10px;}
+  .task-row .task-guard{font-size:12.5px;color:var(--green);font-weight:700;}
+  .badge{font-size:11px;padding:4px 9px;border-radius:8px;letter-spacing:-0.01em;}
+  .company-head{padding:11px 14px;background:linear-gradient(to right,var(--bg),#fff);}
+  .company-head .name{font-size:13.5px;font-weight:800;}
+  .company-head .cnt{font-size:11.5px;font-weight:800;color:var(--ink-600);background:#fff;border:1px solid var(--line);padding:2px 8px;border-radius:20px;}
+
+  /* 확인 필요 항목 — 행 단위로 스캔되게 */
+  .oversight{padding:12px 14px 6px;}
+  .oversight .ov-title{font-size:14px;font-weight:800;margin-bottom:8px;}
+  .ov-item{display:flex;align-items:center;justify-content:space-between;width:100%;padding:11px 10px 11px 12px;margin-bottom:6px;border-radius:10px;
+    background:var(--bg);border:1px solid transparent;font-size:13.5px;font-weight:700;color:var(--ink-900);text-align:left;}
+  .ov-item .n{font-size:12.5px;font-weight:800;color:var(--amber);background:var(--amber-bg);padding:3px 9px;border-radius:20px;white-space:nowrap;}
+  .ov-item.tap{position:relative;padding-right:30px;}
+  .ov-item.tap::after{content:"›";position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:18px;color:var(--ink-400);}
+  .ov-item.tap:active{background:var(--amber-bg);}
+
+  /* 입력 — 아이폰 확대 방지(16px) · 높이 · 포커스 링 */
+  .field label{font-size:13px;color:var(--ink-700);margin-bottom:7px;}
+  .field label .req{color:var(--red);}
+  .field input[type=text],.field input[type=number],.field input[type=date],.field input[type=time],.field input[type=search],
+  .field select,.field textarea{font-size:16px;min-height:46px;padding:11px 13px;border-radius:11px;border-width:1.5px;background:#fff;transition:border-color .12s,box-shadow .12s;}
+  .field input:focus,.field select:focus,.field textarea:focus{box-shadow:var(--focus);}
+  .field textarea{min-height:88px;line-height:1.45;}
+  .search-row input{font-size:16px;min-height:46px;}
+  .staff-add input{font-size:16px;min-height:44px;}
+  .hint{line-height:1.5;}
+
+  /* 칩 — 터치 40px */
+  .chip{min-height:40px;display:inline-flex;align-items:center;justify-content:center;padding:8px 10px;font-size:13px;border-radius:11px;transition:background .12s,border-color .12s,color .12s;}
+  .chip:active{transform:scale(.97);}
+  .filter-scroll .chip{min-height:36px;}
+
+  /* 버튼 체계 — 높이 3단계 (52 / 44 / 40) */
+  .submit-btn{min-height:52px;font-size:16px;border-radius:14px;letter-spacing:-0.01em;transition:transform .1s,box-shadow .15s;}
+  .submit-btn:active{transform:scale(.985);box-shadow:0 3px 10px rgba(47,95,219,0.28);}
+  .toggle-btn{min-height:44px;border-radius:11px;font-size:14px;}
+  .toggle-btn:active{background:var(--bg);}
+  .map-action-btn{min-height:40px;font-size:12.5px;border-radius:10px;}
+  .map-action-btn:active{background:var(--bg);}
+  .export-btn{min-height:50px;font-size:14px;border-style:solid;border-width:1.5px;}
+  .export-btn:disabled{opacity:.6;}
+  .sheet-close-btn{min-height:48px;font-size:15px;border-radius:12px;}
+  .detail-close{width:36px;height:36px;border-radius:50%;font-size:16px;}
+
+  /* 카드·시트 */
+  .form-card{padding:16px 16px 14px;border-radius:var(--radius-lg);}
+  .form-card h3{font-size:15px;font-weight:800;margin:0 0 10px;}
+  .sheet-inner{padding-top:8px;}
+  .sheet-handle{width:40px;height:5px;border-radius:3px;background:var(--line);margin:4px auto 12px;}
+  .sheet-inner h4{font-size:16px;}
+  .detail-cell .k{font-size:11.5px;color:var(--ink-400);font-weight:700;} .detail-cell .v{font-size:14px;font-weight:700;color:var(--ink-900);margin-top:2px;}
+  .detail-banner{border-radius:12px;}
+
+  /* 날씨 카드 */
+  .weather-card{border-radius:18px;padding:16px 18px 14px;background:linear-gradient(135deg,#2956CC 0%,#4F86F3 100%);}
+
+  /* 토스트 — 탭바 위로, 글자 키움 */
+  .toast{font-size:14px;padding:13px 20px;border-radius:14px;bottom:calc(96px + env(safe-area-inset-bottom));}
+
+  /* 빈 상태 */
+  .empty-state{padding:28px 16px;} .empty-state .ic{font-size:30px;} .empty-state .t{font-size:14px;font-weight:800;} .empty-state .s{font-size:12.5px;color:var(--ink-400);}
+
+  /* PC */
+  @media (min-width:900px){
+    body{background:#EEF0F4;}
+    .topbar{padding-top:12px;padding-bottom:12px;}
+    .brand-mark{font-size:21px;} .brand-site{font-size:14px;}
+    .stat-card .num{font-size:26px;}
+    .form-card{padding:20px;}
+    .task-row:hover{background:var(--bg);cursor:pointer;}
+    .nav-btn:hover{color:var(--blue-700);}
+  }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -620,8 +750,8 @@
   <div class="topbar" onclick="switchView('dashboard')" style="cursor:pointer;">
     <img class="icon" src="./logo.png" alt="로고">
     <div>
-      <h1 id="siteTitle" data-site="아이파크무등산스카이포레">아이파크무등산스카이포레 <span style="color:var(--blue-600);font-weight:800;">S</span><span style="color:var(--ink-900);">.</span><span style="color:var(--red);font-weight:800;">O</span><span style="color:var(--ink-900);">.</span><span style="color:var(--green);font-weight:800;">S</span> 시스템 <span style="color:var(--ink-400);font-weight:600;font-size:0.87em;">(<span style="color:var(--blue-600);font-weight:700;">S</span>afety&nbsp;&nbsp;&nbsp;<span style="color:var(--red);font-weight:700;">O</span>n&nbsp;&nbsp;&nbsp;<span style="color:var(--green);font-weight:700;">S</span>ystem)</span></h1>
-      <div class="sub">작업前, 안전을 켜다. <span style="color:var(--ink-400);font-weight:500;">· 일일 고위험 현장관리 시스템</span></div>
+      <h1 id="siteTitle" data-site="아이파크무등산스카이포레"><span class="brand-mark"><b class="m1">S</b><i>.</i><b class="m2">O</b><i>.</i><b class="m3">S</b></span><span class="brand-site">아이파크무등산스카이포레</span></h1>
+      <div class="sub">일일 고위험 작업 안전관리 <span class="sub-tag">Safety On System</span></div>
     </div>
   </div>
 
@@ -1082,17 +1212,17 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p class="admin-build" style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-10-10 03:00 UTC</p>
+        <p class="admin-build" style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-10-10 06:00 UTC</p>
       </div>
     </div>
   </div>
 
   <div class="bottom-nav">
-    <button class="nav-btn active" data-view="dashboard" onclick="switchView('dashboard')"><span class="nic">🏗️</span><span class="nlb">대시보드</span></button>
-    <button class="nav-btn" data-view="register" onclick="switchView('register')"><span class="nic">📝</span><span class="nlb">작업등록</span></button>
-    <button class="nav-btn" data-view="status" onclick="switchView('status')"><span class="nic">📋</span><span class="nlb">작업현황</span></button>
-    <button class="nav-btn" data-view="building" onclick="switchView('building')"><span class="nic">🏢</span><span class="nlb">동별보기</span></button>
-    <button class="nav-btn" data-view="admin" onclick="switchView('admin')"><span class="nic">🔒</span><span class="nlb">관리</span></button>
+    <button class="nav-btn active" data-view="dashboard" onclick="switchView('dashboard')"><span class="nic"><svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/><path d="M10 19.5v-5h4v5"/></svg></span><span class="nlb">대시보드</span></button>
+    <button class="nav-btn" data-view="register" onclick="switchView('register')"><span class="nic"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/><rect x="3.5" y="3.5" width="17" height="17" rx="4"/></svg></span><span class="nlb">작업등록</span></button>
+    <button class="nav-btn" data-view="status" onclick="switchView('status')"><span class="nic"><svg viewBox="0 0 24 24"><path d="M8 7h11M8 12h11M8 17h11"/><circle cx="4.5" cy="7" r="1.1" fill="currentColor" stroke="none"/><circle cx="4.5" cy="12" r="1.1" fill="currentColor" stroke="none"/><circle cx="4.5" cy="17" r="1.1" fill="currentColor" stroke="none"/></svg></span><span class="nlb">작업현황</span></button>
+    <button class="nav-btn" data-view="building" onclick="switchView('building')"><span class="nic"><svg viewBox="0 0 24 24"><rect x="4" y="3.5" width="11" height="17" rx="1.5"/><path d="M15 9.5h5v11h-5"/><path d="M7.5 8h4M7.5 12h4M7.5 16h4"/></svg></span><span class="nlb">동별보기</span></button>
+    <button class="nav-btn" data-view="admin" onclick="switchView('admin')"><span class="nic"><svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg></span><span class="nlb">관리</span></button>
   </div>
 
   <div class="toast" id="toast"></div>
@@ -1996,7 +2126,7 @@ function renderDashboard(){
   document.getElementById('summaryGrid').innerHTML = `
     <div class="stat-card" onclick="openAttendanceSheet()" style="cursor:pointer;"><div class="num">${totalAttendance}</div><div class="lbl">총 출역인원</div></div>
     ${extraCards}
-    <div class="stat-card"><div class="num">${highRiskWorkers}</div><div class="lbl">고위험작업인원</div></div>
+    <div class="stat-card"><div class="num">${highRiskWorkers}</div><div class="lbl">고위험 작업인원</div></div>
     <div class="stat-card" onclick="goToStatusView('전체','전체')" style="cursor:pointer;"><div class="num">${totalTasks}</div><div class="lbl">작업건수</div></div>
     <div class="stat-card risk" onclick="goToStatusView('전체','고위험')" style="cursor:pointer;"><div class="num">${highRiskCount}</div><div class="lbl">고위험</div></div>
     <div class="stat-card grade" onclick="goToStatusView('전체','상등급')" style="cursor:pointer;"><div class="num">${gradeCount}</div><div class="lbl">상등급</div></div>
@@ -2083,7 +2213,7 @@ function renderCompanyGroups(list){
 
 function taskRowHTML(t){
   return `
-    <div class="task-row" data-id="${t.id}">
+    <div class="task-row rl-${riskLevel(t)}" data-id="${t.id}">
       <div class="top">
         <h4 class="name">${esc(t.taskName)}</h4>
         <span class="badge status-${t.status}">${t.status}</span>
