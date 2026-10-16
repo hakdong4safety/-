@@ -1220,7 +1220,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p class="admin-build" style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-10-16 02:00 UTC</p>
+        <p class="admin-build" style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-10-16 04:00 UTC</p>
       </div>
     </div>
   </div>
@@ -1271,6 +1271,11 @@
       <div class="sheet-handle"></div>
       <h4 style="margin:0 0 4px;font-size:16px;">🕘 최근 작업 불러오기</h4>
       <p class="hint" style="margin-top:0;">최근 7일간 등록한 작업입니다. 누르면 오늘 날짜로 폼이 채워집니다. 고위험 작업여부는 다시 선택해 주세요.</p>
+      <div class="dash-company-row">
+        <select id="recentCompanyFilter" onchange="setRecentCompany(this.value)">
+          <option value="">전체 협력업체</option>
+        </select>
+      </div>
       <div id="recentTaskList" style="max-height:52vh;overflow-y:auto;"></div>
       <button class="sheet-close-btn" onclick="closeRecentTaskSheet()">닫기</button>
     </div>
@@ -2046,27 +2051,41 @@ function applyCompanyName(name){
    매일 같은 작업을 다시 등록하는 경우가 많은데, 기존에는
    상세 열기 → 복사 → 등록탭 → 붙여넣기 4단계를 거쳐야 했습니다.
 ========================================================= */
-function openRecentTaskSheet(){
+/* 최근 작업 불러오기 — 협력업체 드롭다운으로 좁혀 볼 수 있습니다.
+   업체 필터를 먼저 걸고 40건을 자르므로, 작업이 많은 날에도 원하는 업체의 작업이 잘리지 않습니다. */
+let _recentCompany = null;   // null = 아직 선택 안 함(폼의 업체명으로 자동 선택)
+function recentTaskPool(){
   const today = state.date;
   const from = ymdLocal(new Date(new Date(today+'T00:00:00').getTime() - 7*86400000));
   // 같은 업체+작업명은 가장 최근 것 하나만 보여줍니다
   const seen = new Set();
-  const list = state.tasks
-    .filter(t=>t.date <= today && t.date >= from)
-    .sort((a,b)=> b.date.localeCompare(a.date))
+  return state.tasks
+    .filter(t=>(t.date||'') <= today && (t.date||'') >= from)
+    .sort((a,b)=> (b.date||'').localeCompare(a.date||''))
     .filter(t=>{
       const key = t.company + '|' + t.taskName;
       if(seen.has(key)) return false;
       seen.add(key); return true;
-    })
-    .slice(0, 40);
-
+    });
+}
+function renderRecentTaskList(){
+  const pool = recentTaskPool();
+  const names = [...new Set(pool.map(t=>t.company).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+  if(_recentCompany && !names.includes(_recentCompany)) _recentCompany = '';
+  const sel = document.getElementById('recentCompanyFilter');
+  if(sel){
+    sel.innerHTML = `<option value="">전체 협력업체 (${pool.length})</option>` + names.map(n=>{
+      const cnt = pool.filter(t=>t.company===n).length;
+      return `<option value="${esc(n)}"${n===_recentCompany?' selected':''}>${esc(n)} (${cnt})</option>`;
+    }).join('');
+  }
+  const list = (_recentCompany ? pool.filter(t=>t.company===_recentCompany) : pool).slice(0, 40);
   document.getElementById('recentTaskList').innerHTML = list.length
     ? list.map(t=>`
-      <div class="task-row" style="cursor:pointer;" onclick="loadRecentTask('${t.id}')">
+      <div class="task-row rl-${riskLevel(t)}" style="cursor:pointer;" onclick="loadRecentTask('${t.id}')">
         <div class="top">
           <h4 class="name">${esc(t.taskName)}</h4>
-          <span class="badge" style="background:var(--bg);color:var(--ink-400);">${(t.date||'').slice(5)}</span>
+          <span class="badge" style="background:var(--bg);color:var(--ink-400);">${esc((t.date||'').slice(5))}</span>
         </div>
         <div class="task-meta">
           <span>🏭 ${esc(t.company)}</span>
@@ -2074,7 +2093,16 @@ function openRecentTaskSheet(){
           <span>👥 ${t.workers||0}명</span>
         </div>
       </div>`).join('')
-    : '<p class="hint">최근 7일간 등록된 작업이 없습니다.</p>';
+    : `<p class="hint">${_recentCompany ? '선택한 업체의 최근 7일 작업이 없습니다.' : '최근 7일간 등록된 작업이 없습니다.'}</p>`;
+}
+function setRecentCompany(v){ _recentCompany = v || ''; renderRecentTaskList(); }
+function openRecentTaskSheet(){
+  // 처음 열 때는 폼에 입력된 업체명으로 자동 선택 (없으면 전체)
+  if(_recentCompany === null){
+    const typed = (document.getElementById('f_company').value || '').trim();
+    _recentCompany = typed;
+  }
+  renderRecentTaskList();
   document.getElementById('recentTaskSheet').classList.add('show');
 }
 function closeRecentTaskSheet(){ document.getElementById('recentTaskSheet').classList.remove('show'); }
