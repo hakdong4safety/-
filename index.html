@@ -699,6 +699,66 @@
   textarea.loose-input{min-height:88px;line-height:1.45;resize:vertical;}
   .loose-input:focus{outline:none;border-color:var(--blue-600);box-shadow:var(--focus);}
 
+  /* 푸시 알림 카드 */
+  .push-card{padding:12px 14px;border:1.5px solid var(--blue-100);background:linear-gradient(to right,#F3F6FD,#fff);}
+  .push-row{display:flex;align-items:center;gap:12px;}
+  .push-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .push-txt b{font-size:14px;color:var(--ink-900);} .push-txt span{font-size:12px;color:var(--ink-600);}
+  .push-btn{flex-shrink:0;background:var(--blue-600);color:#fff;border-color:var(--blue-600);padding:10px 14px;}
+  .push-btn.off{background:#fff;color:var(--ink-600);border-color:var(--line);}
+
+  /* ── 책임구역제 ────────────────────────────────────────── */
+  .siteplan-wrap{aspect-ratio:811/485;}
+  .siteplan-wrap .bg-fixed{width:100%;height:100%;object-fit:cover;display:block;}
+  .building-hotspot.zoned{width:9.5%;height:15%;border-radius:8px;background:transparent;box-shadow:none;
+    display:flex;align-items:flex-end;justify-content:center;padding-bottom:2px;}
+  .building-hotspot.zoned .hl{font-size:clamp(8px,1.6vw,12px);font-weight:900;color:#fff;background:var(--zc,#333);padding:2px 6px;border-radius:7px;
+    box-shadow:0 1px 3px rgba(0,0,0,.35);letter-spacing:-0.02em;line-height:1.2;white-space:nowrap;}
+  .building-hotspot.zoned .hl.done::after{content:" ✓";}
+  .building-hotspot.zoned.active{background:transparent;box-shadow:none;}
+  .building-hotspot.zoned.active .hl{outline:3px solid #fff;outline-offset:1px;transform:scale(1.12);}
+  .zone-legend{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px 12px;border-top:1px solid var(--line);}
+  .zone-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:20px;font-size:11.5px;font-weight:800;
+    border:1.5px solid var(--line);background:#fff;color:var(--ink-900);cursor:pointer;font-family:inherit;}
+  .zone-chip i{width:10px;height:10px;border-radius:50%;background:var(--zc);display:inline-block;}
+  .zone-chip.on{border-color:var(--zc);background:color-mix(in srgb,var(--zc) 10%,#fff);}
+  .zone-chip .st{font-size:10.5px;color:var(--ink-400);font-weight:700;}
+  .zone-chip .st.ok{color:var(--green);}
+  .zone-card{border-left:5px solid var(--zc);padding:14px 16px;}
+  .zone-card .zt{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+  .zone-card h3{margin:0;font-size:15px;}
+  .zone-card .zm{font-size:12.5px;color:var(--ink-600);margin:6px 0 10px;line-height:1.5;}
+  .zone-card .zm b{color:var(--ink-900);}
+  .zone-status{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;padding:5px 10px;border-radius:20px;background:var(--amber-bg);color:var(--amber);}
+  .zone-status.ok{background:var(--green-bg);color:var(--green);}
+  .zone-btn{width:100%;min-height:46px;border-radius:12px;border:none;background:var(--zc);color:#fff;font-weight:800;font-size:14px;font-family:inherit;cursor:pointer;}
+  .zone-btn:active{filter:brightness(.92);}
+  .zone-sheet{max-height:92vh;overflow-y:auto;}
+  .zc-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;}
+  .zc-head h4{margin:0;font-size:16px;}
+  .zc-head .detail-close{position:static;margin-left:auto;flex-shrink:0;}
+  .zc-meta{font-size:12.5px;color:var(--ink-600);line-height:1.5;margin-bottom:10px;}
+  .zc-row{display:flex;gap:8px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line);}
+  .zc-row:first-of-type{border-top:none;}
+  .zc-no{width:22px;flex-shrink:0;font-size:12px;font-weight:900;color:var(--ink-400);padding-top:3px;}
+  .zc-txt{flex:1;min-width:0;font-size:13.5px;font-weight:700;color:var(--ink-900);line-height:1.4;}
+  .zc-txt small{display:block;font-size:11.5px;color:var(--ink-400);font-weight:600;margin-top:2px;line-height:1.35;}
+  .zc-tg{display:flex;gap:4px;flex-shrink:0;}
+  .zc-tg button{min-width:50px;min-height:38px;border-radius:9px;border:1.5px solid var(--line);background:#fff;font-size:12.5px;font-weight:800;font-family:inherit;color:var(--ink-600);}
+  .zc-tg button.ok{border-color:var(--green);background:var(--green);color:#fff;}
+  .zc-tg button.bad{border-color:var(--red);background:var(--red);color:#fff;}
+  .zc-act{width:100%;box-sizing:border-box;margin-top:8px;padding:9px 11px;border:1.5px solid var(--red);border-radius:9px;font-size:14px;font-family:inherit;background:var(--red-bg);}
+  .zc-bulk{display:flex;gap:8px;margin:8px 0 2px;}
+  .zc-bulk button{flex:1;min-height:38px;border-radius:9px;border:1.5px solid var(--line);background:var(--bg);font-size:12.5px;font-weight:800;font-family:inherit;color:var(--ink-700);}
+  .zc-prog{font-size:12px;font-weight:800;color:var(--ink-600);}
+  .zs-row{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;border-left:5px solid var(--zc);background:#fff;}
+  .zs-row .zi{flex:1;min-width:0;} .zs-row .zi b{font-size:14px;} .zs-row .zi span{display:block;font-size:12px;color:var(--ink-600);margin-top:2px;}
+  .zs-row .map-action-btn{flex-shrink:0;}
+  .za-row{display:grid;grid-template-columns:62px 1fr 1fr;gap:6px;align-items:center;margin-bottom:6px;}
+  .za-row .zn{font-size:12.5px;font-weight:800;} .za-row .zn small{display:block;font-size:10.5px;color:var(--ink-400);font-weight:700;}
+  .za-row input{min-height:40px;padding:8px 10px;border:1.5px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;width:100%;box-sizing:border-box;}
+  @media (min-width:900px){ .zone-legend{gap:8px;} .zone-chip{font-size:12.5px;} }
+
   /* 칩 — 터치 40px */
   .chip{min-height:40px;display:inline-flex;align-items:center;justify-content:center;padding:8px 10px;font-size:13px;border-radius:11px;transition:background .12s,border-color .12s,color .12s;}
   .chip:active{transform:scale(.97);}
@@ -817,6 +877,13 @@
     </div>
 
     <div class="section">
+      <div class="form-card push-card" id="pushCard" style="display:none;">
+        <div class="push-row">
+          <div class="push-txt"><b id="pushTitle">🔔 공지 알림 받기</b><span id="pushDesc">원청 공지·긴급 안내를 이 휴대폰 알림으로 받습니다</span></div>
+          <button type="button" class="map-action-btn push-btn" id="pushBtn" onclick="onPushButton()">알림 켜기</button>
+        </div>
+      </div>
+
       <div class="section-head"><h2>주요 작업 목록</h2><span class="meta" id="taskCountMeta"></span></div>
       <div class="dash-company-row">
         <select id="dashCompanyFilter" onchange="setDashCompany(this.value)">
@@ -1054,12 +1121,16 @@
   <!-- ===================== BUILDING ===================== -->
   <div class="view" id="view-building">
     <div class="section">
-      <div class="section-head"><h2>단지 배치도</h2><span class="meta">동을 탭하면 해당 동으로 이동</span></div>
+      <div class="section-head"><h2>단지 배치도</h2><span class="meta">동을 탭하면 동별 현황 · 책임구역 점검</span></div>
       <div class="map-card">
-        <div class="map-wrap" id="buildingMapWrap">
-          <img class="bg-fixed" src="./map.jpg" alt="단지 배치도 (동별보기 전용 고정 도면)">
+        <div class="map-wrap siteplan-wrap" id="buildingMapWrap">
+          <img class="bg-fixed" src="./siteplan.png" alt="단지 배치도">
         </div>
+        <div class="zone-legend" id="zoneLegend"></div>
       </div>
+    </div>
+    <div class="section" id="zonePanelSection">
+      <div id="zonePanel"></div>
     </div>
     <div class="section">
       <div class="section-head"><h2>동별 현황</h2><span class="meta">층별 작업 분포 확인</span></div>
@@ -1112,7 +1183,20 @@
             <button type="button" class="btn-secondary" onclick="clearNotice()">공지 삭제</button>
             <button type="button" class="btn-primary" onclick="publishNotice()">게시하기</button>
           </div>
+          <label class="check-row" id="noticePushRow" style="margin-top:10px;display:none;"><input type="checkbox" id="noticePushChk" checked><span>🔔 게시와 함께 등록 기기에 푸시 알림 발송 (<b id="pushSubCount">0</b>대)</span></label>
           <p class="hint" id="noticeCurrentStatus" style="margin-top:10px;margin-bottom:0;"></p>
+        </div>
+
+        <div class="form-card" id="pushAdminCard" style="display:none;">
+          <h3>🔔 푸시 알림 설정</h3>
+          <p class="hint" style="margin-top:0;">발송 키는 Cloudflare Worker의 SEND_KEY와 같은 값입니다. 이 기기에만 저장되며 소스코드에는 들어가지 않습니다.</p>
+          <div class="staff-add"><input type="password" id="pushSendKeyInput" placeholder="발송 키 (SEND_KEY)" autocomplete="off"><button type="button" class="map-action-btn" onclick="savePushSendKey()">저장</button></div>
+          <p class="hint" id="pushAdminStatus" style="margin:8px 0 0;"></p>
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <button type="button" class="map-action-btn" style="flex:1;" onclick="refreshPushSubs()">등록 기기 새로고침</button>
+            <button type="button" class="map-action-btn" style="flex:1;" onclick="sendTestPush()">이 기기로 테스트</button>
+          </div>
+          <div id="pushSubList" class="diag-box" style="margin-top:10px;max-height:160px;"></div>
         </div>
 
         <div class="form-card">
@@ -1152,6 +1236,13 @@
             <select id="mergeTo" onchange="renderMergePreview()"><option value="">선택하세요</option></select></div>
           <p class="hint" id="mergePreview" style="margin:0 0 10px;"></p>
           <button type="button" class="submit-btn" style="margin:0;background:var(--amber);" onclick="mergeCompanies()">🔗 병합 실행</button>
+        </div>
+
+        <div class="form-card">
+          <h3>🗺 책임구역 담당자</h3>
+          <p class="hint" style="margin-top:0;">구역별 건축·안전 담당자입니다. 점검 체크리스트의 점검자 목록은 여기 이름만 나옵니다. 인사이동 시 이름만 바꾸면 됩니다.</p>
+          <div id="zoneAdminList"></div>
+          <button type="button" class="map-action-btn" style="width:100%;margin-top:10px;background:var(--blue-600);color:#fff;border-color:var(--blue-600);" onclick="saveZones()">구역 담당자 저장</button>
         </div>
 
         <div class="form-card">
@@ -1220,7 +1311,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p class="admin-build" style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-10-16 04:00 UTC</p>
+        <p class="admin-build" style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-11-04 06:00 UTC</p>
       </div>
     </div>
   </div>
@@ -1262,6 +1353,43 @@
         max-height:42vh;overflow-y:auto;"></div>
       <button type="button" onclick="closeNoticeSheet()" style="width:100%;padding:13px;border-radius:10px;border:none;
         background:var(--blue-600);color:#fff;font-weight:800;font-size:14px;font-family:inherit;">확인했습니다</button>
+    </div>
+  </div>
+
+  <!-- 책임구역 점검 체크리스트 -->
+  <div class="sheet" id="zoneCheckSheet" style="z-index:57;">
+    <div class="sheet-inner zone-sheet">
+      <div class="sheet-handle"></div>
+      <div id="zoneCheckBody"></div>
+    </div>
+  </div>
+
+  <!-- 오늘 책임구역 점검 현황 -->
+  <div class="sheet" id="zoneStatusSheet" style="z-index:56;">
+    <div class="sheet-inner">
+      <div class="sheet-handle"></div>
+      <h4 style="margin:0 0 4px;font-size:16px;">📋 책임구역 점검 현황 <span id="zoneStatusDate" style="font-weight:600;color:var(--ink-400);"></span></h4>
+      <p class="hint" style="margin-top:0;">구역별 1일 1회 이상 점검. 건축·안전 담당이 각각 점검을 남길 수 있습니다.</p>
+      <div id="zoneStatusList" style="max-height:52vh;overflow-y:auto;"></div>
+      <div class="sheet-actions">
+        <button type="button" class="btn-secondary" onclick="exportZoneWeekExcel()">📤 이번 주 체크리스트 엑셀</button>
+        <button type="button" class="btn-primary" onclick="document.getElementById('zoneStatusSheet').classList.remove('show')">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 푸시 알림 구독: 소속 선택 -->
+  <div class="sheet" id="pushSheet" style="z-index:58;">
+    <div class="sheet-inner">
+      <div class="sheet-handle"></div>
+      <h4 style="margin:0 0 4px;font-size:16px;">🔔 알림 받기</h4>
+      <p class="hint" style="margin-top:0;">소속을 선택하면 해당 업체 대상 안내도 받을 수 있습니다. 다음 화면에서 브라우저의 "허용"을 눌러주세요.</p>
+      <div class="dash-company-row"><select id="pushCompanySelect"><option value="">소속 선택 안 함 (전체 공지만)</option><option value="HDC">원청 (HDC)</option></select></div>
+      <p class="hint" id="pushIosHint" style="display:none;background:var(--amber-bg);padding:10px 12px;border-radius:10px;color:#6B4A00;">아이폰은 <b>홈 화면에 추가한 앱</b>에서만 알림을 받을 수 있습니다. 사파리 공유(□↑) → "홈 화면에 추가" 후, 그 아이콘으로 열어서 다시 눌러주세요.</p>
+      <div class="sheet-actions">
+        <button type="button" class="btn-secondary" onclick="closePushSheet()">취소</button>
+        <button type="button" class="btn-primary" id="pushSubscribeBtn" onclick="subscribePush()">알림 켜기</button>
+      </div>
     </div>
   </div>
 
@@ -1381,6 +1509,51 @@ const BUILDINGS = [
 const BUILDING_NAMES = BUILDINGS.map(b=>b.name);
 function buildingPos(name){ return BUILDINGS.find(b=>b.name===name) || {x:50,y:50}; }
 
+/* ── 책임구역제 ───────────────────────────────────────────────
+   동별보기 배치도(siteplan.png, 811×485) 위 동 위치(%). 대시보드 전경사진 좌표(BUILDINGS)와는 별개입니다. */
+const SITEPLAN_POS = {
+  '101동':{x:76,y:62},'102동':{x:81,y:43},'103동':{x:82,y:25},'104동':{x:65,y:63},'105동':{x:68,y:45},
+  '106동':{x:71,y:23},'107동':{x:52,y:64},'108동':{x:55,y:45},'109동':{x:60,y:22},'110동':{x:44,y:38},
+  '111동':{x:46,y:22},'112동':{x:28,y:71},'113동':{x:30,y:55},'114동':{x:31,y:38},'115동':{x:33,y:23},
+  '116동':{x:18,y:70},'117동':{x:18,y:55},'118동':{x:20,y:37},'119동':{x:21,y:22},
+};
+/* 구역·담당 기본값 (책임구역제 운영안 2026.11). 관리 탭에서 고치면 Firebase settings/zones 에 저장됩니다. */
+const DEFAULT_ZONES = [
+  { no:1, buildings:['101동','102동','103동'], arch:'이성원', safety:'최교훈' },
+  { no:2, buildings:['104동','105동','106동'], arch:'위광용', safety:'김백호' },
+  { no:3, buildings:['107동','108동','109동'], arch:'박치호', safety:'임경찬' },
+  { no:4, buildings:['110동','111동'],         arch:'우승주', safety:'이상재' },
+  { no:5, buildings:['112동','113동'],         arch:'이민우', safety:'김대량' },
+  { no:6, buildings:['114동','115동'],         arch:'이민우', safety:'박두봉' },
+  { no:7, buildings:['116동','117동','118동'], arch:'김준영', safety:'이상훈' },
+  { no:8, buildings:['119동'],                 arch:'김준영', safety:'박두봉' },
+];
+const ZONE_COLORS = ['#2563EB','#16A34A','#EA580C','#9333EA','#0891B2','#DB2777','#CA8A04','#DC2626'];
+const ZONE_RESP = { arch:'신승묵', safety:'서진수' };   // 건축 책임자 / 안전 책임자
+/* 체크리스트 16개 항목 — 현장 서식(안전책임구역제 CHECK LIST) 그대로 */
+const CHECK_ITEMS = [
+  ['작업장의 정리정돈 상태','보행자 통행로 확보 여부 등'],
+  ['추락위험구간 안전난간대 설치 여부','계단, 발코니, 개구부 등'],
+  ['통로의 조명 설치 상태','지하층 등 조명 설치'],
+  ['근로자의 보호구 착용 상태','현장 출입자 안전모 착용 등'],
+  ['소화설비 설치 여부','소화기 및 화재 위험성 확인 등'],
+  ['전기기계·기구 접지 및 공도구 점검','분전반 시건, 공도구 필증 부착 등'],
+  ['전선의 피복상태 점검','절연피복 손상·노화로 감전위험 등'],
+  ['고소작업대 작업 상태 확인','과상승방지봉 50cm 이상 설치 · 비상정지버튼 작동 · 상승 후 이동방지 리미트 스위치 작동'],
+  ['작업발판 난간대·아웃리거 설치 확인','말비계, B/T, 안전사다리 등'],
+  ['차량계 건설기계 설치·운행상태 점검','펌프카, 이동식크레인, 지게차, B/H 등'],
+  ['JACK SUPPORT 임의해체 여부',''],
+  ['인화성물질 방치 여부','비닐, 가연성물질, 종이 등'],
+  ['지하층 상시 물고임 여부',''],
+  ['타워크레인 운행 시 안전수칙 준수','줄걸이, 양중박스, 신호수 배치 등'],
+  ['지하층 자재 정리 상태','벽체에서 기둥 사이 적재 금지'],
+  ['공구·자재 등 관리번호 부착 여부','자재보관 실명제, 관리번호 부착'],
+];
+const ZONES_KEY = 'sosZones_v1';
+function zoneOfBuilding(name){ return (state.zones||DEFAULT_ZONES).find(z=>z.buildings.includes(name)) || null; }
+function zoneColor(no){ return ZONE_COLORS[(no-1)%ZONE_COLORS.length]; }
+function zoneLabel(z){ const b=z.buildings; return b.length>1 ? `${b[0]}~${b[b.length-1]}` : b[0]; }
+
 // 기초층(최하단)과 주차장지붕층(지하1층과 1층 사이)도 등록 폼에서 선택할 수 있어야
 // 동별보기 층 필터가 실제로 결과를 찾을 수 있습니다.
 const FLOORS = ['기초층','지하3층','지하2층','지하1층','주차장지붕층',
@@ -1478,7 +1651,10 @@ let state = {
   editingTaskId: null,
   editingSnapshot: null,
   editingAdminOk: null,
-  dashCompany: '',           // 대시보드 주요 작업 목록 업체 필터     // 잠긴 고위험 작업을 관리자 비밀번호로 열었을 때 그 작업 id
+  dashCompany: '',           // 대시보드 주요 작업 목록 업체 필터
+  zones: null,               // 책임구역 담당 (null이면 DEFAULT_ZONES)
+  inspections: {},           // 책임구역 점검 기록 { date: { key: rec } }
+  zoneCheck: null,           // 작성 중인 체크리스트     // 잠긴 고위험 작업을 관리자 비밀번호로 열었을 때 그 작업 id
   hdcStaff: { supervisors: [...DEFAULT_SUPERVISORS_HDC], safetyManagers: [...DEFAULT_SAFETY_MANAGERS_HDC] },
   editingPumpId: null,
   clipboardTask: null,
@@ -1745,6 +1921,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadAttendance();
   loadAttendanceFields();
   loadHdcStaff();
+  loadZonesLocal();
   disableBrowserAutofill();
   loadNotice();
   buildRegisterChips();
@@ -2195,6 +2372,7 @@ function renderDashboard(){
     : `<div class="empty-state"><div class="ic">🏢</div><div class="t">선택한 업체의 작업이 없습니다</div></div>`;
   renderOversight(list);
   refreshInputSuggestions();
+  renderPushCard();
   bindTaskRowClicks();
 }
 
@@ -2223,6 +2401,13 @@ function renderOversight(list){
   }
   if(noPlan.length){
     rows.push(`<button type="button" class="ov-item tap" onclick="openTaskListSheet('고위험인데 작업계획서 미해당','고위험 작업인데 작업계획서 또는 P.T.W가 미해당으로 등록되어 있습니다.', window._ovNoPlan)"><span>📄 고위험 · 작업계획서 미해당</span><span class="n">${noPlan.length}건</span></button>`);
+  }
+  // 책임구역 점검 — 오늘(또는 지난 날짜) 기준 미점검 구역
+  if(state.date <= todayStr()){
+    const notYet = zonesList().filter(z=>!zoneInspectedToday(z.no).length);
+    if(notYet.length){
+      rows.push(`<button type="button" class="ov-item tap" onclick="openZoneStatusSheet()"><span>📋 책임구역 점검 미완료</span><span class="n">${notYet.length}구역</span></button>`);
+    }
   }
 
   window._ovNoRegion = noRegion;
@@ -2446,15 +2631,52 @@ function renderBuildingMapHotspots(){
   const wrap = document.getElementById('buildingMapWrap');
   if(!wrap) return;
   wrap.querySelectorAll('.building-hotspot').forEach(el=>el.remove());
-  BUILDINGS.forEach(b=>{
+  BUILDING_NAMES.forEach(name=>{
+    const pos = SITEPLAN_POS[name] || {x:50,y:50};
+    const z = zoneOfBuilding(name);
     const el = document.createElement('button');
     el.type = 'button';
-    el.className = 'building-hotspot' + (state.buildingFilter===b.name ? ' active' : '');
-    el.style.left = b.x+'%'; el.style.top = b.y+'%';
-    el.title = b.name;
-    el.onclick = ()=> setBuildingFilter(b.name);
+    el.className = 'building-hotspot zoned' + (state.buildingFilter===name ? ' active' : '');
+    el.style.left = pos.x+'%'; el.style.top = pos.y+'%';
+    if(z) el.style.setProperty('--zc', zoneColor(z.no));
+    el.title = name + (z ? ` · ${z.no}구역` : '');
+    const done = z && zoneInspectedToday(z.no).length;
+    el.innerHTML = `<span class="hl${done?' done':''}">${esc(name.replace('동',''))}</span>`;
+    el.onclick = ()=> setBuildingFilter(name);
     wrap.appendChild(el);
   });
+  renderZoneLegend();
+  renderZonePanel();
+}
+function zonesList(){ return state.zones || DEFAULT_ZONES; }
+/* 조회 날짜 기준 그 구역의 점검 기록 (건축·안전 각각) */
+function zoneInspectedToday(no){
+  const day = state.inspections[state.date] || {};
+  return Object.values(day).filter(r=>r.zone===no);
+}
+function renderZoneLegend(){
+  const el = document.getElementById('zoneLegend'); if(!el) return;
+  const cur = zoneOfBuilding(state.buildingFilter);
+  el.innerHTML = zonesList().map(z=>{
+    const recs = zoneInspectedToday(z.no);
+    return `<button type="button" class="zone-chip${cur&&cur.no===z.no?' on':''}" style="--zc:${zoneColor(z.no)}" onclick="setBuildingFilter('${z.buildings[0]}')">
+      <i></i>${z.no}구역 <span class="st${recs.length?' ok':''}">${recs.length ? '✓ 점검' : zoneLabel(z)}</span></button>`;
+  }).join('');
+}
+function renderZonePanel(){
+  const el = document.getElementById('zonePanel'); if(!el) return;
+  const z = zoneOfBuilding(state.buildingFilter);
+  if(!z){ el.innerHTML=''; return; }
+  const recs = zoneInspectedToday(z.no);
+  const who = recs.map(r=>`${r.inspector}${r.savedAt?' '+String(r.savedAt).slice(11,16):''}`).join(', ');
+  el.innerHTML = `
+    <div class="form-card zone-card" style="--zc:${zoneColor(z.no)}">
+      <div class="zt"><h3>📋 ${z.no}구역 안전책임구역 점검</h3>
+        <span class="zone-status${recs.length?' ok':''}">${recs.length ? '✓ 점검 완료 · '+esc(who) : '오늘 미점검'}</span></div>
+      <div class="zm">담당구역 <b>${esc(zoneLabel(z))}</b> · 건축 <b>${esc(z.arch||'-')}</b> · 안전 <b>${esc(z.safety||'-')}</b><br>
+        <span style="color:var(--ink-400)">1일 1회 이상 점검 · 건축·안전 담당이 각각 점검 가능 · ${esc(state.date)}</span></div>
+      <button type="button" class="zone-btn" onclick="openZoneCheck(${z.no})">${recs.length ? '점검 내용 보기 · 추가 점검' : '점검하기 ›'}</button>
+    </div>`;
 }
 function setBuildingFilter(b){
   state.buildingFilter=b;
@@ -3538,6 +3760,11 @@ function runConfirm(){
 /* =========================================================
    ACTION PASSWORD GATE (작성/삭제 시 비밀번호 확인)
 ========================================================= */
+/* ── 푸시 알림 설정 ─────────────────────────────────────────
+   vapid_keygen.html 로 만든 "공개 키"를 아래에 붙여넣고, Worker 배포 주소를 적습니다.
+   비워두면 알림 기능이 화면에 나타나지 않습니다. (비공개 키·발송 키는 절대 여기에 쓰지 않습니다) */
+const VAPID_PUBLIC_KEY = '';                                   // 예: 'BNc3…' (87자)
+const PUSH_WORKER_URL  = 'https://sos-push.YOUR-ACCOUNT.workers.dev';  // Cloudflare Worker 주소
 const ACTION_PASSWORD = '5072';
 let _actionPwCallback = null;
 let _actionPwAlwaysAsk = false;
@@ -3639,7 +3866,9 @@ function showAdminPanel(){
   renderCloseDayPreview();
   renderMergeSelects();
   renderHdcStaffAdmin();
+  renderZoneAdmin();
   renderDiag();
+  renderPushAdmin();
   const lbl = document.getElementById('imgExportDateLabel'); if(lbl) lbl.textContent = state.date;
   renderAdminBulkList();
   renderSiteImageVersionList();
@@ -4021,6 +4250,19 @@ function attachFirebaseListeners(){
   }, err=>{
     console.error('출역인원 항목 설정 동기화 오류', err);
   });
+
+  fbDb.ref('settings/zones').on('value', snap=>{
+    const v = snap.val();
+    if(Array.isArray(v) && v.length){ state.zones = v; try{ localStorage.setItem(ZONES_KEY, JSON.stringify(v)); }catch(e){} }
+    else if(v && typeof v==='object'){ const arr = Object.values(v).filter(x=>x&&x.no); if(arr.length){ state.zones = arr.sort((a,b)=>a.no-b.no); } }
+    if(document.getElementById('view-building').classList.contains('active')) renderBuildingFilters();
+    if(adminUnlocked) renderZoneAdmin();
+  });
+  // 점검 기록 — 최근 14일치만 (주간 엑셀·현황용)
+  fbDb.ref('inspections').orderByKey().startAt(ymdLocal(new Date(Date.now()-14*86400000))).on('value', snap=>{
+    state.inspections = snap.val() || {};
+    renderAll();
+  }, err=>recordError('점검 기록 동기화 오류: '+err.message));
 
   fbDb.ref('settings/hdcStaff').on('value', snap=>{
     const val = snap.val();
@@ -4484,6 +4726,309 @@ function removeHdcStaff(key, name){
 }
 
 /* =========================================================
+   책임구역제 체크리스트 — 작성 · 저장 · 현황 · 담당자 관리 · 주간 엑셀
+   저장 위치: Firebase inspections/{날짜}/{구역}_{점검자}
+========================================================= */
+function inspKey(no, inspector){ return `${no}_${inspector.replace(/[.#$\[\]\/]/g,'')}`; }
+function openZoneCheck(no, inspectorPreset){
+  const z = zonesList().find(x=>x.no===no); if(!z) return;
+  const inspectors = [...new Set([z.arch, z.safety].filter(Boolean))];
+  const inspector = inspectorPreset || inspectors[0] || '';
+  loadZoneCheck(z, inspector);
+  document.getElementById('zoneCheckSheet').classList.add('show');
+}
+function loadZoneCheck(z, inspector){
+  const existing = (state.inspections[state.date]||{})[inspKey(z.no, inspector)];
+  state.zoneCheck = existing
+    ? { zone:z.no, inspector, items:{...(existing.items||{})}, actions:{...(existing.actions||{})}, remarks:existing.remarks||'', savedAt:existing.savedAt }
+    : { zone:z.no, inspector, items:{}, actions:{}, remarks:'' };
+  renderZoneCheck();
+}
+function renderZoneCheck(){
+  const c = state.zoneCheck; if(!c) return;
+  const z = zonesList().find(x=>x.no===c.zone);
+  const inspectors = [...new Set([z.arch, z.safety].filter(Boolean))];
+  const role = (n)=> n===z.arch && n===z.safety ? '건축·안전' : (n===z.arch ? '건축' : '안전');
+  const total = CHECK_ITEMS.length, done = Object.keys(c.items).length, bad = Object.values(c.items).filter(v=>v==='불량').length;
+  const rows = CHECK_ITEMS.map(([t,sub],i)=>{
+    const n=i+1, v=c.items[n];
+    return `<div class="zc-row">
+      <div class="zc-no">${n}</div>
+      <div class="zc-txt">${esc(t)}${sub?`<small>${esc(sub)}</small>`:''}
+        ${v==='불량' ? `<input class="zc-act" type="text" placeholder="불량 내용·조치 사항" value="${esc(c.actions[n]||'')}" oninput="state.zoneCheck.actions[${n}]=this.value">` : ''}
+      </div>
+      <div class="zc-tg">
+        <button type="button" class="${v==='양호'?'ok':''}" onclick="setCheckItem(${n},'양호')">양호</button>
+        <button type="button" class="${v==='불량'?'bad':''}" onclick="setCheckItem(${n},'불량')">불량</button>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('zoneCheckBody').innerHTML = `
+    <div class="zc-head"><h4 style="color:${zoneColor(z.no)}">${z.no}구역 안전책임구역제 CHECK LIST</h4>
+      <button type="button" class="detail-close" onclick="closeZoneCheck()">✕</button></div>
+    <div class="zc-meta">현장명 아이파크 무등산 스카이포레 · 점검구역 <b>${esc(zoneLabel(z))}</b> · 점검일 <b>${esc(state.date)}</b>
+      ${c.savedAt ? `<br><span style="color:var(--green);font-weight:700;">✓ ${esc(String(c.savedAt).slice(0,16).replace('T',' '))} 저장된 점검 — 고치면 덮어씁니다</span>` : ''}</div>
+    <div class="field" style="margin-bottom:6px;"><label>점검자</label>
+      <select id="zcInspector" onchange="loadZoneCheck(zonesList().find(x=>x.no===${z.no}), this.value)">
+        ${inspectors.map(n=>`<option value="${esc(n)}"${n===c.inspector?' selected':''}>${esc(n)} (${role(n)} 담당)</option>`).join('')}
+      </select></div>
+    <div class="zc-bulk"><button type="button" onclick="setAllCheck('양호')">전체 양호</button><button type="button" onclick="setAllCheck(null)">전체 지우기</button>
+      <span class="zc-prog" style="align-self:center;margin-left:auto;">${done}/${total} 확인${bad?` · 불량 ${bad}`:''}</span></div>
+    <div style="font-size:13px;font-weight:800;margin:8px 0 2px;">1. 공통 점검 항목</div>
+    ${rows}
+    <div style="font-size:13px;font-weight:800;margin:14px 0 6px;">2. 건의사항</div>
+    <textarea class="loose-input" style="min-height:70px;" placeholder="건의사항·특이사항" oninput="state.zoneCheck.remarks=this.value">${esc(c.remarks||'')}</textarea>
+    <div class="sheet-actions" style="margin-top:12px;">
+      <button type="button" class="btn-secondary" onclick="closeZoneCheck()">닫기</button>
+      <button type="button" class="btn-primary" onclick="saveZoneCheck()">점검 저장</button>
+    </div>`;
+}
+function setCheckItem(n, v){ state.zoneCheck.items[n] = v; if(v!=='불량') delete state.zoneCheck.actions[n]; renderZoneCheck(); }
+function setAllCheck(v){
+  CHECK_ITEMS.forEach((_,i)=>{ if(v) state.zoneCheck.items[i+1]=v; else { delete state.zoneCheck.items[i+1]; delete state.zoneCheck.actions[i+1]; } });
+  renderZoneCheck();
+}
+function closeZoneCheck(){ document.getElementById('zoneCheckSheet').classList.remove('show'); }
+function saveZoneCheck(){
+  const c = state.zoneCheck; if(!c) return;
+  const missing = CHECK_ITEMS.length - Object.keys(c.items).length;
+  if(missing > 0){ showToast(`${missing}개 항목이 아직 확인되지 않았습니다`); return; }
+  const badNoAct = Object.keys(c.items).filter(n=>c.items[n]==='불량' && !(c.actions[n]||'').trim());
+  if(badNoAct.length){ showToast(`불량 항목(${badNoAct.join(', ')}번)의 조치 내용을 적어주세요`); return; }
+  requireActionPassword('점검 결과를 저장하려면 비밀번호를 입력하세요', ()=>{
+    const rec = { zone:c.zone, date:state.date, inspector:c.inspector, items:c.items, actions:c.actions, remarks:c.remarks||'', savedAt:new Date().toISOString() };
+    if(!state.inspections[state.date]) state.inspections[state.date] = {};
+    state.inspections[state.date][inspKey(c.zone, c.inspector)] = rec;
+    if(fbDb) fbDb.ref(`inspections/${state.date}/${inspKey(c.zone, c.inspector)}`).set(rec).catch(err=>{ recordError('점검 저장 실패: '+err.message); showToast('⚠ 서버 저장 실패: '+err.message); });
+    closeZoneCheck();
+    showToast(`✓ ${c.zone}구역 점검 저장 (${c.inspector})`);
+    renderAll();
+  });
+}
+/* 오늘 구역 현황 시트 (대시보드 확인 항목에서 진입) */
+function openZoneStatusSheet(){
+  document.getElementById('zoneStatusDate').textContent = state.date;
+  document.getElementById('zoneStatusList').innerHTML = zonesList().map(z=>{
+    const recs = zoneInspectedToday(z.no);
+    const bad = recs.reduce((n,r)=>n+Object.values(r.items||{}).filter(v=>v==='불량').length,0);
+    return `<div class="zs-row" style="--zc:${zoneColor(z.no)}">
+      <div class="zi"><b>${z.no}구역 <span style="font-weight:600;color:var(--ink-400)">${esc(zoneLabel(z))}</span></b>
+        <span>${recs.length ? '✓ '+recs.map(r=>esc(r.inspector)).join(', ')+(bad?` · 불량 ${bad}건`:'') : `미점검 · 건축 ${esc(z.arch||'-')} / 안전 ${esc(z.safety||'-')}`}</span></div>
+      <button type="button" class="map-action-btn" onclick="document.getElementById('zoneStatusSheet').classList.remove('show'); openZoneCheck(${z.no})">${recs.length?'보기':'점검'}</button>
+    </div>`;
+  }).join('');
+  document.getElementById('zoneStatusSheet').classList.add('show');
+}
+/* 관리 탭 — 구역 담당자 편집 */
+function renderZoneAdmin(){
+  const el = document.getElementById('zoneAdminList'); if(!el) return;
+  el.innerHTML = `<div class="za-row" style="margin-bottom:2px;"><div></div><div class="hint" style="margin:0;text-align:center;">건축 담당</div><div class="hint" style="margin:0;text-align:center;">안전 담당</div></div>` +
+    zonesList().map(z=>`<div class="za-row">
+      <div class="zn" style="color:${zoneColor(z.no)}">${z.no}구역<small>${esc(zoneLabel(z))}</small></div>
+      <input type="text" data-zone="${z.no}" data-role="arch" value="${esc(z.arch||'')}" autocomplete="off">
+      <input type="text" data-zone="${z.no}" data-role="safety" value="${esc(z.safety||'')}" autocomplete="off">
+    </div>`).join('');
+}
+function saveZones(){
+  const next = zonesList().map(z=>({ ...z }));
+  document.querySelectorAll('#zoneAdminList input[data-zone]').forEach(inp=>{
+    const z = next.find(x=>x.no===Number(inp.dataset.zone)); if(z) z[inp.dataset.role] = inp.value.trim();
+  });
+  state.zones = next;
+  try{ localStorage.setItem(ZONES_KEY, JSON.stringify(next)); }catch(e){}
+  if(fbDb) fbDb.ref('settings/zones').set(next).catch(err=>showToast('⚠ 저장 실패: '+err.message));
+  showToast('✓ 구역 담당자가 저장되었습니다'); renderBuildingFilters();
+}
+/* 이번 주(월~일) 체크리스트 엑셀 — 현장 서식과 같은 구조, 구역별 시트 */
+async function exportZoneWeekExcel(){
+  if(typeof ExcelJS === 'undefined'){ showToast('⚠ 엑셀 라이브러리를 불러오지 못했습니다'); return; }
+  const base = new Date(state.date+'T00:00:00'); const dow = (base.getDay()+6)%7;   // 월=0
+  const days = Array.from({length:7},(_,i)=>ymdLocal(new Date(base.getTime()+(i-dow)*86400000)));
+  const dayNames = ['월','화','수','목','금','토','일'];
+  const wb = new ExcelJS.Workbook();
+  const thin = { style:'thin', color:{argb:'FF000000'} }; const border = { top:thin, left:thin, bottom:thin, right:thin };
+  const solid = (argb)=>({ type:'pattern', pattern:'solid', fgColor:{argb}, bgColor:{argb} });
+  for(const z of zonesList()){
+    const ws = wb.addWorksheet(`${z.no}구역`);
+    ws.pageSetup = { paperSize:9, orientation:'landscape', fitToPage:true, fitToWidth:1, fitToHeight:1, margins:{left:0.3,right:0.3,top:0.4,bottom:0.4,header:0.2,footer:0.2} };
+    ws.columns = [{width:4},{width:30},{width:14},...Array(14).fill({width:5}),{width:14}];
+    ws.mergeCells('A1:R1'); ws.getCell('A1').value='안전책임구역제 CHECK LIST'; ws.getCell('A1').font={bold:true,size:16}; ws.getCell('A1').alignment={horizontal:'center',vertical:'middle'}; ws.getRow(1).height=30;
+    ws.mergeCells('A2:R2'); ws.getCell('A2').value='■ 현장명 : 아이파크 무등산 스카이포레 현장';
+    ws.mergeCells('A3:R3'); ws.getCell('A3').value=`■ 점검구역 : ${z.no}구역 (${zoneLabel(z)})     ■ 점검자 : 건축 ${z.arch||''} / 안전 ${z.safety||''}`;
+    ws.mergeCells('A4:C4'); ws.getCell('A4').value='1. 공통 점검 항목'; ws.getCell('A4').font={bold:true};
+    ws.mergeCells('D4:R4'); ws.getCell('D4').value=`■ 점검일자 : ${days[0]} ~ ${days[6]}`;
+    const h5=['NO','안전점검 세부항목','','월','','화','','수','','목','','금','','토','','일','','비고'];
+    ws.getRow(5).values=h5; ws.mergeCells('B5:C5'); ['D','F','H','J','L','N','P'].forEach(c=>ws.mergeCells(`${c}5:${String.fromCharCode(c.charCodeAt(0)+1)}5`));
+    ws.mergeCells('A5:A6'); ws.mergeCells('B6:C6'); ws.mergeCells('R5:R6');
+    const h6=['','','','양호','불량','양호','불량','양호','불량','양호','불량','양호','불량','양호','불량','양호','불량',''];
+    ws.getRow(6).values=h6;
+    [5,6].forEach(r=>ws.getRow(r).eachCell({includeEmpty:true},c=>{ c.fill=solid('FFEFEFEF'); c.font={bold:true,size:9}; c.alignment={horizontal:'center',vertical:'middle'}; c.border=border; }));
+    // 날짜별 점검 기록 (건축·안전 둘 중 하나라도 불량이면 불량)
+    const dayRec = days.map(d=>Object.values(state.inspections[d]||{}).filter(r=>r.zone===z.no));
+    CHECK_ITEMS.forEach(([t,sub],i)=>{
+      const n=i+1, r=ws.getRow(6+n);
+      r.getCell(1).value=n; r.getCell(2).value = t + (sub?`\n(${sub})`:''); ws.mergeCells(`B${6+n}:C${6+n}`);
+      const notes=[];
+      days.forEach((d,di)=>{
+        const recs=dayRec[di]; if(!recs.length) return;
+        const vals=recs.map(x=>(x.items||{})[n]).filter(Boolean); if(!vals.length) return;
+        const bad=vals.includes('불량'); r.getCell(bad?5+di*2:4+di*2).value='O';
+        recs.forEach(x=>{ if((x.actions||{})[n]) notes.push(`${dayNames[di]}: ${x.actions[n]}`); });
+      });
+      r.getCell(18).value = notes.join(' / ');
+      r.height = sub && sub.length > 40 ? 44 : (sub ? 30 : 20);
+      r.eachCell({includeEmpty:true},(c,col)=>{ c.border=border; c.alignment={vertical:'middle',horizontal: col===2?'left':'center',wrapText:true}; c.font={size:9}; });
+      for(let col=1; col<=18; col++) r.getCell(col).border=border;
+    });
+    const rr = 7+CHECK_ITEMS.length; ws.mergeCells(`A${rr}:C${rr}`); ws.getCell(`A${rr}`).value='2. 건의사항'; ws.getCell(`A${rr}`).font={bold:true};
+    const remarks = days.flatMap((d,di)=>dayRec[di].filter(x=>x.remarks).map(x=>`${dayNames[di]} ${x.inspector}: ${x.remarks}`)).join('\n');
+    ws.mergeCells(`D${rr}:R${rr}`); ws.getCell(`D${rr}`).value=remarks; ws.getCell(`D${rr}`).alignment={wrapText:true,vertical:'top'}; ws.getRow(rr).height=Math.max(40, 14*(remarks.split('\n').length+1));
+    // 점검자 서명 행
+    const sr = rr+1; ws.getCell(`A${sr}`).value='점검자'; ws.mergeCells(`A${sr}:C${sr}`);
+    days.forEach((d,di)=>{ const names=dayRec[di].map(x=>x.inspector).join(','); ws.mergeCells(`${String.fromCharCode(68+di*2)}${sr}:${String.fromCharCode(69+di*2)}${sr}`); const c=ws.getCell(`${String.fromCharCode(68+di*2)}${sr}`); c.value=names; c.alignment={horizontal:'center',wrapText:true}; c.font={size:8}; });
+    for(let col=1; col<=18; col++){ ws.getCell(rr,col).border=border; ws.getCell(sr,col).border=border; }
+  }
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`책임구역_체크리스트_${days[0]}_${days[6]}.xlsx`; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  showToast('✓ 이번 주 체크리스트 엑셀 저장 (구역별 시트 8개)');
+}
+function loadZonesLocal(){ try{ const v=JSON.parse(localStorage.getItem(ZONES_KEY)||'null'); if(Array.isArray(v)&&v.length) state.zones=v; }catch(e){} }
+
+/* =========================================================
+   푸시 알림 — 구독(모든 사용자) · 발송(관리 탭)
+   구독 정보는 Firebase pushSubs/{id} 에 저장되고, 발송은 Cloudflare Worker가 합니다.
+========================================================= */
+const PUSH_ID_KEY = 'sosPushSubId_v1', PUSH_SENDKEY_KEY = 'sosPushSendKey_v1';
+function pushSupported(){ return !!(VAPID_PUBLIC_KEY && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window); }
+function isIOS(){ return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1); }
+function isStandalone(){ return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone===true; }
+function urlBase64ToUint8Array(s){ s=s.replace(/-/g,'+').replace(/_/g,'/'); s+='='.repeat((4-s.length%4)%4); return Uint8Array.from(atob(s), c=>c.charCodeAt(0)); }
+function hashStr(str){ let h=5381; for(let i=0;i<str.length;i++) h=((h<<5)+h+str.charCodeAt(i))|0; return (h>>>0).toString(16); }
+
+function renderPushCard(){
+  const card = document.getElementById('pushCard'); if(!card) return;
+  if(!pushSupported()){ card.style.display='none'; return; }
+  card.style.display='';
+  const subId = localStorage.getItem(PUSH_ID_KEY);
+  const granted = Notification.permission === 'granted';
+  const btn = document.getElementById('pushBtn'), title = document.getElementById('pushTitle'), desc = document.getElementById('pushDesc');
+  if(subId && granted){
+    title.textContent = '🔔 알림 받는 중'; desc.textContent = '원청 공지가 이 기기 알림으로 옵니다';
+    btn.textContent = '알림 끄기'; btn.classList.add('off');
+  } else if(Notification.permission === 'denied'){
+    title.textContent = '🔕 알림이 차단되어 있습니다'; desc.textContent = '휴대폰 설정 → 브라우저(또는 이 앱) → 알림 허용 후 다시 눌러주세요';
+    btn.textContent = '다시 시도'; btn.classList.add('off');
+  } else {
+    title.textContent = '🔔 공지 알림 받기'; desc.textContent = isIOS() && !isStandalone() ? '홈 화면에 추가한 앱에서 켤 수 있습니다' : '원청 공지·긴급 안내를 이 휴대폰 알림으로 받습니다';
+    btn.textContent = '알림 켜기'; btn.classList.remove('off');
+  }
+}
+function onPushButton(){
+  const subId = localStorage.getItem(PUSH_ID_KEY);
+  if(subId && Notification.permission === 'granted'){ unsubscribePush(); return; }
+  // 소속 선택 시트
+  const sel = document.getElementById('pushCompanySelect');
+  const names = [...new Set(state.tasks.map(t=>t.company).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+  sel.innerHTML = '<option value="">소속 선택 안 함 (전체 공지만)</option><option value="HDC">원청 (HDC)</option>' + names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  document.getElementById('pushIosHint').style.display = (isIOS() && !isStandalone()) ? '' : 'none';
+  document.getElementById('pushSubscribeBtn').disabled = isIOS() && !isStandalone();
+  document.getElementById('pushSheet').classList.add('show');
+}
+function closePushSheet(){ document.getElementById('pushSheet').classList.remove('show'); }
+async function subscribePush(){
+  try{
+    const perm = await Notification.requestPermission();
+    if(perm !== 'granted'){ showToast('알림이 허용되지 않았습니다'); renderPushCard(); return; }
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if(!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) });
+    const j = sub.toJSON(); const id = hashStr(j.endpoint);
+    const rec = { endpoint:j.endpoint, keys:j.keys, company: document.getElementById('pushCompanySelect').value || '',
+      ua: (navigator.userAgent.match(/iPhone|iPad|Android|Windows|Mac/)||['?'])[0], at: new Date().toISOString() };
+    if(fbDb) await fbDb.ref('pushSubs/' + id).set(rec);
+    localStorage.setItem(PUSH_ID_KEY, id);
+    closePushSheet(); renderPushCard();
+    showToast('✓ 알림이 켜졌습니다. 공지가 오면 휴대폰 알림으로 표시됩니다');
+  }catch(err){
+    console.error(err); recordError('알림 구독 실패: ' + err.message);
+    showToast('⚠ 알림을 켜지 못했습니다: ' + err.message);
+  }
+}
+async function unsubscribePush(){
+  showConfirm('이 기기의 공지 알림을 끌까요?', async ()=>{
+    try{
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      const id = localStorage.getItem(PUSH_ID_KEY) || (sub ? hashStr(sub.endpoint) : null);
+      if(sub) await sub.unsubscribe();
+      if(id && fbDb) await fbDb.ref('pushSubs/' + id).remove();
+      localStorage.removeItem(PUSH_ID_KEY);
+      renderPushCard(); showToast('알림을 껐습니다');
+    }catch(err){ showToast('⚠ ' + err.message); }
+  }, { label:'알림 끄기', color:'var(--red)' });
+}
+
+/* ── 관리 탭: 발송 ── */
+let _pushSubs = {};   // id → 구독 정보 (관리 탭에서만 읽음)
+function savePushSendKey(){
+  const v = document.getElementById('pushSendKeyInput').value.trim();
+  if(!v){ showToast('발송 키를 입력하세요'); return; }
+  localStorage.setItem(PUSH_SENDKEY_KEY, v); document.getElementById('pushSendKeyInput').value='';
+  renderPushAdmin(); showToast('✓ 발송 키가 이 기기에 저장되었습니다');
+}
+function renderPushAdmin(){
+  const card = document.getElementById('pushAdminCard'); if(!card) return;
+  if(!VAPID_PUBLIC_KEY){ card.style.display='none'; document.getElementById('noticePushRow').style.display='none'; return; }
+  card.style.display='';
+  const key = localStorage.getItem(PUSH_SENDKEY_KEY);
+  document.getElementById('pushAdminStatus').textContent = key ? '발송 키 저장됨 (이 기기)' : '발송 키가 없어 발송할 수 없습니다. Worker의 SEND_KEY를 입력하세요';
+  document.getElementById('noticePushRow').style.display = key ? '' : 'none';
+  refreshPushSubs();
+}
+function refreshPushSubs(){
+  if(!fbDb) return;
+  fbDb.ref('pushSubs').once('value').then(snap=>{
+    _pushSubs = snap.val() || {};
+    const ids = Object.keys(_pushSubs);
+    document.getElementById('pushSubCount').textContent = ids.length;
+    const byCo = {}; ids.forEach(id=>{ const c = _pushSubs[id].company || '(소속 없음)'; byCo[c] = (byCo[c]||0)+1; });
+    document.getElementById('pushSubList').textContent = ids.length
+      ? `등록 기기 ${ids.length}대\n` + Object.entries(byCo).sort((a,b)=>b[1]-a[1]).map(([c,n])=>`  ${c}: ${n}대`).join('\n')
+      : '등록된 기기가 없습니다. 사용자가 대시보드에서 "알림 켜기"를 누르면 여기에 잡힙니다';
+  }).catch(err=> recordError('구독 목록 읽기 실패: ' + err.message));
+}
+/* 알림 발송. subs 미지정 시 전체. 무료 Worker 한도(요청당 하위요청 50) 때문에 45대씩 나눠 보냅니다. */
+async function sendPush(title, body, opts={}){
+  const key = localStorage.getItem(PUSH_SENDKEY_KEY);
+  if(!key){ showToast('발송 키가 없습니다 (관리 탭 → 푸시 알림 설정)'); return; }
+  let entries = Object.entries(opts.subs || _pushSubs);
+  if(opts.company) entries = entries.filter(([id,s])=>s.company===opts.company);
+  if(!entries.length){ showToast('보낼 기기가 없습니다'); return; }
+  let sent = 0, expired = [];
+  for(let i=0; i<entries.length; i+=45){
+    const chunk = entries.slice(i, i+45).map(([id,s])=>({ id, endpoint:s.endpoint, keys:s.keys }));
+    try{
+      const res = await fetch(PUSH_WORKER_URL.replace(/\/$/,'') + '/send', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ key, title, body, url:'./', tag: opts.tag || 'sos-notice', subs: chunk }) });
+      if(res.status === 401){ showToast('⚠ 발송 키가 Worker의 SEND_KEY와 다릅니다'); return; }
+      const data = await res.json();
+      sent += data.sent || 0;
+      (data.results||[]).forEach(r=>{ if(r.status===404 || r.status===410) expired.push(r.id); });
+    }catch(err){ recordError('푸시 발송 실패: ' + err.message); showToast('⚠ 발송 실패: ' + err.message); return; }
+  }
+  // 앱을 지웠거나 알림을 끈 기기는 목록에서 정리
+  if(expired.length && fbDb){ const upd = {}; expired.forEach(id=>upd['pushSubs/'+id]=null); fbDb.ref().update(upd).catch(()=>{}); }
+  showToast(`✓ 알림 발송 ${sent}대 성공` + (expired.length ? ` · 만료 ${expired.length}대 정리` : ''));
+  refreshPushSubs();
+}
+async function sendTestPush(){
+  const id = localStorage.getItem(PUSH_ID_KEY);
+  if(!id || !_pushSubs[id]){ showToast('먼저 대시보드에서 이 기기의 "알림 켜기"를 눌러 등록하세요'); return; }
+  await sendPush('S.O.S 테스트 알림', '이 알림이 보이면 발송 설정이 정상입니다.', { subs:{ [id]: _pushSubs[id] }, tag:'sos-test' });
+}
+
+/* =========================================================
    공지사항 (앱 열 때 자동 팝업, 항상 1개, 관리 탭에서만 게시)
 ========================================================= */
 function loadNotice(){
@@ -4532,6 +5077,10 @@ function publishNotice(){
   fbSaveNotice(notice);
   renderAdminNoticeForm();
   showToast('✓ 공지사항이 게시되었습니다');
+  const chk = document.getElementById('noticePushChk');
+  if(chk && chk.checked && document.getElementById('noticePushRow').style.display !== 'none'){
+    sendPush('📢 S.O.S 공지', text.length > 120 ? text.slice(0,117) + '…' : text);
+  }
 }
 function clearNotice(){
   if(!state.notice || !state.notice.text){ showToast('삭제할 공지사항이 없습니다'); return; }

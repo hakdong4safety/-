@@ -1,9 +1,10 @@
 // 빌드마다 캐시 이름이 바뀌므로, 재배포 시 예전 캐시가 자동으로 폐기됩니다.
-const CACHE_NAME = 'hakdong4-safety-202610160400';
+const CACHE_NAME = 'hakdong4-safety-202611040600';
 const APP_SHELL = [
   './',
   './index.html',
   './map.jpg',
+  './siteplan.png',
   './logo.png',
   './icon-192.png',
   './icon-512.png',
@@ -67,5 +68,36 @@ self.addEventListener('fetch', (event) => {
           return Response.error();
         })
       )
+  );
+});
+
+/* ── 푸시 알림 수신 ───────────────────────────────────────────
+   관리 탭에서 공지를 발송하면 Worker가 이 기기의 푸시 서비스로 전달하고,
+   브라우저가 앱이 닫혀 있어도 이 코드를 깨워 알림을 띄웁니다. */
+self.addEventListener('push', (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch (e) { data = { body: event.data ? event.data.text() : '' }; }
+  const title = data.title || 'S.O.S 공지';
+  const options = {
+    body: data.body || '',
+    icon: './icon-192.png',
+    badge: './icon-192.png',
+    tag: data.tag || 'sos-notice',      // 같은 tag면 이전 알림을 대체 (알림 쌓임 방지)
+    renotify: true,
+    data: { url: data.url || './' },
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// 알림을 누르면 이미 열린 앱 창이 있으면 그 창을 앞으로, 없으면 새로 엽니다.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = new URL(event.notification.data?.url || './', self.location.href).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      const same = list.find((c) => c.url.startsWith(self.location.origin));
+      if (same) return same.focus();
+      return self.clients.openWindow(target);
+    })
   );
 });
