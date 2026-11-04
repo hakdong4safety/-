@@ -1,10 +1,11 @@
 // 빌드마다 캐시 이름이 바뀌므로, 재배포 시 예전 캐시가 자동으로 폐기됩니다.
-const CACHE_NAME = 'hakdong4-safety-202611040800';
+const CACHE_NAME = 'hakdong4-safety-202611041200';
 const APP_SHELL = [
   './',
   './index.html',
   './map.jpg',
   './siteplan.png',
+  './checklist_template.xlsx',
   './logo.png',
   './icon-192.png',
   './icon-512.png',
