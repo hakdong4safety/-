@@ -759,6 +759,28 @@
   .za-row input{min-height:40px;padding:8px 10px;border:1.5px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;width:100%;box-sizing:border-box;}
   @media (min-width:900px){ .zone-legend{gap:8px;} .zone-chip{font-size:12.5px;} }
 
+  /* 체크리스트 인쇄 — 화면에는 숨기고 인쇄할 때만 이 영역만 보입니다 */
+  #printArea{display:none;}
+  @media print{
+    @page{ size:A4 landscape; margin:10mm; }
+    body > *:not(#printArea){ display:none !important; }
+    #printArea{ display:block !important; font-family:'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo',sans-serif; color:#000; }
+    .pz-page{ page-break-after:always; }
+    .pz-page:last-child{ page-break-after:auto; }
+    .pz-ttl{ text-align:center; font-size:20pt; font-weight:900; margin:0 0 6pt; }
+    .pz-meta{ font-size:10pt; margin:2pt 0; }
+    .pz-meta b{ font-weight:900; }
+    .pz-tbl{ width:100%; border-collapse:collapse; table-layout:fixed; font-size:8.5pt; margin-top:4pt; }
+    .pz-tbl th,.pz-tbl td{ border:0.6pt solid #000; padding:2pt 3pt; text-align:center; vertical-align:middle; }
+    .pz-tbl th{ background:#efefef; font-weight:900; }
+    .pz-tbl td.l{ text-align:left; }
+    .pz-tbl td.i{ font-size:8pt; line-height:1.25; }
+    .pz-tbl td.i small{ display:block; font-size:7pt; color:#333; }
+    .pz-tbl tr{ page-break-inside:avoid; }
+    .pz-rem{ height:34pt; vertical-align:top !important; text-align:left !important; font-size:8pt; white-space:pre-wrap; }
+    .pz-sign td{ height:18pt; font-size:7.5pt; }
+  }
+
   /* 칩 — 터치 40px */
   .chip{min-height:40px;display:inline-flex;align-items:center;justify-content:center;padding:8px 10px;font-size:13px;border-radius:11px;transition:background .12s,border-color .12s,color .12s;}
   .chip:active{transform:scale(.97);}
@@ -1175,6 +1197,17 @@
         </div>
 
         <div class="form-card">
+          <h3>🖨 책임구역 체크리스트 출력</h3>
+          <p class="hint" style="margin-top:0;">대시보드 날짜(<b id="printWeekLabel"></b>)가 속한 주(월~일)의 체크리스트를 현장 서식 그대로 인쇄합니다. 인쇄 창에서 "PDF로 저장"을 고르면 파일로도 남길 수 있습니다.</p>
+          <div class="dash-company-row"><select id="printZoneSel"><option value="all">전체 구역 (8장)</option></select></div>
+          <label class="check-row" style="margin:8px 0 10px;"><input type="checkbox" id="printWithData" checked><span>저장된 점검 기록 채워서 출력 (끄면 빈 양식)</span></label>
+          <div style="display:flex;gap:8px;">
+            <button type="button" class="map-action-btn" style="flex:1;" onclick="exportZoneWeekExcel()">📤 엑셀</button>
+            <button type="button" class="map-action-btn" style="flex:1;background:var(--blue-600);color:#fff;border-color:var(--blue-600);" onclick="printZoneChecklist()">🖨 인쇄 / PDF 저장</button>
+          </div>
+        </div>
+
+        <div class="form-card">
           <h3>📢 공지사항 관리</h3>
           <p class="hint" style="margin-top:0;">앱을 열 때 모든 사용자에게 팝업으로 표시됩니다. 항상 1개만 유지되며, 새로 게시하면 이전 공지는 사라집니다.</p>
           <textarea id="noticeInput" placeholder="공지 내용을 입력하세요" style="width:100%;min-height:100px;padding:12px;
@@ -1311,7 +1344,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p class="admin-build" style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-11-04 06:00 UTC</p>
+        <p class="admin-build" style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-11-04 08:00 UTC</p>
       </div>
     </div>
   </div>
@@ -3867,6 +3900,7 @@ function showAdminPanel(){
   renderMergeSelects();
   renderHdcStaffAdmin();
   renderZoneAdmin();
+  renderPrintCard();
   renderDiag();
   renderPushAdmin();
   const lbl = document.getElementById('imgExportDateLabel'); if(lbl) lbl.textContent = state.date;
@@ -4839,6 +4873,61 @@ function saveZones(){
   if(fbDb) fbDb.ref('settings/zones').set(next).catch(err=>showToast('⚠ 저장 실패: '+err.message));
   showToast('✓ 구역 담당자가 저장되었습니다'); renderBuildingFilters();
 }
+/* 체크리스트 인쇄 — 현장 서식(A4 가로) 그대로. 구역별 1장. */
+function zoneWeekDays(){
+  const base = new Date(state.date+'T00:00:00'); const dow = (base.getDay()+6)%7;
+  return Array.from({length:7},(_,i)=>ymdLocal(new Date(base.getTime()+(i-dow)*86400000)));
+}
+function buildZoneWeekHTML(zoneNos, withData){
+  const days = zoneWeekDays(), dn = ['월','화','수','목','금','토','일'];
+  return zonesList().filter(z=>zoneNos.includes(z.no)).map(z=>{
+    const dayRec = days.map(d=> withData ? Object.values(state.inspections[d]||{}).filter(r=>r.zone===z.no) : []);
+    const rows = CHECK_ITEMS.map(([t,sub],i)=>{
+      const n=i+1, notes=[];
+      const cells = days.map((d,di)=>{
+        const vals = dayRec[di].map(x=>(x.items||{})[n]).filter(Boolean);
+        dayRec[di].forEach(x=>{ if((x.actions||{})[n]) notes.push(`${dn[di]}: ${x.actions[n]}`); });
+        if(!vals.length) return '<td></td><td></td>';
+        return vals.includes('불량') ? '<td></td><td>O</td>' : '<td>O</td><td></td>';
+      }).join('');
+      return `<tr><td>${n}</td><td class="l i">${esc(t)}${sub?`<small>(${esc(sub)})</small>`:''}</td>${cells}<td class="l i">${esc(notes.join(' / '))}</td></tr>`;
+    }).join('');
+    const remarks = days.flatMap((d,di)=>dayRec[di].filter(x=>x.remarks).map(x=>`${dn[di]} ${x.inspector}: ${x.remarks}`)).join('\n');
+    const sign = days.map((d,di)=>`<td colspan="2">${esc(dayRec[di].map(x=>x.inspector).join(','))}</td>`).join('');
+    return `<div class="pz-page">
+      <div class="pz-ttl">안전책임구역제 CHECK LIST</div>
+      <div class="pz-meta">■ 현장명 : 아이파크 무등산 스카이포레 현장</div>
+      <div class="pz-meta">■ 점검구역 : <b>${z.no}구역 (${esc(zoneLabel(z))})</b> &nbsp;&nbsp;&nbsp; ■ 점검자 : 건축 <b>${esc(z.arch||'')}</b> / 안전 <b>${esc(z.safety||'')}</b> &nbsp;&nbsp;&nbsp; ■ 점검일자 : ${days[0]} ~ ${days[6]}</div>
+      <table class="pz-tbl">
+        <colgroup><col style="width:5%"><col style="width:30%">${'<col style="width:4.2%"><col style="width:4.2%">'.repeat(7)}<col style="width:11%"></colgroup>
+        <thead><tr><th rowspan="2">NO</th><th rowspan="2">안전점검 세부항목</th>${dn.map(d=>`<th colspan="2">${d}</th>`).join('')}<th rowspan="2">비고</th></tr>
+        <tr>${'<th>양호</th><th>불량</th>'.repeat(7)}</tr></thead>
+        <tbody>${rows}
+          <tr><td colspan="2" class="l"><b>2. 건의사항</b></td><td colspan="15" class="pz-rem">${esc(remarks)}</td></tr>
+          <tr class="pz-sign"><td colspan="2"><b>점검자 서명</b></td>${sign}<td></td></tr>
+        </tbody></table>
+    </div>`;
+  }).join('');
+}
+function renderPrintCard(){
+  const sel = document.getElementById('printZoneSel'); if(!sel) return;
+  const keep = sel.value;
+  sel.innerHTML = '<option value="all">전체 구역 (8장)</option>' + zonesList().map(z=>`<option value="${z.no}">${z.no}구역 · ${esc(zoneLabel(z))} · ${esc(z.arch||'')}/${esc(z.safety||'')}</option>`).join('');
+  if([...sel.options].some(o=>o.value===keep)) sel.value = keep;
+  const d = zoneWeekDays(); document.getElementById('printWeekLabel').textContent = `${d[0]} ~ ${d[6]}`;
+}
+function printZoneChecklist(){
+  const sel = document.getElementById('printZoneSel');
+  const nos = sel.value==='all' ? zonesList().map(z=>z.no) : [Number(sel.value)];
+  const withData = document.getElementById('printWithData').checked;
+  const area = document.getElementById('printArea');
+  area.innerHTML = buildZoneWeekHTML(nos, withData);
+  const done = ()=>{ area.innerHTML=''; window.removeEventListener('afterprint', done); };
+  window.addEventListener('afterprint', done);
+  setTimeout(()=>window.print(), 50);
+  showToast(withData ? `✓ ${nos.length}장 인쇄 — 점검 기록 포함` : `✓ ${nos.length}장 빈 양식 인쇄`);
+}
+
 /* 이번 주(월~일) 체크리스트 엑셀 — 현장 서식과 같은 구조, 구역별 시트 */
 async function exportZoneWeekExcel(){
   if(typeof ExcelJS === 'undefined'){ showToast('⚠ 엑셀 라이브러리를 불러오지 못했습니다'); return; }
@@ -5515,5 +5604,6 @@ async function exportToExcel(){
   }
 }
 </script>
+<div id="printArea"></div>
 </body>
 </html>
