@@ -723,6 +723,7 @@
   .zone-chip i{width:10px;height:10px;border-radius:50%;background:var(--zc);display:inline-block;}
   .zone-chip.on{border-color:var(--zc);background:color-mix(in srgb,var(--zc) 10%,#fff);}
   .zone-chip .st{font-size:10.5px;color:var(--ink-400);font-weight:700;}
+  .zone-sep{flex-basis:100%;font-size:11px;font-weight:800;color:var(--ink-400);margin-top:4px;}
   .zone-chip .st.ok{color:var(--green);}
   .zone-card{border-left:5px solid var(--zc);padding:14px 16px;}
   .zone-card .zt{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
@@ -1204,7 +1205,7 @@
         <div class="form-card">
           <h3>🖨 책임구역 체크리스트 출력</h3>
           <p class="hint" style="margin-top:0;">대시보드 날짜(<b id="printWeekLabel"></b>)가 속한 주(월~일)의 체크리스트를 현장 서식 그대로 인쇄합니다. 인쇄 창에서 "PDF로 저장"을 고르면 파일로도 남길 수 있습니다.</p>
-          <div class="dash-company-row"><select id="printZoneSel"><option value="all">전체 구역 (8장)</option></select></div>
+          <div class="dash-company-row"><select id="printZoneSel"><option value="all">전체</option></select></div>
           <label class="check-row" style="margin:8px 0 10px;"><input type="checkbox" id="printWithData" checked><span>저장된 점검 기록 채워서 출력 (끄면 빈 양식)</span></label>
           <div style="display:flex;gap:8px;">
             <button type="button" class="map-action-btn" style="flex:1;" onclick="exportZoneWeekExcel()">📤 엑셀</button>
@@ -1278,7 +1279,7 @@
 
         <div class="form-card">
           <h3>🗺 책임구역 담당자</h3>
-          <p class="hint" style="margin-top:0;">구역별 건축·안전 담당자입니다. 점검 체크리스트의 점검자 목록은 여기 이름만 나옵니다. 인사이동 시 이름만 바꾸면 됩니다.</p>
+          <p class="hint" style="margin-top:0;">구역별 건축·안전 담당과 공종팀(토목·전기·설비) 담당입니다. 점검 체크리스트의 점검자 목록은 여기 이름만 나옵니다. 인사이동 시 이름만 바꾸면 됩니다.</p>
           <div id="zoneAdminList"></div>
           <button type="button" class="map-action-btn" style="width:100%;margin-top:10px;background:var(--blue-600);color:#fff;border-color:var(--blue-600);" onclick="saveZones()">구역 담당자 저장</button>
         </div>
@@ -1349,7 +1350,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p class="admin-build" style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-11-04 12:00 UTC</p>
+        <p class="admin-build" style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-11-05 02:00 UTC</p>
       </div>
     </div>
   </div>
@@ -1407,7 +1408,7 @@
     <div class="sheet-inner">
       <div class="sheet-handle"></div>
       <h4 style="margin:0 0 4px;font-size:16px;">📋 책임구역 점검 현황 <span id="zoneStatusDate" style="font-weight:600;color:var(--ink-400);"></span></h4>
-      <p class="hint" style="margin-top:0;">구역별 1일 1회 이상 점검. 건축·안전 담당이 각각 점검을 남길 수 있습니다.</p>
+      <p class="hint" style="margin-top:0;">구역·공종팀별 1일 1회 이상 점검. 담당자가 각각 점검을 남길 수 있습니다.</p>
       <div id="zoneStatusList" style="max-height:52vh;overflow-y:auto;"></div>
       <div class="sheet-actions">
         <button type="button" class="btn-secondary" onclick="exportZoneWeekExcel()">📤 이번 주 체크리스트 엑셀</button>
@@ -1565,8 +1566,12 @@ const DEFAULT_ZONES = [
   { no:6, buildings:['114동','115동'],         arch:'이민우', safety:'박두봉' },
   { no:7, buildings:['116동','117동','118동'], arch:'김준영', safety:'이상훈' },
   { no:8, buildings:['119동'],                 arch:'김준영', safety:'박두봉' },
+  // 공종팀 — 동에 묶이지 않고 현장 전체를 봅니다. arch/safety 칸을 담당①/②로 씁니다.
+  { no:9,  kind:'team', name:'토목', buildings:[], arch:'이보철', safety:'김양선' },
+  { no:10, kind:'team', name:'전기', buildings:[], arch:'김진수', safety:'임규운' },
+  { no:11, kind:'team', name:'설비', buildings:[], arch:'조석곤', safety:'오재헌' },
 ];
-const ZONE_COLORS = ['#2563EB','#16A34A','#EA580C','#9333EA','#0891B2','#DB2777','#CA8A04','#DC2626'];
+const ZONE_COLORS = ['#2563EB','#16A34A','#EA580C','#9333EA','#0891B2','#DB2777','#CA8A04','#DC2626','#475569','#0F766E','#7C2D12'];
 const ZONE_RESP = { arch:'신승묵', safety:'서진수' };   // 건축 책임자 / 안전 책임자
 /* 체크리스트 16개 항목 — 현장 서식(안전책임구역제 CHECK LIST) 그대로 */
 const CHECK_ITEMS = [
@@ -1590,7 +1595,11 @@ const CHECK_ITEMS = [
 const ZONES_KEY = 'sosZones_v1';
 function zoneOfBuilding(name){ return (state.zones||DEFAULT_ZONES).find(z=>z.buildings.includes(name)) || null; }
 function zoneColor(no){ return ZONE_COLORS[(no-1)%ZONE_COLORS.length]; }
-function zoneLabel(z){ const b=z.buildings; return b.length>1 ? `${b[0]}~${b[b.length-1]}` : b[0]; }
+function zoneLabel(z){ const b=z.buildings||[]; if(z.kind==='team') return '현장 전체'; return b.length>1 ? `${b[0]}~${b[b.length-1]}` : (b[0]||'-'); }
+function zoneTitle(z){ return z.kind==='team' ? `${z.name}팀` : `${z.no}구역`; }
+function zoneInspectors(z){ return [...new Set([z.arch, z.safety].filter(Boolean))]; }
+function zoneRole(z, n){ if(z.kind==='team') return `${z.name}팀`; return n===z.arch && n===z.safety ? '건축·안전' : (n===z.arch ? '건축' : '안전'); }
+function zoneStaffText(z){ return z.kind==='team' ? `담당 <b>${esc(z.arch||'-')}</b> · <b>${esc(z.safety||'-')}</b>` : `건축 <b>${esc(z.arch||'-')}</b> · 안전 <b>${esc(z.safety||'-')}</b>`; }
 
 // 기초층(최하단)과 주차장지붕층(지하1층과 1층 사이)도 등록 폼에서 선택할 수 있어야
 // 동별보기 층 필터가 실제로 결과를 찾을 수 있습니다.
@@ -1692,7 +1701,8 @@ let state = {
   dashCompany: '',           // 대시보드 주요 작업 목록 업체 필터
   zones: null,               // 책임구역 담당 (null이면 DEFAULT_ZONES)
   inspections: {},           // 책임구역 점검 기록 { date: { key: rec } }
-  zoneCheck: null,           // 작성 중인 체크리스트     // 잠긴 고위험 작업을 관리자 비밀번호로 열었을 때 그 작업 id
+  zoneCheck: null,           // 작성 중인 체크리스트
+  zoneSelected: null,        // 범례에서 직접 고른 구역·팀 번호 (동 클릭 시 해제)     // 잠긴 고위험 작업을 관리자 비밀번호로 열었을 때 그 작업 id
   hdcStaff: { supervisors: [...DEFAULT_SUPERVISORS_HDC], safetyManagers: [...DEFAULT_SAFETY_MANAGERS_HDC] },
   editingPumpId: null,
   clipboardTask: null,
@@ -2444,7 +2454,7 @@ function renderOversight(list){
   if(state.date <= todayStr()){
     const notYet = zonesList().filter(z=>!zoneInspectedToday(z.no).length);
     if(notYet.length){
-      rows.push(`<button type="button" class="ov-item tap" onclick="openZoneStatusSheet()"><span>📋 책임구역 점검 미완료</span><span class="n">${notYet.length}구역</span></button>`);
+      rows.push(`<button type="button" class="ov-item tap" onclick="openZoneStatusSheet()"><span>📋 책임구역 점검 미완료</span><span class="n">${notYet.length}곳</span></button>`);
     }
   }
 
@@ -2680,7 +2690,7 @@ function renderBuildingMapHotspots(){
     el.title = name + (z ? ` · ${z.no}구역` : '');
     const done = z && zoneInspectedToday(z.no).length;
     el.innerHTML = `<span class="hl${done?' done':''}">${esc(name.replace('동',''))}</span>`;
-    el.onclick = ()=> setBuildingFilter(name);
+    el.onclick = ()=> { state.zoneSelected = null; setBuildingFilter(name); };
     wrap.appendChild(el);
   });
   renderZoneLegend();
@@ -2692,27 +2702,38 @@ function zoneInspectedToday(no){
   const day = state.inspections[state.date] || {};
   return Object.values(day).filter(r=>r.zone===no);
 }
+function currentZone(){
+  if(state.zoneSelected){ const z = zonesList().find(x=>x.no===state.zoneSelected); if(z) return z; }
+  return zoneOfBuilding(state.buildingFilter);
+}
+function selectZone(no){
+  const z = zonesList().find(x=>x.no===no); if(!z) return;
+  if(z.kind==='team'){ state.zoneSelected = no; renderBuildingMapHotspots(); document.getElementById('zonePanel').scrollIntoView({behavior:'smooth',block:'start'}); }
+  else { state.zoneSelected = null; setBuildingFilter(z.buildings[0]); }
+}
 function renderZoneLegend(){
   const el = document.getElementById('zoneLegend'); if(!el) return;
-  const cur = zoneOfBuilding(state.buildingFilter);
-  el.innerHTML = zonesList().map(z=>{
+  const cur = currentZone();
+  const chip = (z)=>{
     const recs = zoneInspectedToday(z.no);
-    return `<button type="button" class="zone-chip${cur&&cur.no===z.no?' on':''}" style="--zc:${zoneColor(z.no)}" onclick="setBuildingFilter('${z.buildings[0]}')">
-      <i></i>${z.no}구역 <span class="st${recs.length?' ok':''}">${recs.length ? '✓ 점검' : zoneLabel(z)}</span></button>`;
-  }).join('');
+    return `<button type="button" class="zone-chip${cur&&cur.no===z.no?' on':''}" style="--zc:${zoneColor(z.no)}" onclick="selectZone(${z.no})">
+      <i></i>${zoneTitle(z)} <span class="st${recs.length?' ok':''}">${recs.length ? '✓ 점검' : (z.kind==='team' ? esc((z.arch||'')+'·'+(z.safety||'')) : zoneLabel(z))}</span></button>`;
+  };
+  const zones = zonesList().filter(z=>z.kind!=='team'), teams = zonesList().filter(z=>z.kind==='team');
+  el.innerHTML = zones.map(chip).join('') + (teams.length ? `<span class="zone-sep">공종팀</span>` + teams.map(chip).join('') : '');
 }
 function renderZonePanel(){
   const el = document.getElementById('zonePanel'); if(!el) return;
-  const z = zoneOfBuilding(state.buildingFilter);
+  const z = currentZone();
   if(!z){ el.innerHTML=''; return; }
   const recs = zoneInspectedToday(z.no);
   const who = recs.map(r=>`${r.inspector}${r.noWork?'(작업없음)':''}${r.savedAt?' '+String(r.savedAt).slice(11,16):''}`).join(', ');
   el.innerHTML = `
     <div class="form-card zone-card" style="--zc:${zoneColor(z.no)}">
-      <div class="zt"><h3>📋 ${z.no}구역 안전책임구역 점검</h3>
+      <div class="zt"><h3>📋 ${zoneTitle(z)} 안전책임구역 점검</h3>
         <span class="zone-status${recs.length?' ok':''}">${recs.length ? '✓ 점검 완료 · '+esc(who) : '오늘 미점검'}</span></div>
-      <div class="zm">담당구역 <b>${esc(zoneLabel(z))}</b> · 건축 <b>${esc(z.arch||'-')}</b> · 안전 <b>${esc(z.safety||'-')}</b><br>
-        <span style="color:var(--ink-400)">1일 1회 이상 점검 · 건축·안전 담당이 각각 점검 가능 · ${esc(state.date)}</span></div>
+      <div class="zm">담당구역 <b>${esc(zoneLabel(z))}</b> · ${zoneStaffText(z)}<br>
+        <span style="color:var(--ink-400)">1일 1회 이상 점검 · 담당자가 각각 점검 가능 · ${esc(state.date)}</span></div>
       <button type="button" class="zone-btn" onclick="openZoneCheck(${z.no})">${recs.length ? '점검 내용 보기 · 추가 점검' : '점검하기 ›'}</button>
     </div>`;
 }
@@ -4312,7 +4333,11 @@ function attachFirebaseListeners(){
 
   fbDb.ref('settings/zones').on('value', snap=>{
     const v = snap.val();
-    if(Array.isArray(v) && v.length){ state.zones = v; try{ localStorage.setItem(ZONES_KEY, JSON.stringify(v)); }catch(e){} }
+    if(Array.isArray(v) && v.length){
+      // 예전에 저장된 목록에 공종팀이 없으면 기본 팀을 보충 (관리 탭에서 저장하면 영구 반영)
+      DEFAULT_ZONES.filter(d=>d.kind==='team' && !v.some(x=>x.no===d.no)).forEach(d=>v.push({...d}));
+      state.zones = v.sort((a,b)=>a.no-b.no); try{ localStorage.setItem(ZONES_KEY, JSON.stringify(state.zones)); }catch(e){}
+    }
     else if(v && typeof v==='object'){ const arr = Object.values(v).filter(x=>x&&x.no); if(arr.length){ state.zones = arr.sort((a,b)=>a.no-b.no); } }
     if(document.getElementById('view-building').classList.contains('active')) renderBuildingFilters();
     if(adminUnlocked) renderZoneAdmin();
@@ -4791,7 +4816,7 @@ function removeHdcStaff(key, name){
 function inspKey(no, inspector){ return `${no}_${inspector.replace(/[.#$\[\]\/]/g,'')}`; }
 function openZoneCheck(no, inspectorPreset){
   const z = zonesList().find(x=>x.no===no); if(!z) return;
-  const inspectors = [...new Set([z.arch, z.safety].filter(Boolean))];
+  const inspectors = zoneInspectors(z);
   const inspector = inspectorPreset || inspectors[0] || '';
   loadZoneCheck(z, inspector);
   document.getElementById('zoneCheckSheet').classList.add('show');
@@ -4806,8 +4831,8 @@ function loadZoneCheck(z, inspector){
 function renderZoneCheck(){
   const c = state.zoneCheck; if(!c) return;
   const z = zonesList().find(x=>x.no===c.zone);
-  const inspectors = [...new Set([z.arch, z.safety].filter(Boolean))];
-  const role = (n)=> n===z.arch && n===z.safety ? '건축·안전' : (n===z.arch ? '건축' : '안전');
+  const inspectors = zoneInspectors(z);
+  const role = (n)=> zoneRole(z, n);
   const total = CHECK_ITEMS.length, done = Object.keys(c.items).length, bad = Object.values(c.items).filter(v=>v==='불량').length, na = Object.values(c.items).filter(v=>v==='해당없음').length;
   const rows = CHECK_ITEMS.map(([t,sub],i)=>{
     const n=i+1, v=c.items[n];
@@ -4824,7 +4849,7 @@ function renderZoneCheck(){
     </div>`;
   }).join('');
   document.getElementById('zoneCheckBody').innerHTML = `
-    <div class="zc-head"><h4 style="color:${zoneColor(z.no)}">${z.no}구역 안전책임구역제 CHECK LIST</h4>
+    <div class="zc-head"><h4 style="color:${zoneColor(z.no)}">${zoneTitle(z)} 안전책임구역제 CHECK LIST</h4>
       <button type="button" class="detail-close" onclick="closeZoneCheck()">✕</button></div>
     <div class="zc-meta">현장명 아이파크 무등산 스카이포레 · 점검구역 <b>${esc(zoneLabel(z))}</b> · 점검일 <b>${esc(state.date)}</b>
       ${c.savedAt ? `<br><span style="color:var(--green);font-weight:700;">✓ ${esc(String(c.savedAt).slice(0,16).replace('T',' '))} 저장된 점검 — 고치면 덮어씁니다</span>` : ''}</div>
@@ -4875,7 +4900,7 @@ function saveZoneCheck(){
     state.inspections[state.date][inspKey(c.zone, c.inspector)] = rec;
     if(fbDb) fbDb.ref(`inspections/${state.date}/${inspKey(c.zone, c.inspector)}`).set(rec).catch(err=>{ recordError('점검 저장 실패: '+err.message); showToast('⚠ 서버 저장 실패: '+err.message); });
     closeZoneCheck();
-    showToast(`✓ ${c.zone}구역 점검 저장 (${c.inspector})`);
+    showToast(`✓ ${zoneTitle(zonesList().find(x=>x.no===c.zone)||{no:c.zone})} 점검 저장 (${c.inspector})`);
     renderAll();
   });
 }
@@ -4886,8 +4911,8 @@ function openZoneStatusSheet(){
     const recs = zoneInspectedToday(z.no);
     const bad = recs.reduce((n,r)=>n+Object.values(r.items||{}).filter(v=>v==='불량').length,0);
     return `<div class="zs-row" style="--zc:${zoneColor(z.no)}">
-      <div class="zi"><b>${z.no}구역 <span style="font-weight:600;color:var(--ink-400)">${esc(zoneLabel(z))}</span></b>
-        <span>${recs.length ? '✓ '+recs.map(r=>esc(r.inspector)+(r.noWork?'(작업없음)':'')).join(', ')+(bad?` · 불량 ${bad}건`:'') : `미점검 · 건축 ${esc(z.arch||'-')} / 안전 ${esc(z.safety||'-')}`}</span></div>
+      <div class="zi"><b>${zoneTitle(z)} <span style="font-weight:600;color:var(--ink-400)">${esc(zoneLabel(z))}</span></b>
+        <span>${recs.length ? '✓ '+recs.map(r=>esc(r.inspector)+(r.noWork?'(작업없음)':'')).join(', ')+(bad?` · 불량 ${bad}건`:'') : `미점검 · ${z.kind==='team' ? esc((z.arch||'-')+' / '+(z.safety||'-')) : `건축 ${esc(z.arch||'-')} / 안전 ${esc(z.safety||'-')}`}`}</span></div>
       <button type="button" class="map-action-btn" onclick="document.getElementById('zoneStatusSheet').classList.remove('show'); openZoneCheck(${z.no})">${recs.length?'보기':'점검'}</button>
     </div>`;
   }).join('');
@@ -4896,9 +4921,9 @@ function openZoneStatusSheet(){
 /* 관리 탭 — 구역 담당자 편집 */
 function renderZoneAdmin(){
   const el = document.getElementById('zoneAdminList'); if(!el) return;
-  el.innerHTML = `<div class="za-row" style="margin-bottom:2px;"><div></div><div class="hint" style="margin:0;text-align:center;">건축 담당</div><div class="hint" style="margin:0;text-align:center;">안전 담당</div></div>` +
+  el.innerHTML = `<div class="za-row" style="margin-bottom:2px;"><div></div><div class="hint" style="margin:0;text-align:center;">건축 담당 / 팀 담당①</div><div class="hint" style="margin:0;text-align:center;">안전 담당 / 팀 담당②</div></div>` +
     zonesList().map(z=>`<div class="za-row">
-      <div class="zn" style="color:${zoneColor(z.no)}">${z.no}구역<small>${esc(zoneLabel(z))}</small></div>
+      <div class="zn" style="color:${zoneColor(z.no)}">${zoneTitle(z)}<small>${esc(zoneLabel(z))}</small></div>
       <input type="text" data-zone="${z.no}" data-role="arch" value="${esc(z.arch||'')}" autocomplete="off">
       <input type="text" data-zone="${z.no}" data-role="safety" value="${esc(z.safety||'')}" autocomplete="off">
     </div>`).join('');
@@ -4938,7 +4963,7 @@ function buildZoneWeekHTML(zoneNos, withData){
     return `<div class="pz-page">
       <div class="pz-ttl">안전책임구역제 CHECK LIST</div>
       <div class="pz-meta">■ 현장명 : 아이파크 무등산 스카이포레 현장</div>
-      <div class="pz-meta">■ 점검구역 : <b>${z.no}구역 (${esc(zoneLabel(z))})</b> &nbsp;&nbsp;&nbsp; ■ 점검자 : 건축 <b>${esc(z.arch||'')}</b> / 안전 <b>${esc(z.safety||'')}</b> &nbsp;&nbsp;&nbsp; ■ 점검일자 : ${days[0]} ~ ${days[6]}</div>
+      <div class="pz-meta">■ 점검구역 : <b>${zoneTitle(z)} (${esc(zoneLabel(z))})</b> &nbsp;&nbsp;&nbsp; ■ 점검자 : ${z.kind==='team' ? `<b>${esc(z.arch||'')}</b> / <b>${esc(z.safety||'')}</b>` : `건축 <b>${esc(z.arch||'')}</b> / 안전 <b>${esc(z.safety||'')}</b>`} &nbsp;&nbsp;&nbsp; ■ 점검일자 : ${days[0]} ~ ${days[6]}</div>
       <table class="pz-tbl">
         <colgroup><col style="width:5%"><col style="width:30%">${'<col style="width:4.2%"><col style="width:4.2%">'.repeat(7)}<col style="width:11%"></colgroup>
         <thead><tr><th rowspan="2">NO</th><th rowspan="2">안전점검 세부항목</th>${dn.map(d=>`<th colspan="2">${d}</th>`).join('')}<th rowspan="2">비고</th></tr>
@@ -4953,7 +4978,7 @@ function buildZoneWeekHTML(zoneNos, withData){
 function renderPrintCard(){
   const sel = document.getElementById('printZoneSel'); if(!sel) return;
   const keep = sel.value;
-  sel.innerHTML = '<option value="all">전체 구역 (8장)</option>' + zonesList().map(z=>`<option value="${z.no}">${z.no}구역 · ${esc(zoneLabel(z))} · ${esc(z.arch||'')}/${esc(z.safety||'')}</option>`).join('');
+  sel.innerHTML = `<option value="all">전체 (${zonesList().length}장)</option>` + zonesList().map(z=>`<option value="${z.no}">${zoneTitle(z)} · ${esc(zoneLabel(z))} · ${esc(z.arch||'')}/${esc(z.safety||'')}</option>`).join('');
   if([...sel.options].some(o=>o.value===keep)) sel.value = keep;
   const d = zoneWeekDays(); document.getElementById('printWeekLabel').textContent = `${d[0]} ~ ${d[6]}`;
 }
@@ -4999,9 +5024,9 @@ async function exportZoneWeekExcel(){
     await wb.xlsx.load(await loadChecklistTemplate());
     const tpl = wb.worksheets[0]; tpl.name = '_tpl';
     for(const z of zonesList()){
-      const ws = copySheetFrom(wb, tpl, `${z.no}구역`);
+      const ws = copySheetFrom(wb, tpl, zoneTitle(z));
       const dayRec = days.map(d=>Object.values(state.inspections[d]||{}).filter(r=>r.zone===z.no));
-      ws.getCell('A3').value = `■ 점검구역 : ${z.no}구역 (${zoneLabel(z)})                              ■점검자 : 건축 ${z.arch||''} / 안전 ${z.safety||''}`;
+      ws.getCell('A3').value = z.kind==='team' ? `■ 점검구역 : ${zoneTitle(z)} (${zoneLabel(z)})                              ■점검자 : ${z.arch||''} / ${z.safety||''}` : `■ 점검구역 : ${z.no}구역 (${zoneLabel(z)})                              ■점검자 : 건축 ${z.arch||''} / 안전 ${z.safety||''}`;
       ws.getCell('D4').value = `■ 점검일자 : ${fmt(days[0])} ~ ${fmt(days[6])}`;
       const actionLines = [];
       CHECK_ITEMS.forEach((_, i)=>{
@@ -5027,10 +5052,10 @@ async function exportZoneWeekExcel(){
     const buf = await wb.xlsx.writeBuffer();
     const blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
     const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`안전책임구역제_체크리스트_${days[0]}_${days[6]}.xlsx`; document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    showToast('✓ 체크리스트 엑셀 저장 (원본 서식, 구역별 시트 8개)');
+    showToast(`✓ 체크리스트 엑셀 저장 (원본 서식, 시트 ${zonesList().length}개)`);
   }catch(err){ recordError('체크리스트 엑셀 실패: '+err.message); showToast('⚠ ' + err.message); }
 }
-function loadZonesLocal(){ try{ const v=JSON.parse(localStorage.getItem(ZONES_KEY)||'null'); if(Array.isArray(v)&&v.length) state.zones=v; }catch(e){} }
+function loadZonesLocal(){ try{ const v=JSON.parse(localStorage.getItem(ZONES_KEY)||'null'); if(Array.isArray(v)&&v.length){ DEFAULT_ZONES.filter(d=>d.kind==='team' && !v.some(x=>x.no===d.no)).forEach(d=>v.push({...d})); state.zones=v.sort((a,b)=>a.no-b.no); } }catch(e){} }
 
 /* =========================================================
    푸시 알림 — 구독(모든 사용자) · 발송(관리 탭)
