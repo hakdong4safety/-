@@ -768,24 +768,46 @@
   /* 체크리스트 인쇄 — 화면에는 숨기고 인쇄할 때만 이 영역만 보입니다 */
   #printArea{display:none;}
   @media print{
-    @page{ size:A4 landscape; margin:10mm; }
+    @page{ size:A4 portrait; margin:9mm 10mm 8mm; }
+    html,body{ background:#fff !important; margin:0 !important; padding:0 !important; }
     body > *:not(#printArea){ display:none !important; }
-    #printArea{ display:block !important; font-family:'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo',sans-serif; color:#000; }
-    .pz-page{ page-break-after:always; }
+    #printArea{ display:block !important; font-family:'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo',sans-serif; color:#000;
+      -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .pz-page{ page-break-after:always; position:relative; }
     .pz-page:last-child{ page-break-after:auto; }
-    .pz-ttl{ text-align:center; font-size:20pt; font-weight:900; margin:0 0 6pt; }
-    .pz-meta{ font-size:10pt; margin:2pt 0; }
-    .pz-meta b{ font-weight:900; }
-    .pz-tbl{ width:100%; border-collapse:collapse; table-layout:fixed; font-size:8.5pt; margin-top:4pt; }
-    .pz-tbl th,.pz-tbl td{ border:0.6pt solid #000; padding:2pt 3pt; text-align:center; vertical-align:middle; }
-    .pz-tbl th{ background:#efefef; font-weight:900; }
-    .pz-tbl td.l{ text-align:left; }
-    .pz-tbl td.i{ font-size:8pt; line-height:1.25; }
-    .pz-tbl td.i small{ display:block; font-size:7pt; color:#333; }
+    .pz-mark{ font-size:12pt; font-weight:900; margin:0 0 3pt 2pt; }
+    .pz-box{ border:0.8pt solid #000; padding:0; box-sizing:border-box; width:calc(100% - 1.5pt); }   /* 오른쪽 테두리가 쪽 경계에서 잘리지 않게 */
+    .pz-top{ display:flex; align-items:stretch; }
+    .pz-ttl{ flex:1; text-align:center; font-size:18pt; font-weight:900; line-height:1.35; text-decoration:underline; padding:6pt 0 2pt; }
+    .pz-sign{ border-collapse:collapse; width:44%; table-layout:fixed; }
+    .pz-sign th,.pz-sign td{ border:0.6pt solid #000; font-size:7pt; font-weight:400; text-align:center; padding:1pt; }
+    .pz-sign th.v{ width:9%; font-size:8pt; line-height:1.6; }
+    .pz-sign td{ height:38pt; }
+    .pz-sign tr:first-child th{ border-top:none; } .pz-sign th:last-child,.pz-sign td:last-child{ border-right:none; }
+    .pz-meta{ font-size:10pt; padding:3pt 5pt; }
+    .pz-2{ display:flex; } .pz-2 > :first-child{ width:42%; } .pz-2 b{ font-weight:900; }
+    .pz-tbl{ width:100%; border-collapse:collapse; table-layout:fixed; font-size:8.5pt; }
+    .pz-tbl th,.pz-tbl td{ border:0.6pt solid #000; padding:1pt 2pt; text-align:center; vertical-align:middle; }
+    .pz-tbl tr > :first-child{ border-left:none; } .pz-tbl tr > :last-child{ border-right:none; }
+    .pz-tbl th{ background:#d9d9d9; font-weight:400; font-size:9.5pt; }
+    .pz-tbl th.s{ font-size:6.5pt; padding:1pt 0; }
+    .pz-tbl td.g{ background:#d9d9d9; }
+    .pz-tbl tr.it td{ height:33pt; }
+    .pz-tbl td.i{ font-size:9pt; line-height:1.3; }
+    .pz-tbl td.i small{ display:block; font-size:8pt; }
+    .pz-tbl td.n{ font-size:6pt; line-height:1.2; padding:0; }
+    .pz-tbl td.l{ text-align:left; padding-left:4pt; font-size:9.5pt; }
     .pz-tbl tr{ page-break-inside:avoid; }
-    .pz-rem{ height:34pt; vertical-align:top !important; text-align:left !important; font-size:8pt; white-space:pre-wrap; }
-    .pz-sign td{ height:18pt; font-size:7.5pt; }
+    .pz-tbl tbody tr:last-child td{ border-bottom:none; }
+    .pz-rem{ height:26pt; vertical-align:middle !important; text-align:left !important; font-size:8pt; white-space:pre-wrap; padding-left:4pt !important; }
+    .pz-who{ font-size:8pt; padding:3pt 5pt; border-top:0.6pt solid #000; }
+    .pz-foot{ text-align:right; font-size:9.5pt; margin-top:4pt; padding-right:2pt; }
   }
+
+  .spot-co{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:var(--ink-600);margin-bottom:2px;}
+  .spot-co i{width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0;}
+  .legend-reset{width:100%;text-align:left;border:1.5px solid var(--blue-600);background:var(--blue-100);color:var(--blue-700);
+    font-weight:800;font-size:12.5px;padding:8px 10px;border-radius:10px;font-family:inherit;cursor:pointer;margin-bottom:4px;}
 
   /* 칩 — 터치 40px */
   .chip{min-height:40px;display:inline-flex;align-items:center;justify-content:center;padding:8px 10px;font-size:13px;border-radius:11px;transition:background .12s,border-color .12s,color .12s;}
@@ -1204,7 +1226,7 @@
 
         <div class="form-card">
           <h3>🖨 책임구역 체크리스트 출력</h3>
-          <p class="hint" style="margin-top:0;">대시보드 날짜(<b id="printWeekLabel"></b>)가 속한 주(월~일)의 체크리스트를 현장 서식 그대로 인쇄합니다. 인쇄 창에서 "PDF로 저장"을 고르면 파일로도 남길 수 있습니다.</p>
+          <p class="hint" style="margin-top:0;">대시보드 날짜(<b id="printWeekLabel"></b>)가 속한 주(월~일)의 체크리스트를 회사 양식(세로 A4·결재란) 그대로 인쇄합니다. 인쇄 창에서 "PDF로 저장"을 고르면 파일로도 남길 수 있습니다.</p>
           <div class="dash-company-row"><select id="printZoneSel"><option value="all">전체</option></select></div>
           <label class="check-row" style="margin:8px 0 10px;"><input type="checkbox" id="printWithData" checked><span>저장된 점검 기록 채워서 출력 (끄면 빈 양식)</span></label>
           <div style="display:flex;gap:8px;">
@@ -1350,7 +1372,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">🔒 관리 화면 잠그기</button>
-        <p class="admin-build" style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-11-05 02:00 UTC</p>
+        <p class="admin-build" style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:14px;">build 2026-11-23 03:00 UTC</p>
       </div>
     </div>
   </div>
@@ -1459,6 +1481,17 @@
     </div>
   </div>
 
+  <!-- 겹친 위치의 작업 고르기 (대시보드·확대보기 지도에서 핀이 겹칠 때) -->
+  <div class="sheet" id="spotSheet" style="z-index:62;">
+    <div class="sheet-inner">
+      <div class="sheet-handle"></div>
+      <h4 style="margin:0 0 4px;font-size:16px;" id="spotTitle">📍 이 위치의 작업</h4>
+      <p class="hint" style="margin-top:0;">같은 자리에 겹쳐 있는 작업입니다. 확인할 작업을 누르세요.</p>
+      <div id="spotBody" style="max-height:56vh;overflow-y:auto;"></div>
+      <button class="sheet-close-btn" onclick="closeSpotSheet()">닫기</button>
+    </div>
+  </div>
+
   <!-- Confirm dialog -->
   <div class="sheet" id="confirmSheet" style="z-index:80;">
     <div class="sheet-inner" style="text-align:center;">
@@ -1526,7 +1559,7 @@
           <img id="lightboxImg" class="lightbox-img" src="" alt="전경사진 확대보기">
         </div>
       </div>
-      <div class="lightbox-hint">이미지를 탭하면 확대/축소됩니다 · 핀을 탭하면 상세보기가 열립니다</div>
+      <div class="lightbox-hint">이미지를 탭하면 확대/축소됩니다 · 핀을 탭하면 상세보기가 열립니다 (겹친 곳은 목록에서 선택)</div>
     </div>
   </div>
 
@@ -1569,7 +1602,7 @@ const DEFAULT_ZONES = [
   // 공종팀 — 동에 묶이지 않고 현장 전체를 봅니다. arch/safety 칸을 담당①/②로 씁니다.
   { no:9,  kind:'team', name:'토목', buildings:[], arch:'이보철', safety:'김양선' },
   { no:10, kind:'team', name:'전기', buildings:[], arch:'김진수', safety:'임규운' },
-  { no:11, kind:'team', name:'설비', buildings:[], arch:'조석곤', safety:'오재헌' },
+  { no:11, kind:'team', name:'설비', buildings:[], arch:'조석곤', safety:'오재현' },
 ];
 const ZONE_COLORS = ['#2563EB','#16A34A','#EA580C','#9333EA','#0891B2','#DB2777','#CA8A04','#DC2626','#475569','#0F766E','#7C2D12'];
 const ZONE_RESP = { arch:'신승묵', safety:'서진수' };   // 건축 책임자 / 안전 책임자
@@ -1584,7 +1617,7 @@ const CHECK_ITEMS = [
   ['전선의 피복상태 점검','절연피복 손상·노화로 감전위험 등'],
   ['고소작업대 작업 상태 확인','과상승방지봉 50cm 이상 설치 · 비상정지버튼 작동 · 상승 후 이동방지 리미트 스위치 작동'],
   ['작업발판 난간대·아웃리거 설치 확인','말비계, B/T, 안전사다리 등'],
-  ['차량계 건설기계 설치·운행상태 점검','펌프카, 이동식크레인, 지게차, B/H 등'],
+  ['건설기계 설치·운행상태 점검','펌프카, 이동식크레인, 지게차, B/H 등'],
   ['JACK SUPPORT 임의해체 여부',''],
   ['인화성물질 방치 여부','비닐, 가연성물질, 종이 등'],
   ['지하층 상시 물고임 여부',''],
@@ -1593,6 +1626,13 @@ const CHECK_ITEMS = [
   ['공구·자재 등 관리번호 부착 여부','자재보관 실명제, 관리번호 부착'],
 ];
 const ZONES_KEY = 'sosZones_v1';
+/* 담당자 이름 정정. 이미 서버·기기에 저장된 옛 표기도 불러올 때 바로잡습니다. */
+const ZONE_NAME_FIX = { ['오재'+'헌']:'오재현' };
+function fixZoneNames(list){
+  let changed = false;
+  (list||[]).forEach(z=>['arch','safety'].forEach(k=>{ if(z && ZONE_NAME_FIX[z[k]]){ z[k] = ZONE_NAME_FIX[z[k]]; changed = true; } }));
+  return changed;
+}
 function zoneOfBuilding(name){ return (state.zones||DEFAULT_ZONES).find(z=>z.buildings.includes(name)) || null; }
 function zoneColor(no){ return ZONE_COLORS[(no-1)%ZONE_COLORS.length]; }
 function zoneLabel(z){ const b=z.buildings||[]; if(z.kind==='team') return '현장 전체'; return b.length>1 ? `${b[0]}~${b[b.length-1]}` : (b[0]||'-'); }
@@ -2175,6 +2215,8 @@ function taskCenter(t){
 ========================================================= */
 function renderPinsInto(container, taskList, pumpList){
   container.querySelectorAll('.pin,.region-box').forEach(el=>el.remove());
+  // 겹침 판정용: 이 지도에 그려진 모든 핀 위치와 구역 사각형
+  const spots = [], rects = [];
   taskList.forEach(t=>{
     const regions = taskRegions(t);
     regions.forEach(r=>{
@@ -2183,6 +2225,7 @@ function renderPinsInto(container, taskList, pumpList){
       rb.style.left = r.x+'%'; rb.style.top = r.y+'%';
       rb.style.width = r.w+'%'; rb.style.height = r.h+'%';
       container.appendChild(rb);
+      rects.push({ t, r });
     });
     const points = regions.length ? regions.map(r=>({x:r.x+r.w/2, y:r.y+r.h/2})) : [taskCenter(t)];
     points.forEach(c=>{
@@ -2190,8 +2233,9 @@ function renderPinsInto(container, taskList, pumpList){
       pin.className = 'pin' + (isHighRisk(t) ? ' risk':'');
       pin.style.left = c.x+'%'; pin.style.top = c.y+'%';
       pin.innerHTML = `<div class="dot" style="background:${companyColor(t.company)}"><span>😊 ${t.workers||0}</span></div>`;
-      pin.onclick = (e)=>{ e.stopPropagation(); openDetail(t.id); };
+      pin.onclick = (e)=>{ e.stopPropagation(); openSpot(container, c.x, c.y, { task:t }); };
       container.appendChild(pin);
+      spots.push({ task:t, x:c.x, y:c.y });
     });
   });
   pumpList.forEach(p=>{
@@ -2201,9 +2245,66 @@ function renderPinsInto(container, taskList, pumpList){
     const col = companyColor(p.company);
     pin.innerHTML = `<div class="dot" style="background:${col}"><span>P</span></div>`;
     pin.title = `양수기 No.${p.no} · ${p.location}`;
-    pin.onclick = (e)=>{ e.stopPropagation(); openPumpDetail(p.id); };
+    pin.onclick = (e)=>{ e.stopPropagation(); openSpot(container, p.x, p.y, { pump:p }); };
     container.appendChild(pin);
+    spots.push({ pump:p, x:p.x, y:p.y });
   });
+  container._spots = spots; container._rects = rects;
+}
+/* 누른 위치에 겹쳐 있는 작업·양수기를 모읍니다.
+   · 핀 머리(약 27px)가 서로 닿는 거리 안의 핀
+   · 그 지점을 구역(사각형)으로 덮고 있는 다른 작업
+   하나뿐이면 바로 상세를 열고, 둘 이상이면 고르는 창을 띄웁니다. */
+function collectSpot(container, x, y){
+  const box = container.getBoundingClientRect();
+  const R = 24;   // px
+  const tasks = [], pumps = [];
+  const addT = t=>{ if(t && !tasks.some(a=>a.id===t.id)) tasks.push(t); };
+  (container._spots||[]).forEach(s=>{
+    const d = Math.hypot((s.x-x)/100*box.width, (s.y-y)/100*box.height);
+    if(d > R) return;
+    if(s.task) addT(s.task); else if(s.pump && !pumps.some(a=>a.id===s.pump.id)) pumps.push(s.pump);
+  });
+  (container._rects||[]).forEach(q=>{ if(x>=q.r.x && x<=q.r.x+q.r.w && y>=q.r.y && y<=q.r.y+q.r.h) addT(q.t); });
+  return { tasks, pumps };
+}
+function openSpot(container, x, y, hit){
+  const { tasks, pumps } = collectSpot(container, x, y);
+  if(hit && hit.task && !tasks.some(a=>a.id===hit.task.id)) tasks.unshift(hit.task);
+  if(hit && hit.pump && !pumps.some(a=>a.id===hit.pump.id)) pumps.unshift(hit.pump);
+  const total = tasks.length + pumps.length;
+  if(total === 0) return;
+  if(total === 1){ tasks.length ? openDetail(tasks[0].id) : openPumpDetail(pumps[0].id); return; }
+  // 위험도 높은 작업부터
+  const rank = { risk:0, grade:1, normal:2 };
+  tasks.sort((a,b)=> (rank[riskLevel(a)]-rank[riskLevel(b)]) || (a.company||'').localeCompare(b.company||'','ko'));
+  const companies = new Set(tasks.map(t=>t.company)).size;
+  document.getElementById('spotTitle').textContent = `📍 이 위치의 작업 ${tasks.length}건` + (pumps.length ? ` · 양수기 ${pumps.length}` : '') + (companies > 1 ? ` (${companies}개 업체)` : '');
+  document.getElementById('spotBody').innerHTML =
+    tasks.map(t=>taskRowHTML(t).replace('data-id="', 'data-spot-task="')
+      // 여러 업체가 섞여 나오므로 작업명 앞에 업체(지도 핀 색)를 붙입니다
+      .replace('<h4 class="name">', `<h4 class="name"><span class="spot-co"><i style="background:${companyColor(t.company)}"></i>${esc(t.company||'')}</span>`)).join('') +
+    pumps.map(p=>`<div class="task-row rl-normal" data-spot-pump="${esc(p.id)}" style="cursor:pointer;">
+        <div class="top"><h4 class="name">💧 양수기 No.${esc(p.no)}</h4><span class="badge" style="background:var(--bg);color:var(--ink-600);">${esc(p.status||'')}</span></div>
+        <div class="task-meta"><span>🏭 ${esc(p.company||'')}</span><span>📍 ${esc(p.location||'')}</span></div></div>`).join('');
+  document.getElementById('spotSheet').classList.add('show');
+}
+function closeSpotSheet(){ document.getElementById('spotSheet').classList.remove('show'); }
+// 고르면 선택 창을 닫고 상세를 엽니다 (상세 창이 선택 창 뒤에 가려지지 않게)
+document.addEventListener('click', e=>{
+  const row = e.target.closest && e.target.closest('#spotBody [data-spot-task], #spotBody [data-spot-pump]');
+  if(!row) return;
+  closeSpotSheet();
+  if(row.dataset.spotTask) openDetail(row.dataset.spotTask); else openPumpDetail(row.dataset.spotPump);
+});
+/* 대시보드 지도에서 핀이 아닌 구역(빨간 사각형) 안을 눌러도 그 자리의 작업을 엽니다 */
+function onMapAreaTap(e){
+  const wrap = e.currentTarget;
+  if(e.target.closest('.pin')) return;
+  const box = wrap.getBoundingClientRect();
+  const x = (e.clientX-box.left)/box.width*100, y = (e.clientY-box.top)/box.height*100;
+  const { tasks, pumps } = collectSpot(wrap, x, y);
+  if(tasks.length + pumps.length) openSpot(wrap, x, y, null);
 }
 
 /* =========================================================
@@ -2366,19 +2467,28 @@ function closeTaskListSheet(){ document.getElementById('taskListSheet').classLis
 function activePumps(){ return state.pumps.filter(p=>p.status!=='철거'); }
 
 function setDashCompany(v){ state.dashCompany = v || ''; renderDashboard(); bindTaskRowClicks(); }
+function dashMapTasks(list){ return state.dashCompany ? list.filter(t=>t.company===state.dashCompany) : list; }
+function dashMapPumps(pumps){ return state.dashCompany ? pumps.filter(p=>p.company===state.dashCompany) : pumps; }
 function renderDashboard(){
   const list = tasksForDate(state.date);
   const pumps = activePumps();
+  // 협력업체 드롭다운에서 고른 업체가 그 날짜에 없으면 전체로 되돌림 (지도 그리기 전에 확정)
+  if(state.dashCompany && !list.some(t=>t.company===state.dashCompany)) state.dashCompany = '';
+  // 지도·범례도 고른 업체만 — 목록과 지도가 같은 것을 보여줍니다
+  const mapTasks = dashMapTasks(list), mapPumps = dashMapPumps(pumps);
 
   const mapWrap = document.getElementById('mapWrap');
-  renderPinsInto(mapWrap, list, pumps);
+  renderPinsInto(mapWrap, mapTasks, mapPumps);
+  if(!mapWrap._tapBound){ mapWrap.addEventListener('click', onMapAreaTap); mapWrap._tapBound = true; }
 
-  document.getElementById('pinCountMeta').textContent = `작업 ${list.length} · 양수기 ${pumps.length}`;
+  document.getElementById('pinCountMeta').textContent = `작업 ${mapTasks.length} · 양수기 ${mapPumps.length}`;
 
-  const companies = [...new Set(list.map(t=>t.company))];
-  document.getElementById('mapLegend').innerHTML = companies.length ? companies.map(c=>`
+  const companies = [...new Set(mapTasks.map(t=>t.company))];
+  document.getElementById('mapLegend').innerHTML = (state.dashCompany
+      ? `<button type="button" class="legend-reset" onclick="setDashCompany('')">✕ ${esc(state.dashCompany)}만 표시 중 · 전체 보기</button>` : '')
+    + (companies.length ? companies.map(c=>`
     <div class="legend-item"><span class="legend-swatch" style="background:${companyColor(c)}"></span>${esc(c)}</div>
-  `).join('') : `<div class="legend-item">등록된 작업이 없습니다</div>`;
+  `).join('') : `<div class="legend-item">${state.dashCompany ? '이 업체는 위치가 표시된 작업이 없습니다' : '등록된 작업이 없습니다'}</div>`);
 
   const totalWorkers = list.reduce((s,t)=>s+(Number(t.workers)||0),0);
   const highRiskWorkers = list.filter(isHighRisk).reduce((s,t)=>s+(Number(t.workers)||0),0);
@@ -4336,7 +4446,9 @@ function attachFirebaseListeners(){
     if(Array.isArray(v) && v.length){
       // 예전에 저장된 목록에 공종팀이 없으면 기본 팀을 보충 (관리 탭에서 저장하면 영구 반영)
       DEFAULT_ZONES.filter(d=>d.kind==='team' && !v.some(x=>x.no===d.no)).forEach(d=>v.push({...d}));
+      const fixed = fixZoneNames(v);
       state.zones = v.sort((a,b)=>a.no-b.no); try{ localStorage.setItem(ZONES_KEY, JSON.stringify(state.zones)); }catch(e){}
+      if(fixed) fbDb.ref('settings/zones').set(state.zones).catch(()=>{});   // 서버 값도 정정
     }
     else if(v && typeof v==='object'){ const arr = Object.values(v).filter(x=>x&&x.no); if(arr.length){ state.zones = arr.sort((a,b)=>a.no-b.no); } }
     if(document.getElementById('view-building').classList.contains('active')) renderBuildingFilters();
@@ -4344,7 +4456,10 @@ function attachFirebaseListeners(){
   });
   // 점검 기록 — 최근 14일치만 (주간 엑셀·현황용)
   fbDb.ref('inspections').orderByKey().startAt(ymdLocal(new Date(Date.now()-14*86400000))).on('value', snap=>{
-    state.inspections = snap.val() || {};
+    const insp = snap.val() || {};
+    // 옛 표기로 저장된 점검 기록의 점검자 이름도 화면·엑셀·인쇄에서 바르게 보이도록 정정
+    Object.values(insp).forEach(day=>Object.values(day||{}).forEach(r=>{ if(r && ZONE_NAME_FIX[r.inspector]) r.inspector = ZONE_NAME_FIX[r.inspector]; }));
+    state.inspections = insp;
     renderAll();
   }, err=>recordError('점검 기록 동기화 오류: '+err.message));
 
@@ -4822,7 +4937,9 @@ function openZoneCheck(no, inspectorPreset){
   document.getElementById('zoneCheckSheet').classList.add('show');
 }
 function loadZoneCheck(z, inspector){
-  const existing = (state.inspections[state.date]||{})[inspKey(z.no, inspector)];
+  const dayRecs = state.inspections[state.date] || {};
+  // 옛 이름으로 저장된 기록(키가 다름)도 같은 사람의 기록으로 찾아 이어서 수정할 수 있게 합니다
+  const existing = dayRecs[inspKey(z.no, inspector)] || Object.values(dayRecs).find(r=>r && r.zone===z.no && r.inspector===inspector);
   state.zoneCheck = existing
     ? { zone:z.no, inspector, items:{...(existing.items||{})}, actions:{...(existing.actions||{})}, remarks:existing.remarks||'', savedAt:existing.savedAt, noWork:!!existing.noWork }
     : { zone:z.no, inspector, items:{}, actions:{}, remarks:'' };
@@ -4945,33 +5062,46 @@ function zoneWeekDays(){
 }
 function buildZoneWeekHTML(zoneNos, withData){
   const days = zoneWeekDays(), dn = ['월','화','수','목','금','토','일'];
+  const fmt = d=>{ const [y,m,dd]=d.split('-'); return `${y}년 ${Number(m)}월 ${Number(dd)}일`; };
+  const sh = di => (di%2===0 ? ' class="g"' : '');     // 월·수·금·일 음영 (회사 양식과 동일)
   return zonesList().filter(z=>zoneNos.includes(z.no)).map(z=>{
     const dayRec = days.map(d=> withData ? Object.values(state.inspections[d]||{}).filter(r=>r.zone===z.no) : []);
+    const actionLines = [];
     const rows = CHECK_ITEMS.map(([t,sub],i)=>{
-      const n=i+1, notes=[];
+      const n=i+1, badDays=[];
       const cells = days.map((d,di)=>{
         const vals = dayRec[di].map(x=>(x.items||{})[n]).filter(Boolean);
-        dayRec[di].forEach(x=>{ if((x.actions||{})[n]) notes.push(`${dn[di]}: ${x.actions[n]}`); });
-        if(!vals.length) return '<td></td><td></td>';
-        if(vals.includes('불량')) return '<td></td><td>O</td>';
-        return vals.every(v=>v==='해당없음') ? '<td>－</td><td></td>' : '<td>O</td><td></td>';
+        dayRec[di].forEach(x=>{ if((x.actions||{})[n]) actionLines.push(`${n}) ${dn[di]} ${x.inspector}: ${x.actions[n]}`); });
+        if(!vals.length) return `<td${sh(di)}></td><td${sh(di)}></td>`;
+        if(vals.includes('불량')){ badDays.push(dn[di]); return `<td${sh(di)}></td><td${sh(di)}>O</td>`; }
+        return `<td${sh(di)}>${vals.every(v=>v==='해당없음') ? '－' : 'O'}</td><td${sh(di)}></td>`;
       }).join('');
-      return `<tr><td>${n}</td><td class="l i">${esc(t)}${sub?`<small>(${esc(sub)})</small>`:''}</td>${cells}<td class="l i">${esc(notes.join(' / '))}</td></tr>`;
+      return `<tr class="it"><td>${n}</td><td class="i">${esc(t)}${sub?`<small>(${esc(sub)})</small>`:''}</td>${cells}<td class="n">${badDays.length ? esc(badDays.join('·'))+'<br>불량' : ''}</td></tr>`;
     }).join('');
-    const remarks = days.flatMap((d,di)=>dayRec[di].filter(x=>x.remarks).map(x=>`${dn[di]} ${x.inspector}: ${x.remarks}`)).join('\n');
-    const sign = days.map((d,di)=>`<td colspan="2">${esc(dayRec[di].map(x=>x.inspector).join(','))}</td>`).join('');
+    const remarks = days.flatMap((d,di)=>dayRec[di].filter(x=>x.remarks||x.noWork).map(x=>`${dn[di]} ${x.inspector}: ${x.noWork&&!x.remarks?'작업없음':x.remarks}`));
+    const lines = [...actionLines, ...remarks];
+    const who = days.map((d,di)=>dayRec[di].length ? `${dn[di]} ${dayRec[di].map(x=>x.inspector).join(',')}` : null).filter(Boolean).join(' / ');
+    const staff = z.kind==='team' ? `${esc(z.arch||'')} / ${esc(z.safety||'')}` : `건축 ${esc(z.arch||'')} / 안전 ${esc(z.safety||'')}`;
     return `<div class="pz-page">
-      <div class="pz-ttl">안전책임구역제 CHECK LIST</div>
-      <div class="pz-meta">■ 현장명 : 아이파크 무등산 스카이포레 현장</div>
-      <div class="pz-meta">■ 점검구역 : <b>${zoneTitle(z)} (${esc(zoneLabel(z))})</b> &nbsp;&nbsp;&nbsp; ■ 점검자 : ${z.kind==='team' ? `<b>${esc(z.arch||'')}</b> / <b>${esc(z.safety||'')}</b>` : `건축 <b>${esc(z.arch||'')}</b> / 안전 <b>${esc(z.safety||'')}</b>`} &nbsp;&nbsp;&nbsp; ■ 점검일자 : ${days[0]} ~ ${days[6]}</div>
-      <table class="pz-tbl">
-        <colgroup><col style="width:5%"><col style="width:30%">${'<col style="width:4.2%"><col style="width:4.2%">'.repeat(7)}<col style="width:11%"></colgroup>
-        <thead><tr><th rowspan="2">NO</th><th rowspan="2">안전점검 세부항목</th>${dn.map(d=>`<th colspan="2">${d}</th>`).join('')}<th rowspan="2">비고</th></tr>
-        <tr>${'<th>양호</th><th>불량</th>'.repeat(7)}</tr></thead>
-        <tbody>${rows}
-          <tr><td colspan="2" class="l"><b>2. 건의사항</b></td><td colspan="15" class="pz-rem">${esc(remarks)}</td></tr>
-          <tr class="pz-sign"><td colspan="2"><b>점검자 서명</b></td>${sign}<td></td></tr>
-        </tbody></table>
+      <div class="pz-mark">▌ 안전 책임구역제 CHECK LIST</div>
+      <div class="pz-box">
+        <div class="pz-top">
+          <div class="pz-ttl">안전책임구역제<br>CHECK LIST</div>
+          <table class="pz-sign"><tr><th rowspan="2" class="v">결<br>재</th><th>안전관리자</th><th>안전보건책임자</th><th>RM</th><th>소장</th></tr><tr><td></td><td></td><td></td><td></td></tr></table>
+        </div>
+        <div class="pz-meta">■ 현장명 : 아이파크 무등산 스카이포레 현장</div>
+        <div class="pz-meta pz-2"><span>■ 점검구역 : ${zoneTitle(z)} (${esc(zoneLabel(z))})</span><span>■ 점검자 : ${staff} &nbsp;&nbsp;(인)</span></div>
+        <div class="pz-meta pz-2"><b>1. 공통 점검 항목</b><span>■ 점검일자 : ${fmt(days[0])} ~ ${fmt(days[6])}</span></div>
+        <table class="pz-tbl">
+          <colgroup><col style="width:5%"><col style="width:36%">${'<col style="width:3.9%"><col style="width:3.9%">'.repeat(7)}<col style="width:4.4%"></colgroup>
+          <thead><tr><th rowspan="2">NO</th><th rowspan="2">안전점검 세부항목</th>${dn.map(d=>`<th colspan="2">${d}</th>`).join('')}<th rowspan="2">비고</th></tr>
+          <tr>${'<th class="s">양호</th><th class="s">불량</th>'.repeat(7)}</tr></thead>
+          <tbody>${rows}
+            <tr><td colspan="2" class="l"><b>2. 건의사항</b></td><td colspan="14" class="pz-rem">${esc(lines.join('\n'))}</td><td></td></tr>
+          </tbody></table>
+        ${who ? `<div class="pz-who">점검자 : ${esc(who)}</div>` : ''}
+      </div>
+      <div class="pz-foot">IPARK 무등산 스카이포레</div>
     </div>`;
   }).join('');
 }
@@ -5012,7 +5142,7 @@ function copySheetFrom(wb, src, name){
   });
   (src.model.merges||[]).forEach(m=>{ try{ ws.mergeCells(m); }catch(e){} });
   ws.pageSetup = JSON.parse(JSON.stringify(src.pageSetup||{}));
-  ws.pageSetup.printArea = 'A1:R24';
+  ws.pageSetup.printArea = 'A1:R25';
   return ws;
 }
 async function exportZoneWeekExcel(){
@@ -5026,11 +5156,11 @@ async function exportZoneWeekExcel(){
     for(const z of zonesList()){
       const ws = copySheetFrom(wb, tpl, zoneTitle(z));
       const dayRec = days.map(d=>Object.values(state.inspections[d]||{}).filter(r=>r.zone===z.no));
-      ws.getCell('A3').value = z.kind==='team' ? `■ 점검구역 : ${zoneTitle(z)} (${zoneLabel(z)})                              ■점검자 : ${z.arch||''} / ${z.safety||''}` : `■ 점검구역 : ${z.no}구역 (${zoneLabel(z)})                              ■점검자 : 건축 ${z.arch||''} / 안전 ${z.safety||''}`;
-      ws.getCell('D4').value = `■ 점검일자 : ${fmt(days[0])} ~ ${fmt(days[6])}`;
+      ws.getCell('A4').value = z.kind==='team' ? `■ 점검구역 : ${zoneTitle(z)} (${zoneLabel(z)})                    ■점검자 : ${z.arch||''} / ${z.safety||''}   (인)` : `■ 점검구역 : ${z.no}구역 (${zoneLabel(z)})                    ■점검자 : 건축 ${z.arch||''} / 안전 ${z.safety||''}   (인)`;
+      ws.getCell('D5').value = `■ 점검일자 : ${fmt(days[0])} ~ ${fmt(days[6])}`;
       const actionLines = [];
       CHECK_ITEMS.forEach((_, i)=>{
-        const n = i+1, r = 6+n, badDays = [];
+        const n = i+1, r = 7+n, badDays = [];
         days.forEach((d, di)=>{
           const recs = dayRec[di]; const vals = recs.map(x=>(x.items||{})[n]).filter(Boolean);
           recs.forEach(x=>{ if((x.actions||{})[n]) actionLines.push(`${n}) ${dn[di]} ${x.inspector}: ${x.actions[n]}`); });
@@ -5043,10 +5173,10 @@ async function exportZoneWeekExcel(){
       });
       const remarks = days.flatMap((d,di)=>dayRec[di].filter(x=>x.remarks||x.noWork).map(x=>`${dn[di]} ${x.inspector}: ${x.noWork&&!x.remarks?'작업없음':x.remarks}`));
       const lines = [...actionLines, ...remarks];
-      const rem = ws.getCell('D23'); rem.value = lines.join('\n'); rem.alignment = { wrapText:true, vertical:'middle', horizontal:'left' };
-      ws.getRow(23).height = Math.max(27.75, 15 * lines.length + 6);
-      ws.getCell('A24').value = '점검자';
-      ws.getCell('D24').value = days.map((d,di)=>dayRec[di].length ? `${dn[di]} ${dayRec[di].map(x=>x.inspector).join(',')}` : null).filter(Boolean).join(' / ');
+      const rem = ws.getCell('D24'); rem.value = lines.join('\n'); rem.alignment = { wrapText:true, vertical:'middle', horizontal:'left' };
+      ws.getRow(24).height = Math.max(27.75, 15 * lines.length + 6);
+      ws.getCell('A25').value = '점검자';
+      ws.getCell('D25').value = days.map((d,di)=>dayRec[di].length ? `${dn[di]} ${dayRec[di].map(x=>x.inspector).join(',')}` : null).filter(Boolean).join(' / ');
     }
     wb.removeWorksheet(tpl.id);
     const buf = await wb.xlsx.writeBuffer();
@@ -5055,7 +5185,7 @@ async function exportZoneWeekExcel(){
     showToast(`✓ 체크리스트 엑셀 저장 (원본 서식, 시트 ${zonesList().length}개)`);
   }catch(err){ recordError('체크리스트 엑셀 실패: '+err.message); showToast('⚠ ' + err.message); }
 }
-function loadZonesLocal(){ try{ const v=JSON.parse(localStorage.getItem(ZONES_KEY)||'null'); if(Array.isArray(v)&&v.length){ DEFAULT_ZONES.filter(d=>d.kind==='team' && !v.some(x=>x.no===d.no)).forEach(d=>v.push({...d})); state.zones=v.sort((a,b)=>a.no-b.no); } }catch(e){} }
+function loadZonesLocal(){ try{ const v=JSON.parse(localStorage.getItem(ZONES_KEY)||'null'); if(Array.isArray(v)&&v.length){ DEFAULT_ZONES.filter(d=>d.kind==='team' && !v.some(x=>x.no===d.no)).forEach(d=>v.push({...d})); fixZoneNames(v); state.zones=v.sort((a,b)=>a.no-b.no); } }catch(e){} }
 
 /* =========================================================
    푸시 알림 — 구독(모든 사용자) · 발송(관리 탭)
@@ -5267,7 +5397,7 @@ function openImageLightbox(){
   img.src = resolveSiteImageForDate(state.date);
   document.getElementById('lightboxStage').classList.remove('zoomed');
   document.getElementById('imageLightboxSheet').classList.add('show');
-  renderPinsInto(document.getElementById('lightboxStage'), tasksForDate(state.date), activePumps());
+  renderPinsInto(document.getElementById('lightboxStage'), dashMapTasks(tasksForDate(state.date)), dashMapPumps(activePumps()));
 }
 function closeImageLightbox(){
   document.getElementById('imageLightboxSheet').classList.remove('show');
