@@ -846,6 +846,12 @@
   body[data-view="register"] .date-picker::before{content:"작업일자";font-size:10.5px;font-weight:600;color:var(--blue-700);background:var(--blue-100);
     padding:3px 7px;border-radius:20px;white-space:nowrap;}
 
+  /* 아이폰 화면 밀림 보정 — 밀린 만큼 머리글·아래 탭·창을 실제로 보이는 영역으로 옮깁니다 (평소에는 0) */
+  .topbar,.bottom-nav,.sheet{transform:translateY(var(--vv-off,0px));}
+  @media (max-width:899px){
+    body.kb-open .bottom-nav{display:none;}             /* 키보드가 올라와 있으면 아래 탭은 숨김 */
+  }
+
   /* 칩 — 터치 40px */
   .chip{min-height:40px;display:inline-flex;align-items:center;justify-content:center;padding:8px 10px;font-size:13px;border-radius:11px;transition:background .12s,border-color .12s,color .12s;}
   .chip:active{transform:scale(.97);}
@@ -1195,6 +1201,13 @@
   .field input[type=text],.field input[type=number],.field input[type=date],.field input[type=time],.field input[type=search],.field select,.field textarea,
   .loose-input,.staff-add input,.za-row input,.pw-row input,.check-row,.toggle-btn{border-color:#AEAEB2;}
 
+  /* 아이폰 안정성 — 휴대폰에서는 반투명(뒤 비침) 효과를 끄고 불투명 바탕으로. 고정·붙박이 요소와 함께 쓰면 iOS에서 배치가 어긋나는 일이 잦습니다 */
+  @media (max-width:899px){
+    .topbar{background:#FAFAFC;-webkit-backdrop-filter:none;backdrop-filter:none;}
+    .bottom-nav{background:#FAFAFC;-webkit-backdrop-filter:none;backdrop-filter:none;}
+    body[data-view="register"] .date-row{background:var(--bg);-webkit-backdrop-filter:none;backdrop-filter:none;}
+    body.kb-open .step-nav{bottom:0;}
+  }
   /* 휴대폰: 한 줄로 쌓고 순서만 정함 */
   @media (max-width:899px){
     #view-dashboard.active{padding:0 0 4px;}
@@ -1826,7 +1839,7 @@
         </div>
 
         <button class="submit-btn" style="background:var(--ink-400);" onclick="lockAdmin()">관리 화면 잠그기</button>
-        <p class="admin-build" style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:500;margin-top:14px;">build 2026-11-27 01:00 UTC</p>
+        <p class="admin-build" style="text-align:center;font-size:10.5px;color:var(--ink-400);font-weight:500;margin-top:14px;">build 2026-11-27 03:00 UTC</p>
       </div>
     </div>
   </div>
@@ -2672,6 +2685,8 @@ function updateTodayBtn(){
 ========================================================= */
 function switchView(name){
   state.view = name;
+  try{ const a = document.activeElement; if(a && a.blur && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) a.blur(); }catch(e){}
+  if(window._vvSettle) window._vvSettle();
   document.body.dataset.view = name;   // 화면별 스타일(등록 화면의 날짜 줄 고정 등)에 사용
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-'+name).classList.add('active');
@@ -5024,6 +5039,49 @@ function showAuthFailBanner(detail){
   b.style.display = '';
   updateSyncStatus(false);
 }
+/* ═══ 아이폰(홈 화면 앱) 화면 밀림 보정 ═════════════════════════════════════
+   증상: 아래 탭이 화면 한가운데에 뜨고 위쪽 머리글이 사라짐.
+   원인: 키보드가 올라오면 iOS가 화면을 위로 밀어 올리는데, 키보드가 내려간 뒤에도 밀린 채로 남는 경우가 있습니다.
+         그러면 "화면 아래에 고정"한 탭이 실제 화면의 한가운데에 놓입니다.
+   대처: ① 키보드가 내려가면 밀림을 되돌리도록 다시 스크롤  ② 그래도 남으면 머리글·탭·창을 실제로 보이는 영역에 맞춰 옮김
+         ③ 키보드가 올라와 있는 동안은 아래 탭을 숨김(입력 칸을 가리지 않게) */
+(function(){
+  const vv = window.visualViewport; if(!vv) return;
+  const root = document.documentElement;
+  let raf = 0, timers = [];
+  function measure(){
+    raf = 0;
+    const layoutH = root.clientHeight;
+    const kb = layoutH - vv.height > 120 && vv.scale < 1.05;          // 키보드가 올라온 상태
+    document.body.classList.toggle('kb-open', kb);
+    // 키보드가 없는데도 보이는 영역이 아래로 밀려 있으면 그만큼 머리글·탭을 따라 내립니다
+    const off = (!kb && vv.scale < 1.05) ? Math.max(0, Math.round(vv.offsetTop)) : 0;
+    root.style.setProperty('--vv-off', off + 'px');
+    return { kb, off };
+  }
+  function schedule(){ if(!raf) raf = requestAnimationFrame(measure); }
+  function settle(){
+    // 키보드가 내려간 직후: 같은 자리로 다시 스크롤해 iOS가 밀림을 풀게 합니다
+    timers.forEach(clearTimeout); timers = [];
+    [80, 300, 700].forEach(ms=>timers.push(setTimeout(()=>{
+      const a = document.activeElement;
+      if(a && /^(INPUT|TEXTAREA)$/.test(a.tagName) && !/^(checkbox|radio|button|date|time)$/.test(a.type||'')) return;   // 아직 입력 중
+      const y = window.scrollY;
+      if(vv.offsetTop > 1 && root.clientHeight - vv.height <= 120){ window.scrollTo(0, y + vv.offsetTop); }
+      else { window.scrollTo(0, y); }
+      measure();
+    }, ms)));
+  }
+  vv.addEventListener('resize', ()=>{ schedule(); settle(); });
+  vv.addEventListener('scroll', schedule);
+  window.addEventListener('focusout', settle);
+  window.addEventListener('pageshow', ()=>{ schedule(); settle(); });
+  window.addEventListener('orientationchange', ()=>{ schedule(); settle(); });
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden){ schedule(); settle(); } });
+  measure();
+  window._vvMeasure = measure; window._vvSettle = settle;
+})();
+
 function diagInfo(){
   let u = null; try{ u = firebase.auth().currentUser; }catch(e){}
   return [
@@ -5031,6 +5089,9 @@ function diagInfo(){
     '시각: ' + new Date().toISOString(),
     '브라우저: ' + navigator.userAgent,
     '화면: ' + window.innerWidth + 'x' + window.innerHeight + (isDesktopLayout() ? ' (PC 레이아웃)' : ' (모바일 레이아웃)'),
+    '보이는 영역: ' + (window.visualViewport ? Math.round(visualViewport.width) + 'x' + Math.round(visualViewport.height) + ' 밀림 ' + Math.round(visualViewport.offsetTop) + ' 배율 ' + visualViewport.scale.toFixed(2) : '정보 없음')
+      + ' / 배치 기준 ' + document.documentElement.clientWidth + 'x' + document.documentElement.clientHeight + ' / 스크롤 ' + Math.round(window.scrollY)
+      + ' / 홈화면앱 ' + ((window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true),
     '온라인: ' + navigator.onLine,
     '인증: ' + (u ? '성공 (' + u.uid.slice(0,8) + '…)' : '실패/미완료'),
     '연결: ' + (document.getElementById('syncStatus') ? document.getElementById('syncStatus').textContent : ''),
